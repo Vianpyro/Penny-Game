@@ -9,6 +9,22 @@
             "presentation": {
                 "showReuseMessage": false
             }
+        },
+        {
+            "label": "Start FastAPI server",
+            "type": "shell",
+            "command": "uvicorn app.main:app --reload --host 0.0.0.0",
+            "presentation": {
+                "panel": "dedicated",
+                "close": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/api",
+                "env": {
+                    "PYTHONPATH": "${workspaceFolder}/api"
+                }
+            },
+            "problemMatcher": []
         }
     ]
 }
