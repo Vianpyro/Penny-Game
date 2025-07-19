@@ -34,7 +34,7 @@ class PennyGame(BaseModel):
     players: List[str]
     spectators: List[str] = []
     host: Optional[str] = None
-    pennies: int = 20  # Default starting pennies
+    pennies: Dict[str, List[bool]] = {}  # True=heads, False=tails
     turn: int = 0  # Index of current player
     winner: Optional[str] = None
     created_at: datetime
@@ -48,7 +48,7 @@ games: Dict[str, PennyGame] = {}
 def create_game():
     room_id = str(uuid4())[:8]
     now = datetime.now()
-    games[room_id] = PennyGame(room_id=room_id, players=[], created_at=now, last_active_at=now)
+    games[room_id] = PennyGame(room_id=room_id, players=[], pennies={}, created_at=now, last_active_at=now)
     return {"room_id": room_id}
 
 
@@ -70,19 +70,20 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
     game.last_active_at = now
     if spectator:
         game.spectators.append(username)
-        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host}
-    if len(game.players) >= 2:
+        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "pennies": game.pennies}
+    if len(game.players) >= MAX_PLAYERS:
         # If game is full, allow joining as spectator
         game.spectators.append(username)
-        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "note": "Joined as spectator (game full)"}
+        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "note": "Joined as spectator (game full)", "pennies": game.pennies}
     game.players.append(username)
+    game.pennies[username] = [True] * 20  # All heads
     if game.host is None:
         game.host = username
-    return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host}
+    return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "pennies": game.pennies}
 
 class MoveRequest(BaseModel):
     username: str
-    take: int
+    flip: int
 
 @app.post("/game/move/{room_id}")
 def make_move(room_id: str, move: MoveRequest):
@@ -95,14 +96,19 @@ def make_move(room_id: str, move: MoveRequest):
         raise HTTPException(status_code=400, detail="Need 2 players")
     if game.players[game.turn] != move.username:
         raise HTTPException(status_code=400, detail="Not your turn")
-    if move.take not in [1, 2, 3]:
+    if move.flip not in [1, 2, 3]:
         raise HTTPException(status_code=400, detail="Invalid move")
-    if move.take > game.pennies:
-        raise HTTPException(status_code=400, detail="Not enough pennies left")
-    game.pennies -= move.take
+    # Find indices of heads to flip
+    penny_list = game.pennies[move.username]
+    heads_indices = [i for i, v in enumerate(penny_list) if v]
+    if len(heads_indices) < move.flip:
+        raise HTTPException(status_code=400, detail="Not enough heads to flip")
+    # Flip the first 'move.flip' heads to tails
+    for i in heads_indices[:move.flip]:
+        penny_list[i] = False
     now = datetime.now()
     game.last_active_at = now
-    if game.pennies == 0:
+    if all(not v for v in penny_list):
         game.winner = move.username
     else:
         game.turn = (game.turn + 1) % len(game.players)
