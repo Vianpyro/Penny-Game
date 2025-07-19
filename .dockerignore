@@ -1,0 +1,12 @@
+# Docs and meta
+README.md
+LICENSE
+
+# IDE and OS-specific files
+.vscode/
+.idea/
+*.DS_Store
+
+# Version control
+.git
+.gitignore
