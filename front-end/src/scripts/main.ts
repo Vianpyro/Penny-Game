@@ -2,7 +2,7 @@
 import { joinRoom, fetchGameState, changeRole } from './api'
 import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom'
 import { handleDragStart, handleDragEnd, handleDragOver, addDnDEvents, draggedItem } from './dnd'
-import { connectWebSocket, handleWSMessage } from '../websocket'
+import { connectWebSocket, handleWSMessage } from './websocket'
 
 window.addEventListener('DOMContentLoaded', () => {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
@@ -51,15 +51,12 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             const roomId = document.getElementById('gameCode')?.textContent?.trim() || ''
             if (apiUrl && roomId && username && newRole) {
-                changeRole(
-                    apiUrl,
-                    roomId,
-                    username,
-                    newRole,
-                    (roomId: string) => fetchGameState(
+                changeRole(apiUrl, roomId, username, newRole, (roomId: string) =>
+                    fetchGameState(
                         apiUrl,
                         roomId,
-                        (p: string[], h: string, s: string[], a: Record<string, boolean>) => renderPlayers(p, h, s, a, addDnDEvents),
+                        (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
+                            renderPlayers(p, h, s, a, addDnDEvents),
                         (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
                     )
                 )
@@ -177,14 +174,12 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!username) return
         if (detail.roomAction === 'create' && detail.roomId) {
             updateGameCode(detail.roomId)
-            joinRoom(
-                apiUrl,
-                detail.roomId,
-                username,
-                (roomId: string) => fetchGameState(
+            joinRoom(apiUrl, detail.roomId, username, (roomId: string) =>
+                fetchGameState(
                     apiUrl,
                     roomId,
-                    (p: string[], h: string, s: string[], a: Record<string, boolean>) => renderPlayers(p, h, s, a, addDnDEvents),
+                    (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
+                        renderPlayers(p, h, s, a, addDnDEvents),
                     (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
                 )
             )
@@ -192,19 +187,18 @@ window.addEventListener('DOMContentLoaded', () => {
             fetchGameState(
                 apiUrl,
                 detail.roomId,
-                (p: string[], h: string, s: string[], a: Record<string, boolean>) => renderPlayers(p, h, s, a, addDnDEvents),
+                (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
+                    renderPlayers(p, h, s, a, addDnDEvents),
                 (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
             )
         } else if (detail.roomAction === 'join' && detail.roomCode) {
             updateGameCode(detail.roomCode)
-            joinRoom(
-                apiUrl,
-                detail.roomCode,
-                username,
-                (roomId: string) => fetchGameState(
+            joinRoom(apiUrl, detail.roomCode, username, (roomId: string) =>
+                fetchGameState(
                     apiUrl,
                     roomId,
-                    (p: string[], h: string, s: string[], a: Record<string, boolean>) => renderPlayers(p, h, s, a, addDnDEvents),
+                    (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
+                        renderPlayers(p, h, s, a, addDnDEvents),
                     (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
                 )
             )
@@ -212,7 +206,8 @@ window.addEventListener('DOMContentLoaded', () => {
             fetchGameState(
                 apiUrl,
                 detail.roomCode,
-                (p: string[], h: string, s: string[], a: Record<string, boolean>) => renderPlayers(p, h, s, a, addDnDEvents),
+                (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
+                    renderPlayers(p, h, s, a, addDnDEvents),
                 (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
             )
         }
