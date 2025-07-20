@@ -30,7 +30,7 @@ let showModal = visible
                     </div>
                     <div id="roomCodeField" style="margin-bottom: 18px;">
                         <label for="roomCode">Code de la salle :</label>
-                        <input type="text" id="roomCode" name="roomCode" placeholder="Ex: ABC123" />
+                        <input type="text" id="roomCode" name="roomCode" placeholder="ABCD1234" />
                     </div>
                     <button type="submit" class="btn btn-primary">
                         Valider
@@ -88,7 +88,7 @@ let showModal = visible
                     }
                 }
                 // Emit custom event for parent, include createdRoomId if present
-                const detail = { username, role, roomAction, roomCode, roomId: createdRoomId }
+                const detail = { username, role, roomAction, roomCode: roomCode.toLowerCase(), roomId: createdRoomId }
                 window.dispatchEvent(new CustomEvent('joinrole', { detail }))
             })
         }
@@ -103,6 +103,7 @@ let showModal = visible
         right: 0;
         bottom: 0;
         background: rgba(0, 0, 0, 0.4);
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -152,5 +153,8 @@ let showModal = visible
     }
     .btn.btn-primary:hover {
         background: linear-gradient(45deg, #2980b9, #3498db);
+    }
+    #roomCode {
+        text-transform: uppercase;
     }
 </style>
