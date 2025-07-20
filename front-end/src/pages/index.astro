@@ -9,7 +9,7 @@ const MAX_PLAYERS = 10
 
 <Main title={SITE_NAME}>
     <div class="container">
-        <h1><span class="flip">🪙</span> Penny Game</h1>
+        <h1><span class="flip" id="coinFlip">🪙</span> Penny Game</h1>
         <p class="subtitle">Simulation Lean - Mesure du Flow et du Lead Time</p>
 
         <div class="game-setup">
@@ -41,25 +41,18 @@ const MAX_PLAYERS = 10
                                 {
                                     number: 'Manche 1',
                                     title: 'Batch de 20',
-                                    description:
-                                        "Passer TOUTES les 20 pièces d'un coup",
+                                    description: "Passer TOUTES les 20 pièces d'un coup",
                                 },
                                 {
                                     number: 'Manche 2',
                                     title: 'Batch de 1',
-                                    description:
-                                        'Passer les pièces une par une',
+                                    description: 'Passer les pièces une par une',
                                 },
                             ].map((opt, idx) => (
-                                <div
-                                    class={`round-option${idx === 0 ? ' active' : ''}`}
-                                    data-round={idx + 1}
-                                >
+                                <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1}>
                                     <div class="round-number">{opt.number}</div>
                                     <div class="round-title">{opt.title}</div>
-                                    <div class="round-description">
-                                        {opt.description}
-                                    </div>
+                                    <div class="round-description">{opt.description}</div>
                                 </div>
                             ))
                         }
@@ -78,9 +71,7 @@ const MAX_PLAYERS = 10
         </div>
 
         <div class="game-controls">
-            <button class="btn btn-primary" id="startBtn"
-                >Démarrer la Manche</button
-            >
+            <button class="btn btn-primary" id="startBtn">Démarrer la Manche</button>
             <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
         </div>
 
@@ -103,8 +94,7 @@ const MAX_PLAYERS = 10
                             'Amélioration Continue: Discuter des optimisations possibles',
                         ].map((insight) => (
                             <li>
-                                <strong>{insight.split(':')[0]}:</strong>{' '}
-                                {insight.split(':')[1]}
+                                <strong>{insight.split(':')[0]}:</strong> {insight.split(':')[1]}
                             </li>
                         ))
                     }
@@ -116,6 +106,15 @@ const MAX_PLAYERS = 10
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Flip coin logic
+        const coinFlip = document.getElementById('coinFlip')
+        if (coinFlip) {
+            coinFlip.style.cursor = 'pointer'
+            coinFlip.addEventListener('click', () => {
+                coinFlip.classList.toggle('flipped')
+                setTimeout(() => coinFlip.classList.toggle('grayscale'), 400 / 2)
+            })
+        }
         const playerButtons = document.getElementById('playerButtons')
         const roundSelector = document.getElementById('roundSelector')
         const gameBoard = document.getElementById('gameBoard')
@@ -134,9 +133,7 @@ const MAX_PLAYERS = 10
         // Get initial selected round from active option
         let selectedRound = 1 // fallback
         if (roundSelector) {
-            const activeRound = roundSelector.querySelector(
-                '.round-option.active'
-            )
+            const activeRound = roundSelector.querySelector('.round-option.active')
             if (activeRound && activeRound.dataset.round) {
                 selectedRound = parseInt(activeRound.dataset.round, 10)
             }
@@ -146,9 +143,7 @@ const MAX_PLAYERS = 10
         if (playerButtons) {
             playerButtons.querySelectorAll('button').forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    playerButtons
-                        .querySelectorAll('button')
-                        .forEach((b) => b.classList.remove('active'))
+                    playerButtons.querySelectorAll('button').forEach((b) => b.classList.remove('active'))
                     btn.classList.add('active')
                     if (btn.dataset.count) {
                         selectedPlayers = parseInt(btn.dataset.count, 10)
@@ -163,9 +158,7 @@ const MAX_PLAYERS = 10
         if (roundSelector) {
             roundSelector.querySelectorAll('.round-option').forEach((opt) => {
                 opt.addEventListener('click', () => {
-                    roundSelector
-                        .querySelectorAll('.round-option')
-                        .forEach((o) => o.classList.remove('active'))
+                    roundSelector.querySelectorAll('.round-option').forEach((o) => o.classList.remove('active'))
                     opt.classList.add('active')
                     if (opt.dataset.round) {
                         selectedRound = parseInt(opt.dataset.round, 10)
@@ -176,8 +169,7 @@ const MAX_PLAYERS = 10
         }
 
         function updateConfig() {
-            if (playersSpan)
-                playersSpan.textContent = selectedPlayers.toString()
+            if (playersSpan) playersSpan.textContent = selectedPlayers.toString()
             if (roundSpan) roundSpan.textContent = selectedRound.toString()
         }
 
