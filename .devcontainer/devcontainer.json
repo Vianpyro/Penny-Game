@@ -7,6 +7,9 @@
         },
         "vscode": {
             "extensions": [
+                "astro-build.astro-vscode",
+                "esbenp.prettier-vscode",
+                "gruntfuggly.triggertaskonsave",
                 "ms-python.black-formatter",
                 "ms-python.python",
                 "ms-python.isort"
@@ -19,6 +22,10 @@
     "otherPortsAttributes": {
         "onAutoForward": "ignore"
     },
-    "postStartCommand": "pip3 install --user -r api/requirements-dev.txt",
+    "postStartCommand": {
+        "installPythonRequirements": "pip3 install --user -r api/requirements-dev.txt",
+        "installNpmDependencies": "npm install --prefix front-end"
+    },
+    "postAttachCommand": "",
     "remoteUser": "vscode"
 }

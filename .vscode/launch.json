@@ -15,6 +15,13 @@
             ],
             "cwd": "${workspaceFolder}/api",
             "jinja": true
+        },
+        {
+            "name": "Development server",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "./node_modules/.bin/astro dev",
+            "cwd": "${workspaceFolder}/front-end",
         }
     ]
 }

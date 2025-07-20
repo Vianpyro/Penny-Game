@@ -25,6 +25,33 @@
                 }
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Prettify All Files",
+            "type": "shell",
+            "command": "npx prettier --write .",
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+                "close": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/front-end"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Prettify Current File",
+            "type": "shell",
+            "command": "npx prettier --write ${file}",
+            "presentation": {
+                "showReuseMessage": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/front-end"
+            },
+            "problemMatcher": []
         }
     ]
 }

@@ -1,0 +1,59 @@
+---
+import { SITE_NAME } from '../config.js'
+const { title } = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+        />
+        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <meta name="generator" content={Astro.generator} />
+        <title>{SITE_NAME}</title>
+    </head>
+    <body>
+        <main><slot /></main>
+        <footer>
+            <p>
+                &copy; {new Date().getFullYear()}
+                {SITE_NAME}. All rights reserved.
+            </p>
+        </footer>
+    </body>
+</html>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+        padding: 20px;
+    }
+
+    footer {
+        text-align: center;
+    }
+
+    h1 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-size: 2.5em;
+        font-weight: 700;
+    }
+
+    @media screen and (width<=850px) {
+        * {
+            margin: 0;
+            padding: 0;
+        }
+    }
+</style>

@@ -1,0 +1,179 @@
+---
+import '../styles/main.css'
+import '../styles/index.css'
+import Main from '../layouts/Main.astro'
+import { SITE_NAME } from '../config.js'
+import t from '../../locales/fr.js'
+
+const MAX_PLAYERS = 5
+---
+
+<Main title={SITE_NAME}>
+    <div class="container">
+        <h1>{t.title}</h1>
+        <p class="subtitle">{t.subtitle}</p>
+
+        <div class="game-setup">
+            <div class="setup-controls">
+                <div class="player-selector">
+                    <h3>👥 {t.playerCount}</h3>
+                    <div class="player-buttons" id="playerButtons">
+                        {
+                            Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => {
+                                const count = i + 2
+                                return (
+                                    <button
+                                        class={`player-count-btn${count === MAX_PLAYERS ? ' active' : ''}`}
+                                        data-count={count}
+                                    >
+                                        {count} {t.players}
+                                    </button>
+                                )
+                            })
+                        }
+                    </div>
+                </div>
+
+                <div class="round-selector-container">
+                    <h3>🏁 {t.roundChoice}</h3>
+                    <div class="round-selector" id="roundSelector">
+                        {
+                            t.roundOptions.map((opt, idx) => (
+                                <div
+                                    class={`round-option${idx === 0 ? ' active' : ''}`}
+                                    data-round={idx + 1}
+                                >
+                                    <div class="round-number">{opt.number}</div>
+                                    <div class="round-title">{opt.title}</div>
+                                    <div class="round-description">
+                                        {opt.description}
+                                    </div>
+                                </div>
+                            ))
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="batch-info" id="batchInfo">
+                <h3>🎮 {t.configTitle}</h3>
+                <p id="configInfo">
+                    <span id="selected-players">{MAX_PLAYERS}</span>
+                    {t.players} - {t.round}
+                    <span id="selected-round">1</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn btn-primary" id="startBtn">{t.start}</button>
+            <button class="btn btn-success" id="resetBtn">{t.reset}</button>
+        </div>
+
+        <div class="game-board players-5" id="gameBoard">
+            <!-- TODO: Dynamically generate the player zones -->
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <h2>{t.resultsTitle}</h2>
+            <div class="total-time" id="totalTime"></div>
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="insights">
+                <h3>{t.leanTitle}</h3>
+                <ul id="insightsList">
+                    {
+                        t.insights.map((insight) => (
+                            <li>
+                                <strong>{insight.split(':')[0]}:</strong>{' '}
+                                {insight.split(':')[1]}
+                            </li>
+                        ))
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</Main>
+
+<script>
+    // Configuration state is now fetched from HTML
+    document.addEventListener('DOMContentLoaded', () => {
+        const playerButtons = document.getElementById('playerButtons')
+        const roundSelector = document.getElementById('roundSelector')
+        const configInfo = document.getElementById('configInfo')
+        const gameBoard = document.getElementById('gameBoard')
+
+        // Get initial selected player count from active button
+        let selectedPlayers = 2 // fallback
+        if (playerButtons) {
+            const activeBtn = playerButtons.querySelector('button.active')
+            if (activeBtn && activeBtn.dataset.count) {
+                selectedPlayers = parseInt(activeBtn.dataset.count, 10)
+            }
+        }
+
+        // Get initial selected round from active option
+        let selectedRound = 1 // fallback
+        if (roundSelector) {
+            const activeRound = roundSelector.querySelector(
+                '.round-option.active'
+            )
+            if (activeRound && activeRound.dataset.round) {
+                selectedRound = parseInt(activeRound.dataset.round, 10)
+            }
+        }
+
+        // Get translation object from window (injected by Astro)
+        const t = window.t || {}
+
+        // Player count selection
+        if (playerButtons) {
+            playerButtons.querySelectorAll('button').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    playerButtons
+                        .querySelectorAll('button')
+                        .forEach((b) => b.classList.remove('active'))
+                    btn.classList.add('active')
+                    if (btn.dataset.count) {
+                        selectedPlayers = parseInt(btn.dataset.count, 10)
+                        updateConfig()
+                        updateBoard()
+                    }
+                })
+            })
+        }
+
+        // Round selection
+        if (roundSelector) {
+            roundSelector.querySelectorAll('.round-option').forEach((opt) => {
+                opt.addEventListener('click', () => {
+                    roundSelector
+                        .querySelectorAll('.round-option')
+                        .forEach((o) => o.classList.remove('active'))
+                    opt.classList.add('active')
+                    if (opt.dataset.round) {
+                        selectedRound = parseInt(opt.dataset.round, 10)
+                        updateConfig()
+                    }
+                })
+            })
+        }
+
+        function updateConfig() {
+            const playersSpan = document.getElementById('selected-players')
+            const roundSpan = document.getElementById('selected-round')
+            if (playersSpan)
+                playersSpan.textContent = selectedPlayers.toString()
+            if (roundSpan) roundSpan.textContent = selectedRound.toString()
+        }
+
+        function updateBoard() {
+            if (!gameBoard) return
+            gameBoard.className = `game-board players-${selectedPlayers}`
+        }
+
+        // Initial config
+        updateConfig()
+        updateBoard()
+    })
+</script>

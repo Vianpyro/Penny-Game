@@ -29,6 +29,7 @@ rooms: Dict[str, List[WebSocket]] = {}
 # Penny Game state
 from datetime import datetime
 
+
 class PennyGame(BaseModel):
     room_id: str
     players: List[str]
@@ -40,15 +41,19 @@ class PennyGame(BaseModel):
     created_at: datetime
     last_active_at: datetime
 
+
 # In-memory games
 games: Dict[str, PennyGame] = {}
+
 
 # REST endpoints for Penny Game
 @app.post("/game/create")
 def create_game():
     room_id = str(uuid4())[:8]
     now = datetime.now()
-    games[room_id] = PennyGame(room_id=room_id, players=[], pennies={}, created_at=now, last_active_at=now)
+    games[room_id] = PennyGame(
+        room_id=room_id, players=[], pennies={}, created_at=now, last_active_at=now
+    )
     return {"room_id": room_id}
 
 
@@ -70,20 +75,41 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
     game.last_active_at = now
     if spectator:
         game.spectators.append(username)
-        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "pennies": game.pennies}
+        return {
+            "success": True,
+            "players": game.players,
+            "spectators": game.spectators,
+            "host": game.host,
+            "pennies": game.pennies,
+        }
     if len(game.players) >= MAX_PLAYERS:
         # If game is full, allow joining as spectator
         game.spectators.append(username)
-        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "note": "Joined as spectator (game full)", "pennies": game.pennies}
+        return {
+            "success": True,
+            "players": game.players,
+            "spectators": game.spectators,
+            "host": game.host,
+            "note": "Joined as spectator (game full)",
+            "pennies": game.pennies,
+        }
     game.players.append(username)
     game.pennies[username] = [True] * 20  # All heads
     if game.host is None:
         game.host = username
-    return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "pennies": game.pennies}
+    return {
+        "success": True,
+        "players": game.players,
+        "spectators": game.spectators,
+        "host": game.host,
+        "pennies": game.pennies,
+    }
+
 
 class MoveRequest(BaseModel):
     username: str
     flip: int
+
 
 @app.post("/game/move/{room_id}")
 def make_move(room_id: str, move: MoveRequest):
@@ -104,7 +130,7 @@ def make_move(room_id: str, move: MoveRequest):
     if len(heads_indices) < move.flip:
         raise HTTPException(status_code=400, detail="Not enough heads to flip")
     # Flip the first 'move.flip' heads to tails
-    for i in heads_indices[:move.flip]:
+    for i in heads_indices[: move.flip]:
         penny_list[i] = False
     now = datetime.now()
     game.last_active_at = now
@@ -113,6 +139,7 @@ def make_move(room_id: str, move: MoveRequest):
     else:
         game.turn = (game.turn + 1) % len(game.players)
     return game.model_dump()
+
 
 @app.get("/game/state/{room_id}")
 def get_game_state(room_id: str):
@@ -166,6 +193,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
         await broadcast(room_id, f"🔴 {username} left the room.")
         if not rooms[room_id]:
             del rooms[room_id]  # Cleanup empty room
+
 
 async def broadcast(room_id: str, message: str):
     for client in rooms.get(room_id, []):

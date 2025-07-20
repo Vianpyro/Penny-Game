@@ -1,11 +1,18 @@
 {
     "overrides": [
         {
-            "files": ["*.yml", "*.yaml", "*.md"],
+            "files": [
+                "*.yml",
+                "*.yaml",
+                "*.md"
+            ],
             "options": {
                 "tabWidth": 2
             }
         }
+    ],
+    "plugins": [
+        "prettier-plugin-astro"
     ],
     "printWidth": 80,
     "semi": false,
