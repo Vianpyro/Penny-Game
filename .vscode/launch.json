@@ -14,7 +14,7 @@
                 "--reload"
             ],
             "cwd": "${workspaceFolder}/api",
-            "jinja": true
+            "jinja": true,
         },
         {
             "name": "Development server",
@@ -22,6 +22,15 @@
             "request": "launch",
             "command": "./node_modules/.bin/astro dev",
             "cwd": "${workspaceFolder}/front-end",
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Start all servers",
+            "configurations": [
+                "Python Debugger: FastAPI",
+                "Development server"
+            ]
         }
     ]
 }
