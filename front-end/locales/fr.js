@@ -1,5 +1,5 @@
 const t = {
-    title: '🪙 Penny Game',
+    title: 'Penny Game',
     subtitle: 'Simulation Lean - Mesure du Flow et du Lead Time',
     players: 'Joueurs',
     playerCount: 'Nombre de Joueurs',
@@ -21,8 +21,8 @@ const t = {
     configInfo: '5 joueurs - Batch de 1 (passage une par une)',
     start: 'Démarrer la Manche',
     reset: 'Réinitialiser',
-    resultsTitle: '📊 Résultats de la Simulation',
-    leanTitle: '💡 Enseignements Lean',
+    resultsTitle: 'Résultats de la Simulation',
+    leanTitle: 'Enseignements Lean',
     insights: [
         "Batch Size: Observer l'impact de la taille des lots sur le temps de cycle",
         "Flow: Analyser les goulots d'étranglement et les temps d'attente",

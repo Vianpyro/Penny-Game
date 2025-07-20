@@ -5,12 +5,12 @@ import Main from '../layouts/Main.astro'
 import { SITE_NAME } from '../config.js'
 import t from '../../locales/fr.js'
 
-const MAX_PLAYERS = 5
+const MAX_PLAYERS = 10
 ---
 
 <Main title={SITE_NAME}>
     <div class="container">
-        <h1>{t.title}</h1>
+        <h1><span class="flip">🪙</span> {t.title}</h1>
         <p class="subtitle">{t.subtitle}</p>
 
         <div class="game-setup">
@@ -75,11 +75,11 @@ const MAX_PLAYERS = 5
         </div>
 
         <div class="results" id="results" style="display: none;">
-            <h2>{t.resultsTitle}</h2>
+            <h2>📊 {t.resultsTitle}</h2>
             <div class="total-time" id="totalTime"></div>
             <div class="stats-grid" id="statsGrid"></div>
             <div class="insights">
-                <h3>{t.leanTitle}</h3>
+                <h3>💡 {t.leanTitle}</h3>
                 <ul id="insightsList">
                     {
                         t.insights.map((insight) => (
