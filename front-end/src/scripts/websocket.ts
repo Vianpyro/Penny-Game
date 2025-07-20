@@ -1,6 +1,6 @@
 // WebSocket logic for Penny Game
-import { renderPlayers, renderSpectators } from './scripts/dom'
-import { addDnDEvents } from './scripts/dnd'
+import { renderPlayers, renderSpectators } from './dom'
+import { addDnDEvents } from './dnd'
 
 export function handleWSMessage(data: any) {
     try {

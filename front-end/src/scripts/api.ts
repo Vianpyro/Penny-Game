@@ -36,7 +36,13 @@ export function fetchGameState(apiUrl: string, roomId: string, renderPlayers: an
         .catch(console.error)
 }
 
-export function changeRole(apiUrl: string, roomId: string, username: string, newRole: string, fetchGameState: (roomId: string) => void) {
+export function changeRole(
+    apiUrl: string,
+    roomId: string,
+    username: string,
+    newRole: string,
+    fetchGameState: (roomId: string) => void
+) {
     fetch(`${apiUrl}/game/change_role/${roomId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

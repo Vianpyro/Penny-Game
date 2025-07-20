@@ -1,8 +1,8 @@
 // Main entry point for Penny Game frontend
-import { joinRoom, fetchGameState, changeRole } from './scripts/api'
-import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './scripts/dom'
-import { handleDragStart, handleDragEnd, handleDragOver, addDnDEvents, draggedItem } from './scripts/dnd'
-import { connectWebSocket, handleWSMessage } from './websocket'
+import { joinRoom, fetchGameState, changeRole } from './api'
+import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom'
+import { handleDragStart, handleDragEnd, handleDragOver, addDnDEvents, draggedItem } from './dnd'
+import { connectWebSocket, handleWSMessage } from '../websocket'
 
 window.addEventListener('DOMContentLoaded', () => {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
