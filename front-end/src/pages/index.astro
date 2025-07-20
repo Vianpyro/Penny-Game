@@ -37,21 +37,7 @@ let showJoinRole = true
                     <div class="player-list">
                         <h3>👋 Liste des Joueurs</h3>
                         <ul class="user-list" id="playerList">
-                            <li class="online" title="En ligne" draggable="true">
-                                <span class="status-indicator">🟢</span> Joueur 1
-                            </li>
-                            <li class="offline" title="Hors ligne" draggable="true">
-                                <span class="status-indicator">🔴</span> Joueur 2
-                            </li>
-                            <li class="online" title="En ligne" draggable="true">
-                                <span class="status-indicator">🟢</span> Joueur 3
-                            </li>
-                            <li class="online" title="En ligne" draggable="true">
-                                <span class="status-indicator">🟢</span> Joueur 4
-                            </li>
-                            <li class="waiting" title="En attente" draggable="true">
-                                <span class="status-indicator">⏳</span> Waiting for more players
-                            </li>
+                            <!-- Player list will be rendered by JS -->
                         </ul>
                     </div>
                     <div class="spectator-list">
@@ -172,8 +158,115 @@ let showJoinRole = true
             })
                 .then((response) => {
                     if (!response.ok) throw new Error('Erreur lors de la connexion à la salle')
+                    // After joining, fetch actual state
+                    fetchGameState(roomId)
                 })
                 .catch(console.error)
+        }
+
+        function renderPlayers(players, host, spectators, activity) {
+            const playerList = document.getElementById('playerList')
+            if (!playerList) return
+            playerList.innerHTML = ''
+            // Filter out host and spectators from players
+            const filteredPlayers = (players || []).filter((p) => p !== host && !(spectators || []).includes(p))
+            if (!filteredPlayers.length) {
+                const li = document.createElement('li')
+                li.className = 'waiting'
+                li.title = 'En attente'
+                // Do NOT set draggable for info/status
+                li.innerHTML = '<span class="status-indicator">⏳</span> En attente de joueurs'
+                playerList.appendChild(li)
+                // No drag events for status
+                return
+            }
+            filteredPlayers.forEach((player) => {
+                const li = document.createElement('li')
+                const isOnline = activity && activity[player]
+                li.className = isOnline ? 'online' : 'offline'
+                li.title = isOnline ? 'En ligne' : 'Hors ligne'
+                li.setAttribute('draggable', 'true')
+                const icon = isOnline ? '🟢' : '⚪'
+                li.innerHTML = `<span class="status-indicator">${icon}</span> ${player}`
+                playerList.appendChild(li)
+            })
+            // Re-apply drag events after rendering
+            addDnDEvents(playerList)
+        }
+
+        function renderSpectators(spectators, host, activity) {
+            const spectatorList = document.getElementById('spectatorList')
+            if (!spectatorList) return
+            spectatorList.innerHTML = ''
+            // Always show host first with crown icon
+            if (host) {
+                const li = document.createElement('li')
+                const isOnline = activity && activity[host]
+                li.className = 'spectator host'
+                li.title = 'Host'
+                li.innerHTML = `<span class="status-indicator">👑</span> ${host}`
+                spectatorList.appendChild(li)
+            }
+            // Show other spectators (excluding host)
+            ;(spectators || [])
+                .filter((s) => s !== host)
+                .forEach((spectator) => {
+                    const li = document.createElement('li')
+                    const isOnline = activity && activity[spectator]
+                    li.className = 'spectator'
+                    li.title = isOnline ? 'Spectateur en ligne' : 'Spectateur hors ligne'
+                    li.setAttribute('draggable', 'true')
+                    const icon = isOnline ? '👀' : '🙈'
+                    li.innerHTML = `<span class="status-indicator">${icon}</span> ${spectator}`
+                    spectatorList.appendChild(li)
+                })
+            // Re-apply drag events after rendering
+            addDnDEvents(spectatorList)
+        }
+
+        function fetchGameState(roomId) {
+            if (!apiUrl || !roomId) return
+            fetch(`${apiUrl}/game/state/${roomId}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    // Fallback: if no activity info, assume all users online
+                    const activity = {}
+                    if (data.players)
+                        data.players.forEach((p) => {
+                            activity[p] = true
+                        })
+                    if (data.spectators)
+                        data.spectators.forEach((s) => {
+                            activity[s] = true
+                        })
+                    renderPlayers(data.players, data.host, data.spectators, activity)
+                    renderSpectators(data.spectators, data.host, activity)
+                })
+                .catch(console.error)
+        }
+
+        function handleWSMessage(data) {
+            try {
+                // Detect host leaving
+                if (typeof data === 'string' && data.includes('🔴')) {
+                    if (data.includes('left the room.') && data.includes('Host')) {
+                        alert("La salle a été fermée car l'hôte a quitté.")
+                        window.location.reload()
+                        return
+                    }
+                }
+                const msg = JSON.parse(data)
+                if (msg.type === 'activity') {
+                    renderPlayers(msg.players, msg.host, msg.spectators, msg.activity)
+                    renderSpectators(msg.spectators, msg.host, msg.activity)
+                } else {
+                    renderPlayers(msg.players, msg.host, msg.spectators, null)
+                    renderSpectators(msg.spectators, msg.host, null)
+                }
+            } catch {
+                // fallback: log text
+                console.log('WS:', data)
+            }
         }
 
         function connectWebSocket(roomId: string, username: string) {
@@ -181,9 +274,28 @@ let showJoinRole = true
             const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}`
             const ws = new WebSocket(wsUrl)
             ws.onopen = () => console.log('WebSocket connecté:', wsUrl)
-            ws.onmessage = (event) => console.log('WS:', event.data)
-            ws.onclose = () => console.log('WebSocket déconnecté')
-            ws.onerror = (err) => console.error('WebSocket erreur:', err)
+            ws.onmessage = (event) => handleWSMessage(event.data)
+            ws.onclose = (event) => {
+                console.log('WebSocket déconnecté', event)
+                // If close was due to invalid room (code 4001), show alert and keep modal
+                if (event && event.code === 4001) {
+                    alert('Code de salle invalide ou salle inexistante. Veuillez réessayer.')
+                    // Show join modal again
+                    const joinRoleModal = document.getElementById('joinRoleModal')
+                    if (joinRoleModal) {
+                        joinRoleModal.style.display = 'flex'
+                    }
+                }
+            }
+            ws.onerror = (err) => {
+                console.error('WebSocket erreur:', err)
+                alert('Impossible de se connecter à la salle. Veuillez vérifier le code et réessayer.')
+                // Show join modal again
+                const joinRoleModal = document.getElementById('joinRoleModal')
+                if (joinRoleModal) {
+                    joinRoleModal.style.display = 'flex'
+                }
+            }
             ;(window as any).pennyGameWS = ws
         }
 
@@ -195,10 +307,12 @@ let showJoinRole = true
                 updateGameCode(detail.roomId)
                 joinRoom(detail.roomId, username)
                 connectWebSocket(detail.roomId, username)
+                fetchGameState(detail.roomId)
             } else if (detail.roomAction === 'join' && detail.roomCode) {
                 updateGameCode(detail.roomCode)
                 joinRoom(detail.roomCode, username)
                 connectWebSocket(detail.roomCode, username)
+                fetchGameState(detail.roomCode)
             }
         })
 
@@ -254,7 +368,32 @@ let showJoinRole = true
         function handleDrop(e: DragEvent, targetList: HTMLElement) {
             e.preventDefault()
             if (draggedItem && targetList && draggedItem.parentNode !== targetList) {
-                targetList.appendChild(draggedItem)
+                const username = (draggedItem.textContent || '').replace(/^.*?\s/, '').trim()
+                let newRole = ''
+                if (targetList.id === 'playerList') {
+                    newRole = 'player'
+                } else if (targetList.id === 'spectatorList') {
+                    newRole = 'spectator'
+                }
+                // Get current room code from UI
+                const roomId = document.getElementById('gameCode')?.textContent?.trim() || ''
+                if (apiUrl && roomId && username && newRole) {
+                    fetch(`${apiUrl}/game/change_role/${roomId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, role: newRole }),
+                    })
+                        .then((response) => {
+                            if (!response.ok) throw new Error('Erreur lors du changement de rôle')
+                            return response.json()
+                        })
+                        .then((data) => {
+                            fetchGameState(roomId)
+                        })
+                        .catch((err) => {
+                            alert(err.message || 'Impossible de changer le rôle')
+                        })
+                }
             }
         }
 
@@ -267,34 +406,40 @@ let showJoinRole = true
             })
         }
 
-        addDnDEvents(playerList)
+        // Always re-apply drop zone events after rendering
+        function setupDropZones() {
+            const playerList = document.getElementById('playerList')
+            const spectatorList = document.getElementById('spectatorList')
+            if (spectatorList) {
+                spectatorList.addEventListener('dragover', (e) => {
+                    handleDragOver(e as DragEvent)
+                    spectatorList.classList.add('drag-over')
+                })
+                spectatorList.addEventListener('dragleave', () => {
+                    spectatorList.classList.remove('drag-over')
+                })
+                spectatorList.addEventListener('drop', (e) => {
+                    handleDrop(e as DragEvent, spectatorList)
+                    spectatorList.classList.remove('drag-over')
+                })
+            }
+            if (playerList) {
+                playerList.addEventListener('dragover', (e) => {
+                    handleDragOver(e as DragEvent)
+                    playerList.classList.add('drag-over')
+                })
+                playerList.addEventListener('dragleave', () => {
+                    playerList.classList.remove('drag-over')
+                })
+                playerList.addEventListener('drop', (e) => {
+                    handleDrop(e as DragEvent, playerList)
+                    playerList.classList.remove('drag-over')
+                })
+            }
+        }
 
-        if (spectatorList) {
-            spectatorList.addEventListener('dragover', (e) => {
-                handleDragOver(e as DragEvent)
-                spectatorList.classList.add('drag-over')
-            })
-            spectatorList.addEventListener('dragleave', () => {
-                spectatorList.classList.remove('drag-over')
-            })
-            spectatorList.addEventListener('drop', (e) => {
-                handleDrop(e as DragEvent, spectatorList)
-                spectatorList.classList.remove('drag-over')
-            })
-        }
-        if (playerList) {
-            playerList.addEventListener('dragover', (e) => {
-                handleDragOver(e as DragEvent)
-                playerList.classList.add('drag-over')
-            })
-            playerList.addEventListener('dragleave', () => {
-                playerList.classList.remove('drag-over')
-            })
-            playerList.addEventListener('drop', (e) => {
-                handleDrop(e as DragEvent, playerList)
-                playerList.classList.remove('drag-over')
-            })
-        }
+        // Call setupDropZones after each render
+        setupDropZones()
 
         // Flip coin logic
         const coinFlip = document.getElementById('coinFlip')

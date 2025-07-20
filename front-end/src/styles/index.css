@@ -318,9 +318,14 @@
     border-width: 2px;
     border-color: #ecf0f1;
     border-radius: 15px;
-    padding: 5px 10px;
     flex: 1 1 0;
     min-width: fit-content;
+    padding: 5px 10px;
+    user-select: none;
+}
+
+.user-list > li[draggable] {
+    cursor: pointer;
 }
 
 .user-list > li.offline {

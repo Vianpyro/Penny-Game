@@ -12,7 +12,7 @@ let showModal = visible
                 <form id="joinRoleForm" autocomplete="off">
                     <label for="username">Votre nom :</label>
                     <input type="text" id="username" name="username" required placeholder="Entrez votre nom" />
-                    <div class="role-choice">
+                    <div class="role-choice" id="roleChoice">
                         <label>
                             <input type="radio" name="role" value="player" checked /> Joueur
                         </label>
@@ -52,15 +52,18 @@ let showModal = visible
 
         if (form) {
             // Show/hide room code field
+            const roleChoice = document.getElementById('roleChoice')
             Array.from(form.querySelectorAll('[name=roomAction]')).forEach((radio) => {
                 radio.addEventListener('change', () => {
                     const selected = form.querySelector('[name=roomAction]:checked')
                     if (selected && selected.value === 'join') {
                         roomCodeField.style.display = ''
                         title.textContent = 'Rejoindre une partie'
+                        if (roleChoice) roleChoice.style.display = ''
                     } else {
                         roomCodeField.style.display = 'none'
                         title.textContent = 'Créer une partie'
+                        if (roleChoice) roleChoice.style.display = 'none'
                     }
                 })
             })
@@ -69,12 +72,13 @@ let showModal = visible
                 // Hide modal
                 if (modal) modal.style.display = 'none'
                 const username = form.username.value.trim()
-                const role = form.role.value
+                let role = 'player'
                 const roomAction = form.roomAction.value
                 const roomCode = form.roomCode.value.trim()
                 if (!username) return
                 let createdRoomId = ''
                 if (roomAction === 'create') {
+                    role = 'host'
                     try {
                         const res = await fetch(`${apiUrl}/game/create`, {
                             method: 'POST',
@@ -86,6 +90,9 @@ let showModal = visible
                     } catch (err) {
                         alert('Erreur lors de la création de la salle: ' + err.message)
                     }
+                } else {
+                    // Only for join, use selected role
+                    role = form.role.value
                 }
                 // Emit custom event for parent, include createdRoomId if present
                 const detail = { username, role, roomAction, roomCode: roomCode.toLowerCase(), roomId: createdRoomId }

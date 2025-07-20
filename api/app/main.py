@@ -1,3 +1,7 @@
+# Endpoint to change role (player <-> spectator)
+from fastapi import Body
+
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import Dict, List
 from uuid import uuid4
@@ -6,6 +10,9 @@ from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+import json
+from datetime import datetime
+import asyncio
 
 app = FastAPI()
 
@@ -25,9 +32,8 @@ app.add_middleware(
 
 # Global in-memory state (for MVP only)
 rooms: Dict[str, List[WebSocket]] = {}
-
-# Penny Game state
-from datetime import datetime
+# Track online users per room
+online_users: Dict[str, set] = {}
 
 
 class PennyGame(BaseModel):
@@ -183,6 +189,55 @@ def cleanup():
     return {"removed_games": removed_games}
 
 
+class ChangeRoleRequest(BaseModel):
+    username: str
+    role: str
+
+
+@app.post("/game/change_role/{room_id}")
+def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
+    game = games.get(room_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    username = req.username
+    new_role = req.role
+    if username == game.host:
+        raise HTTPException(status_code=400, detail="Host role cannot be changed")
+    if new_role == "player":
+        # Move from spectators to players
+        if username in game.spectators:
+            if len(game.players) >= MAX_PLAYERS:
+                raise HTTPException(status_code=400, detail="Player limit reached")
+            game.spectators.remove(username)
+            game.players.append(username)
+            game.pennies[username] = [True] * 20
+        else:
+            raise HTTPException(status_code=400, detail="User is not a spectator")
+    elif new_role == "spectator":
+        # Move from players to spectators
+        if username in game.players:
+            game.players.remove(username)
+            game.spectators.append(username)
+            game.pennies.pop(username, None)
+        else:
+            raise HTTPException(status_code=400, detail="User is not a player")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    # Update last active
+    game.last_active_at = datetime.now()
+    # Broadcast activity update to all clients in the room
+
+    # Use asyncio.run to execute broadcast_activity from sync context
+    asyncio.run(broadcast_activity(room_id))
+    return {
+        "success": True,
+        "players": game.players,
+        "spectators": game.spectators,
+        "host": game.host,
+        "pennies": game.pennies,
+    }
+
+
 @app.websocket("/ws/{room_id}/{username}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
     total_connections = sum(len(clients) for clients in rooms.values())
@@ -197,7 +252,10 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
         return
 
     rooms[room_id].append(websocket)
-    await broadcast(room_id, f"🔵 {username} joined the room.")
+    if room_id not in online_users:
+        online_users[room_id] = set()
+    online_users[room_id].add(username)
+    await broadcast_activity(room_id)
 
     try:
         while True:
@@ -205,11 +263,47 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
             await broadcast(room_id, f"{username}: {data}")
     except WebSocketDisconnect:
         rooms[room_id].remove(websocket)
-        await broadcast(room_id, f"🔴 {username} left the room.")
+        if room_id in online_users and username in online_users[room_id]:
+            online_users[room_id].remove(username)
+        # If host leaves, delete room/game and notify others
+        game = games.get(room_id)
+        if game and username == game.host:
+            # Notify all clients before deleting
+            await broadcast(room_id, f"🔴 Host {username} left the room.")
+            # Remove all connections
+            for ws in rooms.get(room_id, []):
+                await ws.close(code=4002, reason="Host left, room closed")
+            games.pop(room_id, None)
+            rooms.pop(room_id, None)
+            online_users.pop(room_id, None)
+            return
+        await broadcast_activity(room_id)
         if not rooms[room_id]:
             del rooms[room_id]  # Cleanup empty room
+            online_users.pop(room_id, None)
 
 
 async def broadcast(room_id: str, message: str):
     for client in rooms.get(room_id, []):
         await client.send_text(message)
+
+
+# Broadcast structured activity state
+async def broadcast_activity(room_id: str):
+    game = games.get(room_id)
+    if not game:
+        return
+    # Compose activity state for all users
+    users = set(game.players + game.spectators)
+    host = game.host
+    online = online_users.get(room_id, set())
+    activity = {user: (user in online) for user in users}
+    msg = {
+        "type": "activity",
+        "players": game.players,
+        "spectators": game.spectators,
+        "host": host,
+        "activity": activity,
+    }
+    for client in rooms.get(room_id, []):
+        await client.send_text(json.dumps(msg))
