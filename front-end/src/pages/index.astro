@@ -128,7 +128,9 @@ let showJoinRole = true
         </div>
 
         <div class="game-controls">
-            <button class="btn btn-primary" id="startBtn">Démarrer la Manche</button>
+            <button class="btn btn-primary" id="startBtn"
+                >Démarrer avec <span id="playerCount">{MAX_PLAYERS}</span> joueurs</button
+            >
             <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
         </div>
 
@@ -242,32 +244,30 @@ let showJoinRole = true
         addDnDEvents(playerList)
 
         if (spectatorList) {
-            spectatorList.addEventListener('dragover', handleDragOver)
-            spectatorList.addEventListener('drop', (e) => handleDrop(e as DragEvent, spectatorList))
+            spectatorList.addEventListener('dragover', (e) => {
+                handleDragOver(e as DragEvent)
+                spectatorList.classList.add('drag-over')
+            })
+            spectatorList.addEventListener('dragleave', () => {
+                spectatorList.classList.remove('drag-over')
+            })
+            spectatorList.addEventListener('drop', (e) => {
+                handleDrop(e as DragEvent, spectatorList)
+                spectatorList.classList.remove('drag-over')
+            })
         }
         if (playerList) {
-            playerList.addEventListener('dragover', handleDragOver)
-            playerList.addEventListener('drop', (e) => handleDrop(e as DragEvent, playerList))
-        }
-
-        // Générer un nombre aléatoire de spectateurs (1 à 5)
-        if (spectatorList) {
-            const numSpectators = Math.floor(Math.random() * 5) + 1
-            spectatorList.innerHTML = ''
-            if (numSpectators <= 3) {
-                for (let i = 1; i <= numSpectators; i++) {
-                    const li = document.createElement('li')
-                    li.innerHTML = `<span>👻</span> Spectateur ${i}`
-                    li.setAttribute('draggable', 'true')
-                    li.addEventListener('dragstart', handleDragStart)
-                    li.addEventListener('dragend', handleDragEnd)
-                    spectatorList.appendChild(li)
-                }
-            } else {
-                const li = document.createElement('li')
-                li.innerHTML = `<span>👻👻</span> ${numSpectators} spectateurs`
-                spectatorList.appendChild(li)
-            }
+            playerList.addEventListener('dragover', (e) => {
+                handleDragOver(e as DragEvent)
+                playerList.classList.add('drag-over')
+            })
+            playerList.addEventListener('dragleave', () => {
+                playerList.classList.remove('drag-over')
+            })
+            playerList.addEventListener('drop', (e) => {
+                handleDrop(e as DragEvent, playerList)
+                playerList.classList.remove('drag-over')
+            })
         }
 
         // Flip coin logic
@@ -357,5 +357,20 @@ let showJoinRole = true
 <style>
     #gameCode {
         text-transform: uppercase;
+    }
+    .user-list {
+        min-height: 35px;
+        border: 2px dotted transparent;
+        border-radius: 12px;
+        background: transparent;
+        margin-bottom: 12px;
+        transition:
+            background 0.2s,
+            border-color 0.2s;
+        gap: 6px;
+    }
+    .user-list.drag-over {
+        background: rgba(0, 128, 128, 0.18);
+        border-color: #008080;
     }
 </style>
