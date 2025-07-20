@@ -1,28 +1,20 @@
 ---
 import { SITE_NAME } from '../config.js'
-const { title } = Astro.props
+import Footer from '../components/Footer.astro'
 ---
 
 <!doctype html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
         <link rel="icon" type="image/svg+xml" href="favicon.svg" />
         <meta name="generator" content={Astro.generator} />
         <title>{SITE_NAME}</title>
     </head>
     <body>
         <main><slot /></main>
-        <footer>
-            <p>
-                &copy; {new Date().getFullYear()}
-                {SITE_NAME}. All rights reserved.
-            </p>
-        </footer>
+        <Footer />
     </body>
 </html>
 
@@ -34,9 +26,10 @@ const { title } = Astro.props
     body {
         font-family: sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
+        height: max(100svh, 100%);
         color: #333;
         padding: 20px;
+        margin: 0;
     }
 
     footer {
@@ -48,6 +41,7 @@ const { title } = Astro.props
         margin-bottom: 10px;
         font-size: 2.5em;
         font-weight: 700;
+        margin-block-start: 0;
     }
 
     @media screen and (width<=850px) {

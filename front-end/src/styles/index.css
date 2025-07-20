@@ -76,7 +76,6 @@
 .game-board {
     display: grid;
     gap: 20px;
-    margin-bottom: 30px;
 }
 
 .game-board.players-2 {
@@ -99,7 +98,6 @@
     display: flex;
     gap: 20px;
     justify-content: center;
-    margin-bottom: 30px;
 }
 
 .game-setup {
@@ -217,8 +215,7 @@
     margin-bottom: 15px;
 }
 
-.player-selector,
-.round-selector-container {
+.setup-controls > div {
     background: rgba(255, 255, 255, 0.9);
     border: 2px solid #ecf0f1;
     border-radius: 10px;
@@ -309,8 +306,59 @@
     margin-bottom: 10px;
 }
 
+.player-selector {
+    grid-area: player-selector;
+}
+
+.rules {
+    grid-area: rules;
+}
+
+.round-selector-container {
+    grid-area: round-selector-container;
+}
+
+.user-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+    padding: 0;
+    align-items: stretch;
+    justify-items: stretch;
+}
+
+.user-list > li {
+    border-width: 2px;
+    border-color: #ecf0f1;
+    border-radius: 15px;
+    padding: 5px 10px;
+    flex: 1 1 0;
+    min-width: fit-content;
+}
+
+.user-list > li.offline {
+    color: #888;
+    border-style: dashed;
+}
+
+.user-list > li.online,
+.spectator-list > .user-list > li {
+    border-style: solid;
+    color: inherit;
+}
+
+.user-list > li.waiting {
+    color: #aaa;
+    border-style: dotted;
+}
+
 .setup-controls {
     display: grid;
+    grid-template-areas:
+        'player-selector round-selector-container'
+        'game-info rules';
+    grid-template-columns: 1fr 1fr;
     gap: 30px;
     grid-template-columns: 1fr 1fr;
     margin-bottom: 30px;
@@ -370,13 +418,18 @@
 
 h1 {
     text-align: center;
-}
-
-h3 {
     margin-block-start: 0;
 }
 
-@media screen and width850px {
+.setup-controls > div > h3:first-child {
+    margin-block-start: 0;
+}
+
+p {
+    margin-block-end: 0;
+}
+
+@media screen and (width<=850px) {
     .container {
         border-radius: 0;
         padding: 0;
@@ -404,6 +457,11 @@ h3 {
 
     .setup-controls {
         grid-template-columns: 1fr;
+        grid-template-areas:
+            'player-selector'
+            'round-selector-container'
+            'game-info'
+            'rules';
     }
 
     .setup-controls > * {
