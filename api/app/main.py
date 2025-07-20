@@ -67,12 +67,26 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     username = join.username
+    if username == game.host:
+        raise HTTPException(
+            status_code=400, detail="Host cannot join as player or spectator"
+        )
     if username in game.players or username in game.spectators:
         raise HTTPException(status_code=400, detail="User already joined")
     if room_id not in rooms:
         rooms[room_id] = []
     now = datetime.now()
     game.last_active_at = now
+    if game.host is None:
+        game.host = username
+        return {
+            "success": True,
+            "players": game.players,
+            "spectators": game.spectators,
+            "host": game.host,
+            "pennies": game.pennies,
+            "note": "Host created the room and does not play.",
+        }
     if spectator:
         game.spectators.append(username)
         return {
@@ -95,8 +109,6 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
         }
     game.players.append(username)
     game.pennies[username] = [True] * 20  # All heads
-    if game.host is None:
-        game.host = username
     return {
         "success": True,
         "players": game.players,
@@ -120,6 +132,9 @@ def make_move(room_id: str, move: MoveRequest):
         raise HTTPException(status_code=400, detail="Game over")
     if len(game.players) < 2:
         raise HTTPException(status_code=400, detail="Need 2 players")
+    # Host cannot play
+    if move.username == game.host:
+        raise HTTPException(status_code=400, detail="Host does not play")
     if game.players[game.turn] != move.username:
         raise HTTPException(status_code=400, detail="Not your turn")
     if move.flip not in [1, 2, 3]:

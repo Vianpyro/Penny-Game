@@ -1,0 +1,156 @@
+---
+const { visible = true } = Astro.props
+const apiUrl = import.meta.env.PUBLIC_API_URL
+let showModal = visible
+---
+
+{
+    showModal && (
+        <div class="join-role-modal" id="joinRoleModal" data-api-url={apiUrl}>
+            <div class="join-role-content">
+                <h2 id="join-role-title">Rejoindre une partie</h2>
+                <form id="joinRoleForm" autocomplete="off">
+                    <label for="username">Votre nom :</label>
+                    <input type="text" id="username" name="username" required placeholder="Entrez votre nom" />
+                    <div class="role-choice">
+                        <label>
+                            <input type="radio" name="role" value="player" checked /> Joueur
+                        </label>
+                        <label>
+                            <input type="radio" name="role" value="spectator" /> Spectateur
+                        </label>
+                    </div>
+                    <div class="room-choice">
+                        <label>
+                            <input type="radio" name="roomAction" value="create" /> Créer une salle
+                        </label>
+                        <label>
+                            <input type="radio" name="roomAction" value="join" checked /> Rejoindre une salle
+                        </label>
+                    </div>
+                    <div id="roomCodeField" style="margin-bottom: 18px;">
+                        <label for="roomCode">Code de la salle :</label>
+                        <input type="text" id="roomCode" name="roomCode" placeholder="Ex: ABC123" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        Valider
+                    </button>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('joinRoleForm')
+        const roomCodeField = document.getElementById('roomCodeField')
+        const modal = document.getElementById('joinRoleModal')
+        const title = document.getElementById('join-role-title')
+        // Get apiUrl from data attribute
+        const apiUrl = modal ? modal.getAttribute('data-api-url') : ''
+
+        if (form) {
+            // Show/hide room code field
+            Array.from(form.querySelectorAll('[name=roomAction]')).forEach((radio) => {
+                radio.addEventListener('change', () => {
+                    const selected = form.querySelector('[name=roomAction]:checked')
+                    if (selected && selected.value === 'join') {
+                        roomCodeField.style.display = ''
+                        title.textContent = 'Rejoindre une partie'
+                    } else {
+                        roomCodeField.style.display = 'none'
+                        title.textContent = 'Créer une partie'
+                    }
+                })
+            })
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault()
+                // Hide modal
+                if (modal) modal.style.display = 'none'
+                const username = form.username.value.trim()
+                const role = form.role.value
+                const roomAction = form.roomAction.value
+                const roomCode = form.roomCode.value.trim()
+                if (!username) return
+                let createdRoomId = ''
+                if (roomAction === 'create') {
+                    try {
+                        const res = await fetch(`${apiUrl}/game/create`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                        })
+                        const data = await res.json()
+                        createdRoomId = data.room_id
+                        console.log('Room created:', createdRoomId)
+                    } catch (err) {
+                        alert('Erreur lors de la création de la salle: ' + err.message)
+                    }
+                }
+                // Emit custom event for parent, include createdRoomId if present
+                const detail = { username, role, roomAction, roomCode, roomId: createdRoomId }
+                window.dispatchEvent(new CustomEvent('joinrole', { detail }))
+            })
+        }
+    })
+</script>
+
+<style>
+    .join-role-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .join-role-content {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        padding: 32px 24px;
+        min-width: 320px;
+        text-align: center;
+    }
+    .join-role-content h2 {
+        margin-bottom: 18px;
+    }
+    .join-role-content label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: 500;
+    }
+    .join-role-content input[type='text'] {
+        width: 80%;
+        padding: 8px;
+        margin-bottom: 18px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 1em;
+    }
+    .role-choice,
+    .room-choice {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        margin-bottom: 18px;
+    }
+    .btn.btn-primary {
+        background: linear-gradient(45deg, #3498db, #2980b9);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 28px;
+        font-size: 1em;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+    .btn.btn-primary:hover {
+        background: linear-gradient(45deg, #2980b9, #3498db);
+    }
+</style>

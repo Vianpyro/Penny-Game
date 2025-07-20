@@ -2,13 +2,16 @@
 import '../styles/main.css'
 import '../styles/index.css'
 import Main from '../layouts/Main.astro'
+import JoinRole from '../components/JoinRole.astro'
 import { SITE_NAME } from '../config.js'
 
 const MAX_PLAYERS = 5
+let showJoinRole = true
 ---
 
 <Main title={SITE_NAME}>
     <div class="container">
+        <JoinRole visible={showJoinRole} />
         <h1><span class="flip" id="coinFlip">🪙</span> Penny Game</h1>
         <p class="subtitle">Simulation Lean - Mesure du Flow et du Lead Time</p>
 
@@ -54,7 +57,7 @@ const MAX_PLAYERS = 5
                     <div class="spectator-list">
                         <h3>👀 Spectateurs</h3>
                         <ul class="user-list" id="spectatorList">
-                            <!-- Spectateurs générés dynamiquement -->
+                            <!-- Dynamically generated spectators for testing -->
                         </ul>
                     </div>
                 </div>
@@ -70,11 +73,6 @@ const MAX_PLAYERS = 5
                 </div>
 
                 <div class="game-info">
-                    <div class="create-room">
-                        <h3>🏗️ Créer une Salle</h3>
-                        <button class="btn btn-primary" id="createRoomBtn">Créer une nouvelle salle</button>
-                        <p style="font-size: 0.95em; color: #7f8c8d;">Cliquez pour générer un code de salle unique.</p>
-                    </div>
                     <div class="share-room" style="margin-top: 18px;">
                         <h3>🔗 Partager la Salle</h3>
                         <p>
@@ -165,6 +163,43 @@ const MAX_PLAYERS = 5
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Listen for joinrole event from JoinRole modal
+        window.addEventListener('joinrole', (e) => {
+            const detail = (e as CustomEvent).detail
+            if (detail && detail.roomAction === 'create' && detail.roomId) {
+                const gameCodeSpan = document.getElementById('gameCode')
+                if (gameCodeSpan) {
+                    gameCodeSpan.textContent = detail.roomId
+                }
+            }
+        })
+
+        // Copy code to clipboard
+        const copyBtn = document.getElementById('copyCodeBtn')
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const gameCodeSpan = document.getElementById('gameCode')
+                if (gameCodeSpan) {
+                    const code = gameCodeSpan.textContent || ''
+                    if (code) {
+                        navigator.clipboard
+                            .writeText(code)
+                            .then(() => {
+                                copyBtn.textContent = 'Copié !'
+                                setTimeout(() => {
+                                    copyBtn.textContent = 'Copier le code'
+                                }, 1200)
+                            })
+                            .catch(() => {
+                                copyBtn.textContent = 'Erreur...'
+                                setTimeout(() => {
+                                    copyBtn.textContent = 'Copier le code'
+                                }, 1200)
+                            })
+                    }
+                }
+            })
+        }
         // Drag & Drop joueurs/spectateurs
         const playerList = document.getElementById('playerList')
         const spectatorList = document.getElementById('spectatorList')
@@ -230,7 +265,7 @@ const MAX_PLAYERS = 5
                 }
             } else {
                 const li = document.createElement('li')
-                li.innerHTML = `<span>👻👻</span> ${numSpectateurs} spectateurs`
+                li.innerHTML = `<span>👻👻</span> ${numSpectators} spectateurs`
                 spectatorList.appendChild(li)
             }
         }
@@ -318,3 +353,9 @@ const MAX_PLAYERS = 5
         updateBoard()
     })
 </script>
+
+<style>
+    #gameCode {
+        text-transform: uppercase;
+    }
+</style>
