@@ -165,14 +165,49 @@ let showJoinRole = true
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Listen for joinrole event from JoinRole modal
+        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+
+        function updateGameCode(code: string) {
+            const gameCodeSpan = document.getElementById('gameCode')
+            if (gameCodeSpan) gameCodeSpan.textContent = code
+        }
+
+        function joinRoom(roomId: string, username: string) {
+            if (!apiUrl || !roomId || !username) return
+            fetch(`${apiUrl}/game/join/${roomId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username }),
+            })
+                .then((response) => {
+                    if (!response.ok) throw new Error('Erreur lors de la connexion à la salle')
+                })
+                .catch(console.error)
+        }
+
+        function connectWebSocket(roomId: string, username: string) {
+            if (!apiUrl || !roomId || !username) return
+            const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}`
+            const ws = new WebSocket(wsUrl)
+            ws.onopen = () => console.log('WebSocket connecté:', wsUrl)
+            ws.onmessage = (event) => console.log('WS:', event.data)
+            ws.onclose = () => console.log('WebSocket déconnecté')
+            ws.onerror = (err) => console.error('WebSocket erreur:', err)
+            ;(window as any).pennyGameWS = ws
+        }
+
         window.addEventListener('joinrole', (e) => {
             const detail = (e as CustomEvent).detail
-            if (detail && detail.roomAction === 'create' && detail.roomId) {
-                const gameCodeSpan = document.getElementById('gameCode')
-                if (gameCodeSpan) {
-                    gameCodeSpan.textContent = detail.roomId
-                }
+            const username = detail?.username
+            if (!username) return
+            if (detail.roomAction === 'create' && detail.roomId) {
+                updateGameCode(detail.roomId)
+                joinRoom(detail.roomId, username)
+                connectWebSocket(detail.roomId, username)
+            } else if (detail.roomAction === 'join' && detail.roomCode) {
+                updateGameCode(detail.roomCode)
+                joinRoom(detail.roomCode, username)
+                connectWebSocket(detail.roomCode, username)
             }
         })
 
