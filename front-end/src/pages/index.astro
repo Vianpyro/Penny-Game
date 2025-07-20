@@ -3,20 +3,19 @@ import '../styles/main.css'
 import '../styles/index.css'
 import Main from '../layouts/Main.astro'
 import { SITE_NAME } from '../config.js'
-import t from '../../locales/fr.js'
 
 const MAX_PLAYERS = 10
 ---
 
 <Main title={SITE_NAME}>
     <div class="container">
-        <h1><span class="flip">🪙</span> {t.title}</h1>
-        <p class="subtitle">{t.subtitle}</p>
+        <h1><span class="flip">🪙</span> Penny Game</h1>
+        <p class="subtitle">Simulation Lean - Mesure du Flow et du Lead Time</p>
 
         <div class="game-setup">
             <div class="setup-controls">
                 <div class="player-selector">
-                    <h3>👥 {t.playerCount}</h3>
+                    <h3>👥 Nombre de Joueurs</h3>
                     <div class="player-buttons" id="playerButtons">
                         {
                             Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => {
@@ -26,7 +25,7 @@ const MAX_PLAYERS = 10
                                         class={`player-count-btn${count === MAX_PLAYERS ? ' active' : ''}`}
                                         data-count={count}
                                     >
-                                        {count} {t.players}
+                                        {count} Joueurs
                                     </button>
                                 )
                             })
@@ -35,10 +34,23 @@ const MAX_PLAYERS = 10
                 </div>
 
                 <div class="round-selector-container">
-                    <h3>🏁 {t.roundChoice}</h3>
+                    <h3>🏁 Choix de la Manche</h3>
                     <div class="round-selector" id="roundSelector">
                         {
-                            t.roundOptions.map((opt, idx) => (
+                            [
+                                {
+                                    number: 'Manche 1',
+                                    title: 'Batch de 20',
+                                    description:
+                                        "Passer TOUTES les 20 pièces d'un coup",
+                                },
+                                {
+                                    number: 'Manche 2',
+                                    title: 'Batch de 1',
+                                    description:
+                                        'Passer les pièces une par une',
+                                },
+                            ].map((opt, idx) => (
                                 <div
                                     class={`round-option${idx === 0 ? ' active' : ''}`}
                                     data-round={idx + 1}
@@ -56,18 +68,20 @@ const MAX_PLAYERS = 10
             </div>
 
             <div class="batch-info" id="batchInfo">
-                <h3>🎮 {t.configTitle}</h3>
+                <h3>🎮 Configuration Actuelle</h3>
                 <p id="configInfo">
                     <span id="selected-players">{MAX_PLAYERS}</span>
-                    {t.players} - {t.round}
+                    Joueurs - Manche
                     <span id="selected-round">1</span>
                 </p>
             </div>
         </div>
 
         <div class="game-controls">
-            <button class="btn btn-primary" id="startBtn">{t.start}</button>
-            <button class="btn btn-success" id="resetBtn">{t.reset}</button>
+            <button class="btn btn-primary" id="startBtn"
+                >Démarrer la Manche</button
+            >
+            <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
         </div>
 
         <div class="game-board players-5" id="gameBoard">
@@ -75,14 +89,19 @@ const MAX_PLAYERS = 10
         </div>
 
         <div class="results" id="results" style="display: none;">
-            <h2>📊 {t.resultsTitle}</h2>
+            <h2>📊 Résultats de la Simulation</h2>
             <div class="total-time" id="totalTime"></div>
             <div class="stats-grid" id="statsGrid"></div>
             <div class="insights">
-                <h3>💡 {t.leanTitle}</h3>
+                <h3>💡 Enseignements Lean</h3>
                 <ul id="insightsList">
                     {
-                        t.insights.map((insight) => (
+                        [
+                            "Batch Size: Observer l'impact de la taille des lots sur le temps de cycle",
+                            "Flow: Analyser les goulots d'étranglement et les temps d'attente",
+                            'Lead Time: Comparer le temps individuel vs. temps total du processus',
+                            'Amélioration Continue: Discuter des optimisations possibles',
+                        ].map((insight) => (
                             <li>
                                 <strong>{insight.split(':')[0]}:</strong>{' '}
                                 {insight.split(':')[1]}
@@ -96,12 +115,12 @@ const MAX_PLAYERS = 10
 </Main>
 
 <script>
-    // Configuration state is now fetched from HTML
     document.addEventListener('DOMContentLoaded', () => {
         const playerButtons = document.getElementById('playerButtons')
         const roundSelector = document.getElementById('roundSelector')
-        const configInfo = document.getElementById('configInfo')
         const gameBoard = document.getElementById('gameBoard')
+        const playersSpan = document.getElementById('selected-players')
+        const roundSpan = document.getElementById('selected-round')
 
         // Get initial selected player count from active button
         let selectedPlayers = 2 // fallback
@@ -122,9 +141,6 @@ const MAX_PLAYERS = 10
                 selectedRound = parseInt(activeRound.dataset.round, 10)
             }
         }
-
-        // Get translation object from window (injected by Astro)
-        const t = window.t || {}
 
         // Player count selection
         if (playerButtons) {
@@ -160,8 +176,6 @@ const MAX_PLAYERS = 10
         }
 
         function updateConfig() {
-            const playersSpan = document.getElementById('selected-players')
-            const roundSpan = document.getElementById('selected-round')
             if (playersSpan)
                 playersSpan.textContent = selectedPlayers.toString()
             if (roundSpan) roundSpan.textContent = selectedRound.toString()
