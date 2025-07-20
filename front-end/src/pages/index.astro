@@ -33,14 +33,20 @@ const MAX_PLAYERS = 5
                     </div>
                     <div class="player-list">
                         <h3>👋 Liste des Joueurs</h3>
-                        <ul class="user-list">
-                            <li class="online" title="En ligne"><span class="status-indicator">🟢</span> Joueur 1</li>
-                            <li class="offline" title="Hors ligne">
+                        <ul class="user-list" id="playerList">
+                            <li class="online" title="En ligne" draggable="true">
+                                <span class="status-indicator">🟢</span> Joueur 1
+                            </li>
+                            <li class="offline" title="Hors ligne" draggable="true">
                                 <span class="status-indicator">🔴</span> Joueur 2
                             </li>
-                            <li class="online" title="En ligne"><span class="status-indicator">🟢</span> Joueur 3</li>
-                            <li class="online" title="En ligne"><span class="status-indicator">🟢</span> Joueur 4</li>
-                            <li class="waiting" title="En attente">
+                            <li class="online" title="En ligne" draggable="true">
+                                <span class="status-indicator">🟢</span> Joueur 3
+                            </li>
+                            <li class="online" title="En ligne" draggable="true">
+                                <span class="status-indicator">🟢</span> Joueur 4
+                            </li>
+                            <li class="waiting" title="En attente" draggable="true">
                                 <span class="status-indicator">⏳</span> Waiting for more players
                             </li>
                         </ul>
@@ -159,8 +165,57 @@ const MAX_PLAYERS = 5
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Générer un nombre aléatoire de spectateurs (1 à 5)
+        // Drag & Drop joueurs/spectateurs
+        const playerList = document.getElementById('playerList')
         const spectatorList = document.getElementById('spectatorList')
+        let draggedItem: HTMLElement | null = null
+
+        function handleDragStart(e: DragEvent) {
+            draggedItem = e.target as HTMLElement
+            if (!draggedItem || !e.dataTransfer) return
+            e.dataTransfer.effectAllowed = 'move'
+            e.dataTransfer.setData('text/plain', draggedItem.textContent || '')
+            setTimeout(() => draggedItem!.classList.add('dragging'), 0)
+        }
+
+        function handleDragEnd(e: DragEvent) {
+            if (draggedItem) draggedItem.classList.remove('dragging')
+            draggedItem = null
+        }
+
+        function handleDragOver(e: DragEvent) {
+            e.preventDefault()
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+        }
+
+        function handleDrop(e: DragEvent, targetList: HTMLElement) {
+            e.preventDefault()
+            if (draggedItem && targetList && draggedItem.parentNode !== targetList) {
+                targetList.appendChild(draggedItem)
+            }
+        }
+
+        function addDnDEvents(list: HTMLElement | null) {
+            if (!list) return
+            list.querySelectorAll('li[draggable="true"]').forEach((li) => {
+                const liEl = li as HTMLElement
+                liEl.addEventListener('dragstart', handleDragStart)
+                liEl.addEventListener('dragend', handleDragEnd)
+            })
+        }
+
+        addDnDEvents(playerList)
+
+        if (spectatorList) {
+            spectatorList.addEventListener('dragover', handleDragOver)
+            spectatorList.addEventListener('drop', (e) => handleDrop(e as DragEvent, spectatorList))
+        }
+        if (playerList) {
+            playerList.addEventListener('dragover', handleDragOver)
+            playerList.addEventListener('drop', (e) => handleDrop(e as DragEvent, playerList))
+        }
+
+        // Générer un nombre aléatoire de spectateurs (1 à 5)
         if (spectatorList) {
             const numSpectators = Math.floor(Math.random() * 5) + 1
             spectatorList.innerHTML = ''
@@ -168,11 +223,14 @@ const MAX_PLAYERS = 5
                 for (let i = 1; i <= numSpectators; i++) {
                     const li = document.createElement('li')
                     li.innerHTML = `<span>👻</span> Spectateur ${i}`
+                    li.setAttribute('draggable', 'true')
+                    li.addEventListener('dragstart', handleDragStart)
+                    li.addEventListener('dragend', handleDragEnd)
                     spectatorList.appendChild(li)
                 }
             } else {
                 const li = document.createElement('li')
-                li.innerHTML = `<span>👻👻</span> ${numSpectators} spectateurs`
+                li.innerHTML = `<span>👻👻</span> ${numSpectateurs} spectateurs`
                 spectatorList.appendChild(li)
             }
         }
@@ -195,7 +253,7 @@ const MAX_PLAYERS = 5
         // Get initial selected player count from active button
         let selectedPlayers = 2 // fallback
         if (playerButtons) {
-            const activeBtn = playerButtons.querySelector('button.active')
+            const activeBtn = playerButtons.querySelector('button.active') as HTMLElement | null
             if (activeBtn && activeBtn.dataset.count) {
                 selectedPlayers = parseInt(activeBtn.dataset.count, 10)
             }
@@ -204,7 +262,7 @@ const MAX_PLAYERS = 5
         // Get initial selected round from active option
         let selectedRound = 1 // fallback
         if (roundSelector) {
-            const activeRound = roundSelector.querySelector('.round-option.active')
+            const activeRound = roundSelector.querySelector('.round-option.active') as HTMLElement | null
             if (activeRound && activeRound.dataset.round) {
                 selectedRound = parseInt(activeRound.dataset.round, 10)
             }
@@ -213,11 +271,14 @@ const MAX_PLAYERS = 5
         // Player count selection
         if (playerButtons) {
             playerButtons.querySelectorAll('button').forEach((btn) => {
-                btn.addEventListener('click', () => {
-                    playerButtons.querySelectorAll('button').forEach((b) => b.classList.remove('active'))
-                    btn.classList.add('active')
-                    if (btn.dataset.count) {
-                        selectedPlayers = parseInt(btn.dataset.count, 10)
+                const btnEl = btn as HTMLElement
+                btnEl.addEventListener('click', () => {
+                    playerButtons
+                        .querySelectorAll('button')
+                        .forEach((b) => (b as HTMLElement).classList.remove('active'))
+                    btnEl.classList.add('active')
+                    if (btnEl.dataset.count) {
+                        selectedPlayers = parseInt(btnEl.dataset.count, 10)
                         updateConfig()
                         updateBoard()
                     }
@@ -228,11 +289,14 @@ const MAX_PLAYERS = 5
         // Round selection
         if (roundSelector) {
             roundSelector.querySelectorAll('.round-option').forEach((opt) => {
-                opt.addEventListener('click', () => {
-                    roundSelector.querySelectorAll('.round-option').forEach((o) => o.classList.remove('active'))
-                    opt.classList.add('active')
-                    if (opt.dataset.round) {
-                        selectedRound = parseInt(opt.dataset.round, 10)
+                const optEl = opt as HTMLElement
+                optEl.addEventListener('click', () => {
+                    roundSelector
+                        .querySelectorAll('.round-option')
+                        .forEach((o) => (o as HTMLElement).classList.remove('active'))
+                    optEl.classList.add('active')
+                    if (optEl.dataset.round) {
+                        selectedRound = parseInt(optEl.dataset.round, 10)
                         updateConfig()
                     }
                 })
