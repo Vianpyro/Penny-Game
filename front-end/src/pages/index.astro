@@ -90,23 +90,20 @@ const MAX_PLAYERS = 5
                         {
                             [
                                 {
-                                    number: 'Manche 1',
                                     title: 'Batch de 20',
                                     description: "Passer TOUTES les 20 pièces d'un coup",
                                 },
                                 {
-                                    number: 'Manche 2',
                                     title: 'Batch de 5',
                                     description: 'Passer les pièces 5 par 5',
                                 },
                                 {
-                                    number: 'Manche 3',
                                     title: 'Batch de 1',
                                     description: 'Passer les pièces une par une',
                                 },
                             ].map((opt, idx) => (
                                 <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1}>
-                                    <div class="round-number">{opt.number}</div>
+                                    <div class="round-number">Manche {idx + 1}</div>
                                     <div class="round-title">{opt.title}</div>
                                     <div class="round-description">{opt.description}</div>
                                 </div>
