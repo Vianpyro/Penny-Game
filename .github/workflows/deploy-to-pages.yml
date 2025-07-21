@@ -38,6 +38,8 @@ jobs:
 
       - name: Build Astro site
         run: npm run build --prefix front-end
+        env:
+          PUBLIC_API_URL: ${{ secrets.PUBLIC_API_URL }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
