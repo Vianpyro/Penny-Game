@@ -1,6 +1,4 @@
-# Endpoint to change role (player <-> spectator)
 from fastapi import Body
-
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import Dict, List
@@ -32,6 +30,7 @@ app.add_middleware(
 
 # Global in-memory state (for MVP only)
 rooms: Dict[str, List[WebSocket]] = {}
+  
 # Track online users per room
 online_users: Dict[str, set] = {}
 
@@ -51,7 +50,6 @@ class PennyGame(BaseModel):
 
 # In-memory games
 games: Dict[str, PennyGame] = {}
-
 
 # REST endpoints for Penny Game
 @app.post("/game/create")
@@ -127,7 +125,6 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
         "host": game.host,
         "pennies": game.pennies,
     }
-
 
 class MoveRequest(BaseModel):
     username: str
