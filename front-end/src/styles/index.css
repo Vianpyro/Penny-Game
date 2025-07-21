@@ -425,6 +425,27 @@ p {
     border: 2px solid #f3b712 !important;
 }
 
+#gameCode {
+    text-transform: uppercase;
+}
+
+.user-list {
+    min-height: 35px;
+    border: 2px dotted transparent;
+    border-radius: 12px;
+    background: transparent;
+    margin-bottom: 12px;
+    transition:
+        background 0.2s,
+        border-color 0.2s;
+    gap: 6px;
+}
+
+.user-list.drag-over {
+    background: rgba(0, 128, 128, 0.18);
+    border-color: #008080;
+}
+
 @media screen and (width<=850px) {
     .container {
         border-radius: 0;

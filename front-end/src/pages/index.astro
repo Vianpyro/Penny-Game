@@ -140,25 +140,4 @@ let showJoinRole = true
     </div>
 </Main>
 
-<script type="module" src="/src/scripts/game.ts"></script>
-
-<style>
-    #gameCode {
-        text-transform: uppercase;
-    }
-    .user-list {
-        min-height: 35px;
-        border: 2px dotted transparent;
-        border-radius: 12px;
-        background: transparent;
-        margin-bottom: 12px;
-        transition:
-            background 0.2s,
-            border-color 0.2s;
-        gap: 6px;
-    }
-    .user-list.drag-over {
-        background: rgba(0, 128, 128, 0.18);
-        border-color: #008080;
-    }
-</style>
+<script type="module" is:inline src="/src/scripts/game.ts"></script>

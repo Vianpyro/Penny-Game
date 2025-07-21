@@ -51,7 +51,7 @@ export function renderSpectators(
         const li = document.createElement('li')
         const isOnline = activity && activity[host]
         li.className = 'spectator host'
-        li.title = 'Host'
+        li.title = 'Hôte de la partie'
         li.innerHTML = `<span class="status-indicator">👑</span> ${host}`
         spectatorList.appendChild(li)
     }
