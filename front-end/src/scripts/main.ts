@@ -11,7 +11,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const copyBtn = document.getElementById('copyCodeBtn')
     if (copyBtn) {
         copyBtn.addEventListener('click', () => {
-            const gameCodeSpan = document.getElementById('gameCode')
+            const gameCodeSpan = document.getElementById('game-code')
             if (gameCodeSpan) {
                 const code = gameCodeSpan.textContent || ''
                 if (code) {
@@ -49,7 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
             } else if (targetList.id === 'spectatorList') {
                 newRole = 'spectator'
             }
-            const roomId = document.getElementById('gameCode')?.textContent?.trim() || ''
+            const roomId = document.getElementById('game-code')?.textContent?.trim() || ''
             if (apiUrl && roomId && username && newRole) {
                 changeRole(apiUrl, roomId, username, newRole, (roomId: string) =>
                     fetchGameState(

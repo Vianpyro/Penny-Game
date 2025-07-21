@@ -95,7 +95,7 @@
 }
 
 .insights {
-    background: rgb(52, 152, 219 / 10%);
+    background: rgba(52, 152, 219, 0.1);
     border-left: 4px solid #3498db;
     border-radius: 0 10px 10px 0;
     margin-top: 20px;
@@ -310,8 +310,7 @@
     gap: 10px;
     list-style: none;
     padding: 0;
-    align-items: stretch;
-    justify-items: stretch;
+    place-items: stretch;
 }
 
 .user-list > li {
@@ -351,7 +350,6 @@
         'game-info rules';
     grid-template-columns: 1fr 1fr;
     gap: 30px;
-    grid-template-columns: 1fr 1fr;
     margin-bottom: 30px;
 }
 
@@ -421,11 +419,12 @@ p {
 }
 
 .rules {
-    background: rgb(from #e6ab22 r g b / 10%) !important;
+    grid-area: rules;
+    background: rgba(230, 171, 34, 0.1) !important;
     border: 2px solid #f3b712 !important;
 }
 
-#gameCode {
+#game-code {
     text-transform: uppercase;
 }
 

@@ -1,7 +1,7 @@
 // DOM manipulation helpers for Penny Game
 
 export function updateGameCode(code: string) {
-    const gameCodeSpan = document.getElementById('gameCode')
+    const gameCodeSpan = document.getElementById('game-code')
     if (gameCodeSpan) gameCodeSpan.textContent = code
 }
 

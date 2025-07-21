@@ -62,7 +62,7 @@ let showJoinRole = true
                     <div class="share-room" style="margin-top: 18px;">
                         <h3>🔗 Partager la Salle</h3>
                         <p>
-                            Code de la Salle: <span id="gameCode">ABCD1234</span>
+                            Code de la Salle: <span id="game-code">ABCD1234</span>
                             <button class="btn btn-success" id="copyCodeBtn" style="margin-left: 10px;"
                                 >Copier le code</button
                             >
@@ -185,7 +185,7 @@ let showJoinRole = true
         if (startBtn && gameSetup && gameControls && gameBoard) {
             startBtn.addEventListener('click', async () => {
                 // Get game code from UI
-                const gameCode = document.getElementById('gameCode')?.textContent?.trim() || ''
+                const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
                 // Fetch full game state from API (optional, for validation)
                 const state = await fetchGameState(gameCode)
                 if (!state) return
@@ -208,7 +208,7 @@ let showJoinRole = true
                         const gameSetup = document.querySelector('.game-setup')
                         const gameControls = document.querySelector('.game-controls')
                         const gameBoard = document.getElementById('gameBoard')
-                        const gameCode = document.getElementById('gameCode')?.textContent?.trim() || ''
+                        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
                         fetchGameState(gameCode).then((state) => {
                             if (!state) return
                             if (gameSetup) gameSetup.style.display = 'none'
