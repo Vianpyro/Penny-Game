@@ -1,13 +1,24 @@
 {
-    "name": "Template Development Container",
+    "name": "Lean Agile - Penny Game",
     "dockerFile": "Dockerfile",
     "customizations": {
         "settings": {
             "terminal.integrated.shell.linux": "/bin/bash"
         },
         "vscode": {
-            "extensions": ["esbenp.prettier-vscode"]
+            "extensions": [
+                "ms-python.black-formatter",
+                "ms-python.python",
+                "ms-python.isort"
+            ]
         }
     },
+    "forwardPorts": [
+        8000
+    ],
+    "otherPortsAttributes": {
+        "onAutoForward": "ignore"
+    },
+    "postStartCommand": "pip3 install --user -r api/requirements-dev.txt",
     "remoteUser": "vscode"
 }
