@@ -1,3 +1,7 @@
+#game-code {
+    text-transform: uppercase;
+}
+
 .btn {
     border: none;
     border-radius: 10px;
@@ -47,8 +51,8 @@
 }
 
 .flip {
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
     display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 }
 
 .flip.flipped {
@@ -95,7 +99,7 @@
 }
 
 .insights {
-    background: rgba(52, 152, 219, 0.1);
+    background: rgb(52 152 219 / 10%);
     border-left: 4px solid #3498db;
     border-radius: 0 10px 10px 0;
     margin-top: 20px;
@@ -193,19 +197,16 @@
     margin-bottom: 15px;
 }
 
+.player-selector {
+    grid-area: player-selector;
+}
+
 .player-selector h3,
 .round-selector-container h3,
 .insights h3 {
     color: #2c3e50;
     font-size: 1.3em;
     margin-bottom: 15px;
-}
-
-.setup-controls > div {
-    background: rgb(255 255 255 / 90%);
-    border: 2px solid #ecf0f1;
-    border-radius: 10px;
-    padding: 20px;
 }
 
 .player-zone {
@@ -285,6 +286,10 @@
     grid-template-columns: 1fr 1fr;
 }
 
+.round-selector-container {
+    grid-area: round-selector-container;
+}
+
 .round-title {
     color: #2c3e50;
     font-size: 1.3em;
@@ -292,65 +297,29 @@
     margin-bottom: 10px;
 }
 
-.player-selector {
-    grid-area: player-selector;
-}
-
 .rules {
+    background: rgba(230, 171, 34, 0.1) !important;
+    border: 2px solid #f3b712 !important;
     grid-area: rules;
-}
-
-.round-selector-container {
-    grid-area: round-selector-container;
-}
-
-.user-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    list-style: none;
-    padding: 0;
-    place-items: stretch;
-}
-
-.user-list > li {
-    border-width: 2px;
-    border-color: #ecf0f1;
-    border-radius: 15px;
-    flex: 1 1 0;
-    min-width: fit-content;
-    padding: 5px 10px;
-    user-select: none;
-}
-
-.user-list > li[draggable] {
-    cursor: pointer;
-}
-
-.user-list > li.offline {
-    color: #888;
-    border-style: dashed;
-}
-
-.user-list > li.online,
-.spectator-list > .user-list > li {
-    border-style: solid;
-    color: inherit;
-}
-
-.user-list > li.waiting {
-    color: #aaa;
-    border-style: dotted;
 }
 
 .setup-controls {
     display: grid;
-    grid-template-areas:
-        'player-selector round-selector-container'
-        'game-info rules';
-    grid-template-columns: 1fr 1fr;
     gap: 30px;
+    grid-template-areas: 'player-selector round-selector-container' 'game-info rules';
+    grid-template-columns: 1fr 1fr;
     margin-bottom: 30px;
+}
+
+.setup-controls > div {
+    background: rgb(255, 255, 255/90%);
+    border: 2px solid #ecf0f1;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.setup-controls > div > h3:first-child {
+    margin-block-start: 0;
 }
 
 .stat-card {
@@ -405,44 +374,63 @@
     text-align: center;
 }
 
-h1 {
-    text-align: center;
-    margin-block-start: 0;
-}
-
-.setup-controls > div > h3:first-child {
-    margin-block-start: 0;
-}
-
-p {
-    margin-block-end: 0;
-}
-
-.rules {
-    grid-area: rules;
-    background: rgba(230, 171, 34, 0.1) !important;
-    border: 2px solid #f3b712 !important;
-}
-
-#game-code {
-    text-transform: uppercase;
-}
-
 .user-list {
-    min-height: 35px;
+    background: transparent;
     border: 2px dotted transparent;
     border-radius: 12px;
-    background: transparent;
-    margin-bottom: 12px;
-    transition:
-        background 0.2s,
-        border-color 0.2s;
+    display: flex;
+    flex-wrap: wrap;
     gap: 6px;
+    list-style: none;
+    margin-bottom: 12px;
+    min-height: 35px;
+    padding: 0;
+    place-items: stretch;
+    transition: background 0.2s border-color 0.2s;
+}
+
+.user-list > li {
+    border-color: #ecf0f1;
+    border-radius: 15px;
+    border-width: 2px;
+    flex: 1 1 0;
+    min-width: fit-content;
+    padding: 5px 10px;
+    user-select: none;
+}
+
+.user-list > li.offline {
+    border-style: dashed;
+    color: #888;
+}
+
+.user-list > li.online,
+.spectator-list > .user-list > li {
+    border-style: solid;
+    color: inherit;
+}
+
+.user-list > li.waiting {
+    border-style: dotted;
+    color: #aaa;
+}
+
+.user-list > li[draggable] {
+    cursor: pointer;
 }
 
 .user-list.drag-over {
     background: rgb(0 128 128 / 18%);
     border-color: #008080;
+}
+
+h1 {
+    margin-block-start: 0;
+    text-align: center;
+}
+
+p {
+    margin-block-end: 0;
 }
 
 @media screen and (width<=850px) {
@@ -472,12 +460,8 @@ p {
     }
 
     .setup-controls {
+        grid-template-areas: player-selector round-selector-container game-info rules;
         grid-template-columns: 1fr;
-        grid-template-areas:
-            'player-selector'
-            'round-selector-container'
-            'game-info'
-            'rules';
     }
 
     .setup-controls > * {
