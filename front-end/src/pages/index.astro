@@ -111,7 +111,7 @@ let showJoinRole = true
             <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
         </div>
 
-        <div class="game-board players-5" id="gameBoard">
+        <div class="game-board players-5" id="gameBoard" style="display: none;">
             <!-- TODO: Dynamically generate the player zones -->
         </div>
 
@@ -141,3 +141,88 @@ let showJoinRole = true
 </Main>
 
 <script type="module" is:inline src="/src/scripts/game.ts"></script>
+
+<script type="module">
+    // Game start logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const startBtn = document.getElementById('startBtn')
+        const gameSetup = document.querySelector('.game-setup')
+        const gameControls = document.querySelector('.game-controls')
+        const gameBoard = document.getElementById('gameBoard')
+
+        // Helper to fetch player names from API
+        async function fetchGameState(gameCode) {
+            const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+            if (!apiUrl || !gameCode) return null
+            try {
+                const res = await fetch(`${apiUrl}/game/state/${gameCode}`)
+                if (!res.ok) return null
+                const data = await res.json()
+                return data
+            } catch {
+                return null
+            }
+        }
+
+        function renderPlayerSections(players, turn, pennies) {
+            if (!gameBoard) return
+            gameBoard.innerHTML = ''
+            players.forEach((player, idx) => {
+                const section = document.createElement('section')
+                section.className = 'player-zone'
+                section.innerHTML = `<h3>Joueur ${idx + 1}: ${player}</h3>`
+                // Only the current turn player gets pennies
+                if (idx === turn) {
+                    const pennyCount = Array.isArray(pennies) ? pennies.filter(Boolean).length : 0
+                    section.innerHTML += `<div class="pennies">${'🪙 '.repeat(pennyCount)}</div>`
+                } else {
+                    section.innerHTML += `<div class="pennies"></div>`
+                }
+                gameBoard.appendChild(section)
+            })
+        }
+
+        if (startBtn && gameSetup && gameControls && gameBoard) {
+            startBtn.addEventListener('click', async () => {
+                // Get game code from UI
+                const gameCode = document.getElementById('gameCode')?.textContent?.trim() || ''
+                // Fetch full game state from API
+                const state = await fetchGameState(gameCode)
+                if (!state) return
+                // Hide setup, show board
+                gameSetup.style.display = 'none'
+                gameControls.style.display = 'none'
+                gameBoard.style.display = ''
+                renderPlayerSections(state.players || [], state.turn ?? 0, state.pennies || [])
+                // Send WebSocket signal to all players to switch to game screen
+                if (window.pennyGameWS && window.pennyGameWS.readyState === 1) {
+                    window.pennyGameWS.send(JSON.stringify({ type: 'start_game' }))
+                }
+            })
+        }
+
+        // Listen for ws signal to switch to game screen
+        if (window.pennyGameWS) {
+            window.pennyGameWS.addEventListener('message', (event) => {
+                try {
+                    const msg = JSON.parse(event.data)
+                    if (msg.type === 'start_game') {
+                        const gameSetup = document.querySelector('.game-setup')
+                        const gameControls = document.querySelector('.game-controls')
+                        const gameBoard = document.getElementById('gameBoard')
+                        const gameCode = document.getElementById('gameCode')?.textContent?.trim() || ''
+                        fetchGameState(gameCode).then((state) => {
+                            if (!state) return
+                            if (gameSetup) gameSetup.style.display = 'none'
+                            if (gameControls) gameControls.style.display = 'none'
+                            if (gameBoard) {
+                                gameBoard.style.display = ''
+                                renderPlayerSections(state.players || [], state.turn ?? 0, state.pennies || [])
+                            }
+                        })
+                    }
+                } catch {}
+            })
+        }
+    })
+</script>
