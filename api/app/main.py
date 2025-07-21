@@ -1,3 +1,5 @@
+from fastapi import Body
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import Dict, List
 from uuid import uuid4
@@ -6,6 +8,9 @@ from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+import json
+from datetime import datetime
+import asyncio
 
 app = FastAPI()
 
@@ -25,20 +30,23 @@ app.add_middleware(
 
 # Global in-memory state (for MVP only)
 rooms: Dict[str, List[WebSocket]] = {}
+  
+# Track online users per room
+online_users: Dict[str, set] = {}
 
-# Penny Game state
-from datetime import datetime
 
 class PennyGame(BaseModel):
+    started_at: Optional[datetime] = None  # Timestamp when game starts
+    turn_timestamps: List[datetime] = []  # Timestamp for each turn
     room_id: str
     players: List[str]
     spectators: List[str] = []
     host: Optional[str] = None
-    pennies: Dict[str, List[bool]] = {}  # True=heads, False=tails
+    pennies: List[bool] = [True] * 20  # Shared coins, True=heads, False=tails
     turn: int = 0  # Index of current player
-    winner: Optional[str] = None
     created_at: datetime
     last_active_at: datetime
+
 
 # In-memory games
 games: Dict[str, PennyGame] = {}
@@ -48,7 +56,13 @@ games: Dict[str, PennyGame] = {}
 def create_game():
     room_id = str(uuid4())[:8]
     now = datetime.now()
-    games[room_id] = PennyGame(room_id=room_id, players=[], pennies={}, created_at=now, last_active_at=now)
+    games[room_id] = PennyGame(
+        room_id=room_id,
+        players=[],
+        pennies=[True] * 20,
+        created_at=now,
+        last_active_at=now,
+    )
     return {"room_id": room_id}
 
 
@@ -62,57 +76,94 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     username = join.username
+    if username == game.host:
+        raise HTTPException(
+            status_code=400, detail="Host cannot join as player or spectator"
+        )
     if username in game.players or username in game.spectators:
         raise HTTPException(status_code=400, detail="User already joined")
     if room_id not in rooms:
         rooms[room_id] = []
     now = datetime.now()
     game.last_active_at = now
+    if game.host is None:
+        game.host = username
+        return {
+            "success": True,
+            "players": game.players,
+            "spectators": game.spectators,
+            "host": game.host,
+            "pennies": game.pennies,
+            "note": "Host created the room and does not play.",
+        }
     if spectator:
         game.spectators.append(username)
-        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "pennies": game.pennies}
+        return {
+            "success": True,
+            "players": game.players,
+            "spectators": game.spectators,
+            "host": game.host,
+            "pennies": game.pennies,
+        }
     if len(game.players) >= MAX_PLAYERS:
         # If game is full, allow joining as spectator
         game.spectators.append(username)
-        return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "note": "Joined as spectator (game full)", "pennies": game.pennies}
+        return {
+            "success": True,
+            "players": game.players,
+            "spectators": game.spectators,
+            "host": game.host,
+            "note": "Joined as spectator (game full)",
+            "pennies": game.pennies,
+        }
     game.players.append(username)
-    game.pennies[username] = [True] * 20  # All heads
-    if game.host is None:
-        game.host = username
-    return {"success": True, "players": game.players, "spectators": game.spectators, "host": game.host, "pennies": game.pennies}
+    # No per-player pennies, shared coins only
+    return {
+        "success": True,
+        "players": game.players,
+        "spectators": game.spectators,
+        "host": game.host,
+        "pennies": game.pennies,
+    }
 
 class MoveRequest(BaseModel):
     username: str
     flip: int
+
 
 @app.post("/game/move/{room_id}")
 def make_move(room_id: str, move: MoveRequest):
     game = games.get(room_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    if game.winner:
-        raise HTTPException(status_code=400, detail="Game over")
     if len(game.players) < 2:
         raise HTTPException(status_code=400, detail="Need 2 players")
+    # Host cannot play
+    if move.username == game.host:
+        raise HTTPException(status_code=400, detail="Host does not play")
     if game.players[game.turn] != move.username:
         raise HTTPException(status_code=400, detail="Not your turn")
     if move.flip not in [1, 2, 3]:
         raise HTTPException(status_code=400, detail="Invalid move")
-    # Find indices of heads to flip
-    penny_list = game.pennies[move.username]
+    # Shared coins logic
+    penny_list = game.pennies
     heads_indices = [i for i, v in enumerate(penny_list) if v]
     if len(heads_indices) < move.flip:
         raise HTTPException(status_code=400, detail="Not enough heads to flip")
     # Flip the first 'move.flip' heads to tails
-    for i in heads_indices[:move.flip]:
+    for i in heads_indices[: move.flip]:
         penny_list[i] = False
     now = datetime.now()
     game.last_active_at = now
-    if all(not v for v in penny_list):
-        game.winner = move.username
-    else:
-        game.turn = (game.turn + 1) % len(game.players)
+    # Set started_at on first move
+    if game.started_at is None:
+        game.started_at = now
+    # Record timestamp for this turn
+    game.turn_timestamps.append(now)
+    # Rotate turn
+    game.turn = (game.turn + 1) % len(game.players)
     return game.model_dump()
+
 
 @app.get("/game/state/{room_id}")
 def get_game_state(room_id: str):
@@ -141,6 +192,55 @@ def cleanup():
     return {"removed_games": removed_games}
 
 
+class ChangeRoleRequest(BaseModel):
+    username: str
+    role: str
+
+
+@app.post("/game/change_role/{room_id}")
+def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
+    game = games.get(room_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    username = req.username
+    new_role = req.role
+    if username == game.host:
+        raise HTTPException(status_code=400, detail="Host role cannot be changed")
+    if new_role == "player":
+        # Move from spectators to players
+        if username in game.spectators:
+            if len(game.players) >= MAX_PLAYERS:
+                raise HTTPException(status_code=400, detail="Player limit reached")
+            game.spectators.remove(username)
+            game.players.append(username)
+            # No per-player pennies, shared coins only
+        else:
+            raise HTTPException(status_code=400, detail="User is not a spectator")
+    elif new_role == "spectator":
+        # Move from players to spectators
+        if username in game.players:
+            game.players.remove(username)
+            game.spectators.append(username)
+            # No per-player pennies, shared coins only
+        else:
+            raise HTTPException(status_code=400, detail="User is not a player")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    # Update last active
+    game.last_active_at = datetime.now()
+    # Broadcast activity update to all clients in the room
+
+    # Use asyncio.run to execute broadcast_activity from sync context
+    asyncio.run(broadcast_activity(room_id))
+    return {
+        "success": True,
+        "players": game.players,
+        "spectators": game.spectators,
+        "host": game.host,
+        "pennies": game.pennies,
+    }
+
+
 @app.websocket("/ws/{room_id}/{username}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
     total_connections = sum(len(clients) for clients in rooms.values())
@@ -155,7 +255,10 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
         return
 
     rooms[room_id].append(websocket)
-    await broadcast(room_id, f"🔵 {username} joined the room.")
+    if room_id not in online_users:
+        online_users[room_id] = set()
+    online_users[room_id].add(username)
+    await broadcast_activity(room_id)
 
     try:
         while True:
@@ -163,10 +266,47 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
             await broadcast(room_id, f"{username}: {data}")
     except WebSocketDisconnect:
         rooms[room_id].remove(websocket)
-        await broadcast(room_id, f"🔴 {username} left the room.")
+        if room_id in online_users and username in online_users[room_id]:
+            online_users[room_id].remove(username)
+        # If host leaves, delete room/game and notify others
+        game = games.get(room_id)
+        if game and username == game.host:
+            # Notify all clients before deleting
+            await broadcast(room_id, f"🔴 Host {username} left the room.")
+            # Remove all connections
+            for ws in rooms.get(room_id, []):
+                await ws.close(code=4002, reason="Host left, room closed")
+            games.pop(room_id, None)
+            rooms.pop(room_id, None)
+            online_users.pop(room_id, None)
+            return
+        await broadcast_activity(room_id)
         if not rooms[room_id]:
             del rooms[room_id]  # Cleanup empty room
+            online_users.pop(room_id, None)
+
 
 async def broadcast(room_id: str, message: str):
     for client in rooms.get(room_id, []):
         await client.send_text(message)
+
+
+# Broadcast structured activity state
+async def broadcast_activity(room_id: str):
+    game = games.get(room_id)
+    if not game:
+        return
+    # Compose activity state for all users
+    users = set(game.players + game.spectators)
+    host = game.host
+    online = online_users.get(room_id, set())
+    activity = {user: (user in online) for user in users}
+    msg = {
+        "type": "activity",
+        "players": game.players,
+        "spectators": game.spectators,
+        "host": host,
+        "activity": activity,
+    }
+    for client in rooms.get(room_id, []):
+        await client.send_text(json.dumps(msg))

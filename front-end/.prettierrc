@@ -7,7 +7,8 @@
             }
         }
     ],
-    "printWidth": 80,
+    "plugins": ["prettier-plugin-astro"],
+    "printWidth": 120,
     "semi": false,
     "singleQuote": true,
     "tabWidth": 4,

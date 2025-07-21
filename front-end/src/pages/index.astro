@@ -1,0 +1,226 @@
+---
+import '../styles/main.css'
+import '../styles/index.css'
+import Main from '../layouts/Main.astro'
+import JoinRole from '../components/JoinRole.astro'
+import { SITE_NAME } from '../config.js'
+
+const MAX_PLAYERS = 5
+let showJoinRole = true
+---
+
+<Main title={SITE_NAME}>
+    <div class="container">
+        <JoinRole visible={showJoinRole} />
+        <h1><span class="flip" id="coinFlip">🪙</span> Penny Game</h1>
+        <p class="subtitle">Simulation Lean - Mesure du Flow et du Lead Time</p>
+
+        <div class="game-setup">
+            <div class="setup-controls">
+                <div class="player-selector">
+                    <h3>👥 Nombre de Joueurs</h3>
+                    <div class="player-buttons" id="playerButtons">
+                        {
+                            Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => {
+                                const count = i + 2
+                                return (
+                                    <button
+                                        class={`player-count-btn${count === MAX_PLAYERS ? ' active' : ''}`}
+                                        data-count={count}
+                                    >
+                                        {count} Joueurs
+                                    </button>
+                                )
+                            })
+                        }
+                    </div>
+                    <div class="player-list">
+                        <h3>👋 Liste des Joueurs</h3>
+                        <ul class="user-list" id="playerList">
+                            <!-- Player list will be rendered by JS -->
+                        </ul>
+                    </div>
+                    <div class="spectator-list">
+                        <h3>👀 Spectateurs</h3>
+                        <ul class="user-list" id="spectatorList">
+                            <!-- Spectator list will be rendered by JS -->
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="rules">
+                    <h3>📜 Règles du Jeu</h3>
+                    <p>
+                        Le Penny Game est une simulation Lean visant à mesurer le flow et le lead time dans un processus
+                        de production. Les joueurs doivent passer des pièces de monnaie d'une zone à une autre en
+                        respectant les règles de batch size. Le but est d'optimiser le temps total de passage des
+                        pièces.
+                    </p>
+                </div>
+
+                <div class="game-info">
+                    <div class="share-room" style="margin-top: 18px;">
+                        <h3>🔗 Partager la Salle</h3>
+                        <p>
+                            Code de la Salle: <span id="game-code">ABCD1234</span>
+                            <button class="btn btn-success" id="copyCodeBtn" style="margin-left: 10px;"
+                                >Copier le code</button
+                            >
+                        </p>
+                        <p style="font-size: 0.95em; color: #7f8c8d;">
+                            Partagez ce code avec les autres joueurs pour qu'ils rejoignent la partie.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="round-selector-container">
+                    <h3>🏁 Choix de la Manche</h3>
+                    <!-- TODO: Toggle desired round(s) -->
+                    <div class="round-selector" id="roundSelector">
+                        {
+                            [
+                                {
+                                    title: 'Batch de 20',
+                                    description: "Passer TOUTES les 20 pièces d'un coup",
+                                },
+                                {
+                                    title: 'Batch de 5',
+                                    description: 'Passer les pièces 5 par 5',
+                                },
+                                {
+                                    title: 'Batch de 1',
+                                    description: 'Passer les pièces une par une',
+                                },
+                            ].map((opt, idx) => (
+                                <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1}>
+                                    <div class="round-number">Manche {idx + 1}</div>
+                                    <div class="round-title">{opt.title}</div>
+                                    <div class="round-description">{opt.description}</div>
+                                </div>
+                            ))
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn btn-primary" id="startBtn"
+                >Démarrer avec <span id="playerCount">{MAX_PLAYERS}</span> joueurs</button
+            >
+            <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
+        </div>
+
+        <div class="game-board players-5" id="gameBoard" style="display: none;">
+            <!-- TODO: Dynamically generate the player zones -->
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <h2>📊 Résultats de la Simulation</h2>
+            <div class="total-time" id="totalTime"></div>
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="insights">
+                <h3>💡 Enseignements Lean</h3>
+                <ul id="insightsList">
+                    {
+                        [
+                            "Batch Size: Observer l'impact de la taille des lots sur le temps de cycle",
+                            "Flow: Analyser les goulots d'étranglement et les temps d'attente",
+                            'Lead Time: Comparer le temps individuel vs. temps total du processus',
+                            'Amélioration Continue: Discuter des optimisations possibles',
+                        ].map((insight) => (
+                            <li>
+                                <strong>{insight.split(':')[0]}:</strong> {insight.split(':')[1]}
+                            </li>
+                        ))
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</Main>
+
+<script type="module" is:inline src="/src/scripts/main.ts"></script>
+
+<script type="module">
+    // Game start logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const startBtn = document.getElementById('startBtn')
+        const gameSetup = document.querySelector('.game-setup')
+        const gameControls = document.querySelector('.game-controls')
+        const gameBoard = document.getElementById('gameBoard')
+
+        // Helper to fetch player names from API
+        async function fetchGameState(gameCode) {
+            const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+            if (!apiUrl || !gameCode) return null
+            try {
+                const res = await fetch(`${apiUrl}/game/state/${gameCode}`)
+                if (!res.ok) return null
+                const data = await res.json()
+                return data
+            } catch {
+                return null
+            }
+        }
+
+        function renderPlayerSections(players, turn, pennies) {
+            if (!gameBoard) return
+            gameBoard.innerHTML = ''
+            players.forEach((player, idx) => {
+                const section = document.createElement('section')
+                section.className = 'player-zone'
+                section.innerHTML = `<h3>Joueur ${idx + 1}: ${player}</h3>`
+                // Only the current turn player gets pennies
+                if (idx === turn) {
+                    const pennyCount = Array.isArray(pennies) ? pennies.filter(Boolean).length : 0
+                    section.innerHTML += `<div class="pennies">${'🪙 '.repeat(pennyCount)}</div>`
+                } else {
+                    section.innerHTML += `<div class="pennies"></div>`
+                }
+                gameBoard.appendChild(section)
+            })
+        }
+
+        if (startBtn && gameSetup && gameControls && gameBoard) {
+            startBtn.addEventListener('click', async () => {
+                // Get game code from UI
+                const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+                // Fetch full game state from API (optional, for validation)
+                const state = await fetchGameState(gameCode)
+                if (!state) return
+                // Only the host should send the ws message to start the game
+                // Assume the host is the only one who sees the start button
+                if (window.pennyGameWS && window.pennyGameWS.readyState === 1) {
+                    window.pennyGameWS.send(JSON.stringify({ type: 'start_game' }))
+                }
+                // Do NOT switch to the board view here; wait for the ws message
+            })
+        }
+
+        // Listen for ws signal to switch to game screen
+        if (window.pennyGameWS) {
+            window.pennyGameWS.addEventListener('message', (event) => {
+                try {
+                    const msg = JSON.parse(event.data)
+                    console.log('WS message received:', msg.type || msg)
+                    if (msg.type === 'start_game') {
+                        const gameSetup = document.querySelector('.game-setup')
+                        const gameControls = document.querySelector('.game-controls')
+                        const gameBoard = document.getElementById('gameBoard')
+                        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+                        fetchGameState(gameCode).then((state) => {
+                            if (!state) return
+                            if (gameSetup) gameSetup.style.display = 'none'
+                            if (gameControls) gameControls.style.display = 'none'
+                            if (gameBoard) {
+                                gameBoard.style.display = ''
+                                renderPlayerSections(state.players || [], state.turn ?? 0, state.pennies || [])
+                            }
+                        })
+                    }
+                } catch {}
+            })
+        }
+    })
+</script>

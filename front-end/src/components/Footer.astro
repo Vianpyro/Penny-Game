@@ -1,0 +1,42 @@
+---
+const baseYear = 2025
+const currentYear = new Date().getFullYear()
+const yearString = currentYear === baseYear ? baseYear.toString() : `${baseYear}-${currentYear}`
+---
+
+<footer>
+    <div>
+        <span>Vianney Veremme &copy; {yearString}</span>
+        <span>Licensed under the GNU AGPL v3 License</span>
+    </div>
+</footer>
+
+<style>
+    footer {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        margin-block-start: 1em;
+        user-select: none;
+    }
+
+    footer > div {
+        display: flex;
+        gap: 1em;
+        text-align: center;
+    }
+
+    footer > ul {
+        display: flex;
+        gap: 1em;
+        justify-content: center;
+    }
+
+    @media screen and (width<=850px) {
+        footer > div {
+            flex-direction: column;
+            font-size: 1rem;
+            gap: 0;
+        }
+    }
+</style>
