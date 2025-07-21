@@ -42,7 +42,7 @@ if ((window as any).pennyGameWS) {
     ;(window as any).pennyGameWS.addEventListener('message', (event: MessageEvent) => {
         try {
             const msg = JSON.parse(event.data)
-            console.log('WS message received:', msg.type || msg)
+            console.debug('WS message received:', msg.type || msg)
             if (msg.type === 'start_game') {
                 const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
                 const gameControls = document.querySelector('.game-controls') as HTMLElement | null

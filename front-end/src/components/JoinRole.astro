@@ -86,7 +86,7 @@ let showModal = visible
                         })
                         const data = await res.json()
                         createdRoomId = data.room_id
-                        console.log('Room created:', createdRoomId)
+                        console.debug('Room created:', createdRoomId)
                     } catch (err) {
                         alert('Erreur lors de la création de la salle: ' + err.message)
                     }
