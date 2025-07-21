@@ -11,6 +11,7 @@ from typing import Optional
 import json
 from datetime import datetime
 import asyncio
+from enum import Enum
 
 app = FastAPI()
 
@@ -28,9 +29,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class GameState(Enum):
+    LOBBY = "lobby"
+    ACTIVE = "active"
+    RESULTS = "results"
+
+
 # Global in-memory state (for MVP only)
 rooms: Dict[str, List[WebSocket]] = {}
-  
+
 # Track online users per room
 online_users: Dict[str, set] = {}
 
@@ -46,10 +54,12 @@ class PennyGame(BaseModel):
     turn: int = 0  # Index of current player
     created_at: datetime
     last_active_at: datetime
+    state: GameState = GameState.LOBBY
 
 
 # In-memory games
 games: Dict[str, PennyGame] = {}
+
 
 # REST endpoints for Penny Game
 @app.post("/game/create")
@@ -86,28 +96,41 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
         rooms[room_id] = []
     now = datetime.now()
     game.last_active_at = now
+    # Determine current game state
+    if game.started_at is None:
+        current_state = GameState.LOBBY
+    elif all(not v for v in game.pennies):
+        current_state = GameState.RESULTS
+    else:
+        current_state = GameState.ACTIVE
+    # Add user to the game
     if game.host is None:
         game.host = username
+        # Inform all clients of the current state
+        asyncio.run(broadcast_game_state(room_id, state=current_state))
         return {
             "success": True,
             "players": game.players,
             "spectators": game.spectators,
             "host": game.host,
             "pennies": game.pennies,
+            "state": current_state.value,
             "note": "Host created the room and does not play.",
         }
     if spectator:
         game.spectators.append(username)
+        asyncio.run(broadcast_game_state(room_id, state=current_state))
         return {
             "success": True,
             "players": game.players,
             "spectators": game.spectators,
             "host": game.host,
             "pennies": game.pennies,
+            "state": current_state.value,
         }
     if len(game.players) >= MAX_PLAYERS:
-        # If game is full, allow joining as spectator
         game.spectators.append(username)
+        asyncio.run(broadcast_game_state(room_id, state=current_state))
         return {
             "success": True,
             "players": game.players,
@@ -115,20 +138,42 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
             "host": game.host,
             "note": "Joined as spectator (game full)",
             "pennies": game.pennies,
+            "state": current_state.value,
         }
     game.players.append(username)
     # No per-player pennies, shared coins only
+    asyncio.run(broadcast_game_state(room_id, state=current_state))
     return {
         "success": True,
         "players": game.players,
         "spectators": game.spectators,
         "host": game.host,
         "pennies": game.pennies,
+        "state": current_state.value,
     }
+
 
 class MoveRequest(BaseModel):
     username: str
     flip: int
+
+
+# New endpoint to start the game (host only)
+@app.post("/game/start/{room_id}")
+def start_game(room_id: str):
+    game = games.get(room_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    if game.started_at is not None:
+        raise HTTPException(status_code=400, detail="Game already started")
+    now = datetime.now()
+    game.started_at = now
+    game.turn_timestamps.append(now)
+    # Do not rotate turn here; first move will do that
+    game.last_active_at = now
+    # Broadcast game state change to all clients
+    asyncio.run(broadcast_game_state(room_id, state=GameState.ACTIVE))
+    return {"success": True, "state": GameState.ACTIVE}
 
 
 @app.post("/game/move/{room_id}")
@@ -155,14 +200,23 @@ def make_move(room_id: str, move: MoveRequest):
         penny_list[i] = False
     now = datetime.now()
     game.last_active_at = now
-    # Set started_at on first move
-    if game.started_at is None:
-        game.started_at = now
     # Record timestamp for this turn
     game.turn_timestamps.append(now)
     # Rotate turn
     game.turn = (game.turn + 1) % len(game.players)
+
+    # If all pennies are tails, game is over, show results
+    if all(not v for v in game.pennies):
+        asyncio.create_task(broadcast_game_state(room_id, state=GameState.RESULTS))
+
     return game.model_dump()
+
+
+# Broadcast game state (menu, game, results) to all clients
+async def broadcast_game_state(room_id: str, state: GameState):
+    msg = {"type": "game_state", "state": state.value}
+    for client in rooms.get(room_id, []):
+        await client.send_text(json.dumps(msg))
 
 
 @app.get("/game/state/{room_id}")
