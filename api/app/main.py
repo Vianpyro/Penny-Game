@@ -233,7 +233,10 @@ def make_move(room_id: str, move: MoveRequest):
     if all(not v for v in game.pennies):
         asyncio.create_task(broadcast_game_state(room_id, state=GameState.RESULTS))
 
-    return game.model_dump()
+    data = game.model_dump()
+    if "host_secret" in data:
+        del data["host_secret"]
+    return data
 
 
 # Broadcast game state (menu, game, results) to all clients
@@ -248,7 +251,10 @@ def get_game_state(room_id: str):
     game = games.get(room_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    return game.model_dump()
+    data = game.model_dump()
+    if "host_secret" in data:
+        del data["host_secret"]
+    return data
 
 
 # Cleanup endpoint to remove inactive games and players
