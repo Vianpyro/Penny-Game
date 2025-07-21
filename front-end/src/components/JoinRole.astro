@@ -1,82 +1,104 @@
 ---
-const { visible = true } = Astro.props
 const apiUrl = import.meta.env.PUBLIC_API_URL
-let showModal = visible
 ---
 
-{
-    showModal && (
-        <div class="join-role-modal" id="joinRoleModal" data-api-url={apiUrl}>
-            <div class="join-role-content">
-                <h2 id="join-role-title">Rejoindre une partie</h2>
-                <form id="joinRoleForm" autocomplete="off">
-                    <label for="username">Votre nom :</label>
-                    <input type="text" id="username" name="username" required placeholder="Entrez votre nom" />
-                    <div class="role-choice" id="roleChoice">
-                        <label>
-                            <input type="radio" name="role" value="player" checked /> Joueur
-                        </label>
-                        <label>
-                            <input type="radio" name="role" value="spectator" /> Spectateur
-                        </label>
-                    </div>
-                    <div class="room-choice">
-                        <label>
-                            <input type="radio" name="roomAction" value="create" /> Créer une salle
-                        </label>
-                        <label>
-                            <input type="radio" name="roomAction" value="join" checked /> Rejoindre une salle
-                        </label>
-                    </div>
-                    <div id="roomCodeField" style="margin-bottom: 18px;">
-                        <label for="roomCode">Code de la salle :</label>
-                        <input type="text" id="roomCode" name="roomCode" placeholder="ABCD1234" />
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        Valider
-                    </button>
-                </form>
+<div class="join-role-modal" id="joinRoleModal" data-api-url={apiUrl}>
+    <div class="join-role-content">
+        <h2 id="join-role-title">Rejoindre une partie</h2>
+        <form id="joinRoleForm" autocomplete="off">
+            <label for="username">Votre nom :</label>
+            <input type="text" id="username" name="username" required placeholder="Entrez votre nom" />
+            <div class="role-choice" id="roleChoice">
+                <label>
+                    <input type="radio" name="role" value="player" checked /> Joueur
+                </label>
+                <label>
+                    <input type="radio" name="role" value="spectator" /> Spectateur
+                </label>
             </div>
-        </div>
-    )
-}
+            <div class="room-choice">
+                <label>
+                    <input type="radio" name="roomAction" value="create" /> Créer une salle
+                </label>
+                <label>
+                    <input type="radio" name="roomAction" value="join" checked /> Rejoindre une salle
+                </label>
+            </div>
+            <div id="roomCodeField" style="margin-bottom: 18px;">
+                <label for="roomCode">Code de la salle :</label>
+                <input type="text" id="roomCode" name="roomCode" placeholder="ABCD1234" />
+            </div>
+            <button type="submit" class="btn btn-primary"> Valider </button>
+        </form>
+    </div>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"></div>
 
 <script>
+    function lockBodyScroll(lock) {
+        if (lock) {
+            document.body.style.overflow = 'hidden'
+            document.body.style.touchAction = 'none'
+        } else {
+            document.body.style.overflow = ''
+            document.body.style.touchAction = ''
+        }
+    }
+
+    function hideModal() {
+        const modal = document.getElementById('joinRoleModal')
+        const backdrop = document.getElementById('modalBackdrop')
+        if (modal) modal.classList.add('hidden')
+        if (backdrop) backdrop.classList.add('hidden')
+        lockBodyScroll(false)
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('joinRoleForm')
         const roomCodeField = document.getElementById('roomCodeField')
         const modal = document.getElementById('joinRoleModal')
         const title = document.getElementById('join-role-title')
-        // Get apiUrl from data attribute
         const apiUrl = modal ? modal.getAttribute('data-api-url') : ''
 
+        if (modal && getComputedStyle(modal).display !== 'none') {
+            lockBodyScroll(true)
+        }
+
         if (form) {
-            // Show/hide room code field
             const roleChoice = document.getElementById('roleChoice')
             Array.from(form.querySelectorAll('[name=roomAction]')).forEach((radio) => {
                 radio.addEventListener('change', () => {
                     const selected = form.querySelector('[name=roomAction]:checked')
-                    if (selected && selected.value === 'join') {
+                    const selectedValue = selected?.value
+                    if (selectedValue === 'join') {
                         roomCodeField.style.display = ''
                         title.textContent = 'Rejoindre une partie'
-                        if (roleChoice) roleChoice.style.display = ''
+                        roleChoice.style.display = ''
                     } else {
                         roomCodeField.style.display = 'none'
                         title.textContent = 'Créer une partie'
-                        if (roleChoice) roleChoice.style.display = 'none'
+                        roleChoice.style.display = 'none'
                     }
                 })
             })
+
             form.addEventListener('submit', async (e) => {
                 e.preventDefault()
-                // Hide modal
-                if (modal) modal.style.display = 'none'
-                const username = form.username.value.trim()
+                hideModal()
+
+                const usernameInput = form.querySelector('input[name="username"]')
+                const roomActionInput = form.querySelector('input[name="roomAction"]:checked')
+                const roomCodeInput = form.querySelector('input[name="roomCode"]')
+                const roleInput = form.querySelector('input[name="role"]:checked')
+
+                const username = usernameInput?.value.trim() || ''
+                const roomAction = roomActionInput?.value || ''
+                const roomCode = roomCodeInput?.value.trim() || ''
                 let role = 'player'
-                const roomAction = form.roomAction.value
-                const roomCode = form.roomCode.value.trim()
-                if (!username) return
                 let createdRoomId = ''
+
+                if (!username) return
+
                 if (roomAction === 'create') {
                     role = 'host'
                     try {
@@ -88,34 +110,57 @@ let showModal = visible
                         createdRoomId = data.room_id
                         console.debug('Room created:', createdRoomId)
                     } catch (err) {
-                        alert('Erreur lors de la création de la salle: ' + err.message)
+                        alert('Erreur lors de la création de la salle: ' + (err?.message || err))
                     }
                 } else {
-                    // Only for join, use selected role
-                    role = form.role.value
+                    role = roleInput?.value || 'player'
                 }
-                // Emit custom event for parent, include createdRoomId if present
-                const detail = { username, role, roomAction, roomCode: roomCode.toLowerCase(), roomId: createdRoomId }
+
+                const detail = {
+                    username,
+                    role,
+                    roomAction,
+                    roomCode: roomCode.toLowerCase(),
+                    roomId: createdRoomId,
+                }
                 window.dispatchEvent(new CustomEvent('joinrole', { detail }))
             })
         }
+
+        window.addEventListener('closeJoinRoleModal', hideModal)
     })
 </script>
 
 <style>
+    .hidden {
+        display: none !important;
+    }
+
     .join-role-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1101;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        pointer-events: auto;
+    }
+
+    .modal-backdrop {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         background: rgb(0 0 0 / 40%);
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
+        z-index: 1100;
+        pointer-events: all;
+        touch-action: none;
     }
+
     .join-role-content {
         background: #fff;
         border-radius: 16px;
@@ -123,15 +168,20 @@ let showModal = visible
         padding: 32px 24px;
         min-width: 320px;
         text-align: center;
+        z-index: 1102;
+        pointer-events: auto;
     }
+
     .join-role-content h2 {
         margin-bottom: 18px;
     }
+
     .join-role-content label {
         display: block;
         margin-bottom: 10px;
         font-weight: 500;
     }
+
     .join-role-content input[type='text'] {
         width: 80%;
         padding: 8px;
@@ -140,6 +190,7 @@ let showModal = visible
         border: 1px solid #ccc;
         font-size: 1em;
     }
+
     .role-choice,
     .room-choice {
         display: flex;
@@ -147,6 +198,7 @@ let showModal = visible
         gap: 24px;
         margin-bottom: 18px;
     }
+
     .btn.btn-primary {
         background: linear-gradient(45deg, #3498db, #2980b9);
         color: #fff;
@@ -158,9 +210,11 @@ let showModal = visible
         font-weight: 600;
         transition: background 0.2s;
     }
+
     .btn.btn-primary:hover {
         background: linear-gradient(45deg, #2980b9, #3498db);
     }
+
     #roomCode {
         text-transform: uppercase;
     }

@@ -1,8 +1,8 @@
 // Main entry point for Penny Game frontend
 import { joinRoom, fetchGameState, changeRole } from './api'
 import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom'
-import { handleDragStart, handleDragEnd, handleDragOver, addDnDEvents, draggedItem } from './dnd'
-import { connectWebSocket, handleWSMessage } from './websocket'
+import { handleDragOver, addDnDEvents, draggedItem } from './dnd'
+import { connectWebSocket } from './websocket'
 import { fetchBoardGameState, renderPlayerSections } from './game-board'
 
 // --- Game Start & Board Logic ---
