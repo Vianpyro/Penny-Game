@@ -13,18 +13,22 @@ export function handleWSMessage(data: any) {
         }
         const msg = JSON.parse(data)
         if (msg.type === 'game_state') {
+            const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
+            const gameControls = document.querySelector('.game-controls') as HTMLElement | null
+            const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
+            const results = document.getElementById('results') as HTMLElement | null
             let stateMsg = ''
             switch (msg.state) {
                 case 'lobby':
                     stateMsg = 'The game is waiting in the lobby.'
+                    if (gameSetup) gameSetup.style.display = ''
+                    if (gameControls) gameControls.style.display = ''
+                    if (results) results.style.display = 'none'
+                    if (gameBoard) gameBoard.style.display = 'none'
                     break
                 case 'active':
                     stateMsg = 'The game is starting!'
                     // Switch to game view
-                    const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
-                    const gameControls = document.querySelector('.game-controls') as HTMLElement | null
-                    const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
-                    const results = document.getElementById('results') as HTMLElement | null
                     if (gameSetup) gameSetup.style.display = 'none'
                     if (gameControls) gameControls.style.display = 'none'
                     if (results) results.style.display = 'none'
@@ -32,6 +36,10 @@ export function handleWSMessage(data: any) {
                     break
                 case 'results':
                     stateMsg = 'The game is over. Results are displayed.'
+                    if (gameSetup) gameSetup.style.display = 'none'
+                    if (gameControls) gameControls.style.display = 'none'
+                    if (results) results.style.display = ''
+                    if (gameBoard) gameBoard.style.display = 'none'
                     break
                 default:
                     stateMsg = `Game state changed: ${msg.state}`
