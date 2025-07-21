@@ -15,13 +15,23 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
     startBtn.addEventListener('click', async () => {
         // Get game code from UI
         const gameCode = (document.getElementById('game-code') as HTMLElement | null)?.textContent?.trim() || ''
+        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
         // Fetch full game state from API (optional, for validation)
         const state = await fetchBoardGameState(gameCode)
         if (!state) return
-        // Only the host should send the ws message to start the game
-        // Assume the host is the only one who sees the start button
-        if ((window as any).pennyGameWS && (window as any).pennyGameWS.readyState === 1) {
-            ;(window as any).pennyGameWS.send(JSON.stringify({ type: 'start_game' }))
+        // Only the host should trigger the game start
+        // Call the backend endpoint to trigger the state change
+        if (apiUrl && gameCode) {
+            fetch(`${apiUrl}/game/start/${gameCode}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+                .then((response) => {
+                    if (!response.ok) throw new Error('Erreur lors du démarrage de la partie')
+                })
+                .catch((err) => {
+                    alert(err.message || 'Impossible de démarrer la partie')
+                })
         }
         // Do NOT switch to the board view here; wait for the ws message
     })

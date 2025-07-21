@@ -12,10 +12,27 @@ export function handleWSMessage(data: any) {
             }
         }
         const msg = JSON.parse(data)
+        if (msg.type === 'game_state') {
+            let stateMsg = ''
+            switch (msg.state) {
+                case 'lobby':
+                    stateMsg = 'La partie est en attente dans le lobby.'
+                    break
+                case 'active':
+                    stateMsg = 'La partie commence !'
+                    break
+                case 'results':
+                    stateMsg = 'La partie est terminée. Résultats affichés.'
+                    break
+                default:
+                    stateMsg = `Changement d\'état de la partie: ${msg.state}`
+            }
+            alert(stateMsg)
+        }
         if (msg.type === 'activity') {
             renderPlayers(msg.players, msg.host, msg.spectators, msg.activity, addDnDEvents)
             renderSpectators(msg.spectators, msg.host, msg.activity, addDnDEvents)
-        } else {
+        } else if (msg.type !== 'game_state') {
             renderPlayers(msg.players, msg.host, msg.spectators, {}, addDnDEvents)
             renderSpectators(msg.spectators, msg.host, {}, addDnDEvents)
         }
@@ -32,11 +49,8 @@ export function connectWebSocket(apiUrl: string, roomId: string, username: strin
     ws.onmessage = (event) => handleWSMessage(event.data)
     ws.onclose = (event: CloseEvent) => {
         console.log('WebSocket déconnecté', event)
-        if (event && event.code === 4001) {
-            alert('Code de salle invalide ou salle inexistante. Veuillez réessayer.')
-            const joinRoleModal = document.getElementById('joinRoleModal')
-            if (joinRoleModal) joinRoleModal.style.display = 'flex'
-        }
+        alert('Connexion perdue avec la salle. La page va être rechargée.')
+        window.location.reload()
     }
     ws.onerror = (err: Event) => {
         console.error('WebSocket erreur:', err)
