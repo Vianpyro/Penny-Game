@@ -3,6 +3,54 @@ import { joinRoom, fetchGameState, changeRole } from './api'
 import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom'
 import { handleDragStart, handleDragEnd, handleDragOver, addDnDEvents, draggedItem } from './dnd'
 import { connectWebSocket, handleWSMessage } from './websocket'
+import { fetchBoardGameState, renderPlayerSections } from './game-board'
+
+// --- Game Start & Board Logic ---
+const startBtn = document.getElementById('startBtn') as HTMLButtonElement | null
+const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
+const gameControls = document.querySelector('.game-controls') as HTMLElement | null
+const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
+
+if (startBtn && gameSetup && gameControls && gameBoard) {
+    startBtn.addEventListener('click', async () => {
+        // Get game code from UI
+        const gameCode = (document.getElementById('game-code') as HTMLElement | null)?.textContent?.trim() || ''
+        // Fetch full game state from API (optional, for validation)
+        const state = await fetchBoardGameState(gameCode)
+        if (!state) return
+        // Only the host should send the ws message to start the game
+        // Assume the host is the only one who sees the start button
+        if ((window as any).pennyGameWS && (window as any).pennyGameWS.readyState === 1) {
+            ;(window as any).pennyGameWS.send(JSON.stringify({ type: 'start_game' }))
+        }
+        // Do NOT switch to the board view here; wait for the ws message
+    })
+}
+
+// Listen for ws signal to switch to game screen
+if ((window as any).pennyGameWS) {
+    ;(window as any).pennyGameWS.addEventListener('message', (event: MessageEvent) => {
+        try {
+            const msg = JSON.parse(event.data)
+            console.log('WS message received:', msg.type || msg)
+            if (msg.type === 'start_game') {
+                const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
+                const gameControls = document.querySelector('.game-controls') as HTMLElement | null
+                const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
+                const gameCode = (document.getElementById('game-code') as HTMLElement | null)?.textContent?.trim() || ''
+                fetchBoardGameState(gameCode).then((state) => {
+                    if (!state) return
+                    if (gameSetup) (gameSetup as HTMLElement).style.display = 'none'
+                    if (gameControls) (gameControls as HTMLElement).style.display = 'none'
+                    if (gameBoard) {
+                        ;(gameBoard as HTMLElement).style.display = ''
+                        renderPlayerSections(state.players || [], state.turn ?? 0, state.pennies || [])
+                    }
+                })
+            }
+        } catch {}
+    })
+}
 
 window.addEventListener('DOMContentLoaded', () => {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
