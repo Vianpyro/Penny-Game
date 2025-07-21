@@ -19,7 +19,7 @@ PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
 # Allow all origins for MVP simplicity
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4321"],  # Set to your front-end origin
+    allow_origins=["http://localhost:4321", "https://vianpyro.github.io/Penny-Game"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
