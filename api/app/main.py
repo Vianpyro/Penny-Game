@@ -1,4 +1,6 @@
-from fastapi import Body
+from fastapi import Body, Request, Response, Cookie
+from fastapi import Cookie
+from fastapi import Response
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from typing import Dict, List
@@ -12,6 +14,8 @@ import json
 from datetime import datetime
 import asyncio
 from enum import Enum
+from fastapi import Response
+import json
 
 app = FastAPI()
 
@@ -23,8 +27,8 @@ PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
 # Allow all origins for MVP simplicity
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["http://localhost:4321"],  # Set to your front-end origin
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -50,6 +54,7 @@ class PennyGame(BaseModel):
     players: List[str]
     spectators: List[str] = []
     host: Optional[str] = None
+    host_secret: Optional[str] = None  # Secret token for host actions
     pennies: List[bool] = [True] * 20  # Shared coins, True=heads, False=tails
     turn: int = 0  # Index of current player
     created_at: datetime
@@ -66,14 +71,27 @@ games: Dict[str, PennyGame] = {}
 def create_game():
     room_id = str(uuid4())[:8]
     now = datetime.now()
+    host_secret = str(uuid4())
     games[room_id] = PennyGame(
         room_id=room_id,
         players=[],
         pennies=[True] * 20,
         created_at=now,
         last_active_at=now,
+        host_secret=host_secret,
     )
-    return {"room_id": room_id}
+
+    response = Response(
+        content=json.dumps({"room_id": room_id}), media_type="application/json"
+    )
+    response.set_cookie(
+        key="host_secret",
+        value=host_secret,
+        httponly=True,
+        samesite="strict",
+        max_age=10,
+    )
+    return response
 
 
 class JoinRequest(BaseModel):
@@ -160,19 +178,25 @@ class MoveRequest(BaseModel):
 
 # New endpoint to start the game (host only)
 @app.post("/game/start/{room_id}")
-def start_game(room_id: str):
+async def start_game(room_id: str, host_secret: str = Cookie(None)):
     game = games.get(room_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     if game.started_at is not None:
         raise HTTPException(status_code=400, detail="Game already started")
+    if len(game.players) < 2:
+        raise HTTPException(
+            status_code=400, detail="Need at least 2 players to start the game"
+        )
+    if not host_secret or host_secret != game.host_secret:
+        raise HTTPException(status_code=403, detail="Invalid host secret")
     now = datetime.now()
     game.started_at = now
     game.turn_timestamps.append(now)
     # Do not rotate turn here; first move will do that
     game.last_active_at = now
     # Broadcast game state change to all clients
-    asyncio.run(broadcast_game_state(room_id, state=GameState.ACTIVE))
+    await broadcast_game_state(room_id, state=GameState.ACTIVE)
     return {"success": True, "state": GameState.ACTIVE}
 
 

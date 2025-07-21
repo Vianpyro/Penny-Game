@@ -104,7 +104,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
                     try {
                         const res = await fetch(`${apiUrl}/game/create`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
                         })
                         const data = await res.json()
                         createdRoomId = data.room_id

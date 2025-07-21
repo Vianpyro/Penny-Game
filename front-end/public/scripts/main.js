@@ -25,6 +25,7 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
             fetch(`${apiUrl}/game/start/${gameCode}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
             })
                 .then((response) => {
                     if (!response.ok) throw new Error('Erreur lors du démarrage de la partie')
@@ -58,7 +59,7 @@ if (window.pennyGameWS) {
                     }
                 })
             }
-        } catch {}
+        } catch { }
     })
 }
 
