@@ -16,10 +16,10 @@ export function handleWSMessage(data: any) {
             let stateMsg = ''
             switch (msg.state) {
                 case 'lobby':
-                    stateMsg = 'La partie est en attente dans le lobby.'
+                    stateMsg = 'The game is waiting in the lobby.'
                     break
                 case 'active':
-                    stateMsg = 'La partie commence !'
+                    stateMsg = 'The game is starting!'
                     // Switch to game view
                     const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
                     const gameControls = document.querySelector('.game-controls') as HTMLElement | null
@@ -31,10 +31,10 @@ export function handleWSMessage(data: any) {
                     if (gameBoard) gameBoard.style.display = ''
                     break
                 case 'results':
-                    stateMsg = 'La partie est terminée. Résultats affichés.'
+                    stateMsg = 'The game is over. Results are displayed.'
                     break
                 default:
-                    stateMsg = `Changement d\'état de la partie: ${msg.state}`
+                    stateMsg = `Game state changed: ${msg.state}`
             }
             console.debug(stateMsg)
         }
@@ -54,15 +54,15 @@ export function connectWebSocket(apiUrl: string, roomId: string, username: strin
     if (!apiUrl || !roomId || !username) return
     const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}`
     const ws = new WebSocket(wsUrl)
-    ws.onopen = () => console.debug('WebSocket connecté:', wsUrl)
+    ws.onopen = () => console.debug('WebSocket connected:', wsUrl)
     ws.onmessage = (event) => handleWSMessage(event.data)
     ws.onclose = (event: CloseEvent) => {
-        console.debug('WebSocket déconnecté', event)
+        console.debug('WebSocket disconnected', event)
         alert('Connexion perdue avec la salle. La page va être rechargée.')
         window.location.reload()
     }
     ws.onerror = (error: Event) => {
-        console.error('WebSocket erreur:', error)
+        console.error('WebSocket error:', error)
         alert('Impossible de se connecter à la salle. Veuillez vérifier le code et réessayer.')
         const joinRoleModal = document.getElementById('joinRoleModal')
         if (joinRoleModal) joinRoleModal.style.display = 'flex'
