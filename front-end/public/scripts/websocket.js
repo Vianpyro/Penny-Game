@@ -1,8 +1,8 @@
 // WebSocket logic for Penny Game
-import { renderPlayers, renderSpectators } from './dom'
-import { addDnDEvents } from './dnd'
+import { renderPlayers, renderSpectators } from './dom.js'
+import { addDnDEvents } from './dnd.js'
 
-export function handleWSMessage(data: any) {
+export function handleWSMessage(data) {
     try {
         if (typeof data === 'string' && data.includes('🔴')) {
             if (data.includes('left the room.') && data.includes('Host')) {
@@ -13,10 +13,10 @@ export function handleWSMessage(data: any) {
         }
         const msg = JSON.parse(data)
         if (msg.type === 'game_state') {
-            const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
-            const gameControls = document.querySelector('.game-controls') as HTMLElement | null
-            const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
-            const results = document.getElementById('results') as HTMLElement | null
+            const gameSetup = document.querySelector('.game-setup')
+            const gameControls = document.querySelector('.game-controls')
+            const gameBoard = document.getElementById('gameBoard')
+            const results = document.getElementById('results')
             let stateMsg = ''
             switch (msg.state) {
                 case 'lobby': // Default/Switch to lobby view
@@ -57,22 +57,22 @@ export function handleWSMessage(data: any) {
     }
 }
 
-export function connectWebSocket(apiUrl: string, roomId: string, username: string) {
+export function connectWebSocket(apiUrl, roomId, username) {
     if (!apiUrl || !roomId || !username) return
     const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}`
     const ws = new WebSocket(wsUrl)
     ws.onopen = () => console.debug('WebSocket connected:', wsUrl)
     ws.onmessage = (event) => handleWSMessage(event.data)
-    ws.onclose = (event: CloseEvent) => {
+    ws.onclose = (event) => {
         console.debug('WebSocket disconnected', event)
         alert('Connexion perdue avec la salle. La page va être rechargée.')
         window.location.reload()
     }
-    ws.onerror = (error: Event) => {
+    ws.onerror = (error) => {
         console.error('WebSocket error:', error)
         alert('Impossible de se connecter à la salle. Veuillez vérifier le code et réessayer.')
         const joinRoleModal = document.getElementById('joinRoleModal')
         if (joinRoleModal) joinRoleModal.style.display = 'flex'
     }
-    ;(window as any).pennyGameWS = ws
+    window.pennyGameWS = ws
 }

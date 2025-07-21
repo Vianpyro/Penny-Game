@@ -34,7 +34,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
 </div>
 <div class="modal-backdrop" id="modalBackdrop"></div>
 
-<script>
+<script type="module" is:inline>
     function lockBodyScroll(lock) {
         if (lock) {
             document.body.style.overflow = 'hidden'

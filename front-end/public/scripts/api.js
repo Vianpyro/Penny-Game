@@ -1,6 +1,6 @@
 // API-related functions for Penny Game
 
-export function joinRoom(apiUrl: string, roomId: string, username: string, fetchGameState: (roomId: string) => void) {
+export function joinRoom(apiUrl, roomId, username, fetchGameState) {
     if (!apiUrl || !roomId || !username) return
     fetch(`${apiUrl}/game/join/${roomId}`, {
         method: 'POST',
@@ -15,19 +15,19 @@ export function joinRoom(apiUrl: string, roomId: string, username: string, fetch
         .catch(console.error)
 }
 
-export function fetchGameState(apiUrl: string, roomId: string, renderPlayers: any, renderSpectators: any) {
+export function fetchGameState(apiUrl, roomId, renderPlayers, renderSpectators) {
     if (!apiUrl || !roomId) return
     fetch(`${apiUrl}/game/state/${roomId}`)
         .then((response) => response.json())
         .then((data) => {
             // Fallback: if no activity info, assume all users online
-            const activity: Record<string, boolean> = {}
+            const activity = {}
             if (data.players)
-                data.players.forEach((p: string) => {
+                data.players.forEach((p) => {
                     activity[p] = true
                 })
             if (data.spectators)
-                data.spectators.forEach((s: string) => {
+                data.spectators.forEach((s) => {
                     activity[s] = true
                 })
             renderPlayers(data.players, data.host, data.spectators, activity)
@@ -36,13 +36,7 @@ export function fetchGameState(apiUrl: string, roomId: string, renderPlayers: an
         .catch(console.error)
 }
 
-export function changeRole(
-    apiUrl: string,
-    roomId: string,
-    username: string,
-    newRole: string,
-    fetchGameState: (roomId: string) => void
-) {
+export function changeRole(apiUrl, roomId, username, newRole, fetchGameState) {
     fetch(`${apiUrl}/game/change_role/${roomId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

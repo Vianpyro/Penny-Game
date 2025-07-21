@@ -1,20 +1,20 @@
 // Main entry point for Penny Game frontend
-import { joinRoom, fetchGameState, changeRole } from './api'
-import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom'
-import { handleDragOver, addDnDEvents, draggedItem } from './dnd'
-import { connectWebSocket } from './websocket'
-import { fetchBoardGameState, renderPlayerSections } from './game-board'
+import { joinRoom, fetchGameState, changeRole } from './api.js'
+import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom.js'
+import { handleDragOver, addDnDEvents, draggedItem } from './dnd.js'
+import { connectWebSocket } from './websocket.js'
+import { fetchBoardGameState, renderPlayerSections } from './game-board.js'
 
 // --- Game Start & Board Logic ---
-const startBtn = document.getElementById('startBtn') as HTMLButtonElement | null
-const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
-const gameControls = document.querySelector('.game-controls') as HTMLElement | null
-const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
+const startBtn = document.getElementById('startBtn')
+const gameSetup = document.querySelector('.game-setup')
+const gameControls = document.querySelector('.game-controls')
+const gameBoard = document.getElementById('gameBoard')
 
 if (startBtn && gameSetup && gameControls && gameBoard) {
     startBtn.addEventListener('click', async () => {
         // Get game code from UI
-        const gameCode = (document.getElementById('game-code') as HTMLElement | null)?.textContent?.trim() || ''
+        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
         const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
         // Fetch full game state from API (optional, for validation)
         const state = await fetchBoardGameState(gameCode)
@@ -38,22 +38,22 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
 }
 
 // Listen for ws signal to switch to game screen
-if ((window as any).pennyGameWS) {
-    ;(window as any).pennyGameWS.addEventListener('message', (event: MessageEvent) => {
+if (window.pennyGameWS) {
+    window.pennyGameWS.addEventListener('message', (event) => {
         try {
             const msg = JSON.parse(event.data)
             console.debug('WS message received:', msg.type || msg)
             if (msg.type === 'start_game') {
-                const gameSetup = document.querySelector('.game-setup') as HTMLElement | null
-                const gameControls = document.querySelector('.game-controls') as HTMLElement | null
-                const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
-                const gameCode = (document.getElementById('game-code') as HTMLElement | null)?.textContent?.trim() || ''
+                const gameSetup = document.querySelector('.game-setup')
+                const gameControls = document.querySelector('.game-controls')
+                const gameBoard = document.getElementById('gameBoard')
+                const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
                 fetchBoardGameState(gameCode).then((state) => {
                     if (!state) return
-                    if (gameSetup) (gameSetup as HTMLElement).style.display = 'none'
-                    if (gameControls) (gameControls as HTMLElement).style.display = 'none'
+                    if (gameSetup) gameSetup.style.display = 'none'
+                    if (gameControls) gameControls.style.display = 'none'
                     if (gameBoard) {
-                        ;(gameBoard as HTMLElement).style.display = ''
+                        gameBoard.style.display = ''
                         renderPlayerSections(state.players || [], state.turn ?? 0, state.pennies || [])
                     }
                 })
@@ -97,7 +97,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const spectatorList = document.getElementById('spectatorList')
     let _draggedItem = draggedItem
 
-    function handleDrop(e: DragEvent, targetList: HTMLElement) {
+    function handleDrop(e, targetList) {
         e.preventDefault()
         if (_draggedItem && targetList && _draggedItem.parentNode !== targetList) {
             const username = (_draggedItem.textContent || '').replace(/^.*?\s/, '').trim()
@@ -109,13 +109,12 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             const roomId = document.getElementById('game-code')?.textContent?.trim() || ''
             if (apiUrl && roomId && username && newRole) {
-                changeRole(apiUrl, roomId, username, newRole, (roomId: string) =>
+                changeRole(apiUrl, roomId, username, newRole, (roomId) =>
                     fetchGameState(
                         apiUrl,
                         roomId,
-                        (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
-                            renderPlayers(p, h, s, a, addDnDEvents),
-                        (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
+                        (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
+                        (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
                     )
                 )
             }
@@ -123,31 +122,31 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupDropZones() {
-        const playerList = document.getElementById('playerList') as HTMLElement | null
-        const spectatorList = document.getElementById('spectatorList') as HTMLElement | null
+        const playerList = document.getElementById('playerList')
+        const spectatorList = document.getElementById('spectatorList')
         if (spectatorList) {
             spectatorList.addEventListener('dragover', (e) => {
-                handleDragOver(e as DragEvent)
+                handleDragOver(e)
                 spectatorList.classList.add('drag-over')
             })
             spectatorList.addEventListener('dragleave', () => {
                 spectatorList.classList.remove('drag-over')
             })
             spectatorList.addEventListener('drop', (e) => {
-                handleDrop(e as DragEvent, spectatorList)
+                handleDrop(e, spectatorList)
                 spectatorList.classList.remove('drag-over')
             })
         }
         if (playerList) {
             playerList.addEventListener('dragover', (e) => {
-                handleDragOver(e as DragEvent)
+                handleDragOver(e)
                 playerList.classList.add('drag-over')
             })
             playerList.addEventListener('dragleave', () => {
                 playerList.classList.remove('drag-over')
             })
             playerList.addEventListener('drop', (e) => {
-                handleDrop(e as DragEvent, playerList)
+                handleDrop(e, playerList)
                 playerList.classList.remove('drag-over')
             })
         }
@@ -173,7 +172,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Get initial selected player count from active button
     let selectedPlayers = 2 // fallback
     if (playerButtons) {
-        const activeBtn = playerButtons.querySelector('button.active') as HTMLElement | null
+        const activeBtn = playerButtons.querySelector('button.active')
         if (activeBtn && activeBtn.dataset.count) {
             selectedPlayers = parseInt(activeBtn.dataset.count, 10)
         }
@@ -182,7 +181,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Get initial selected round from active option
     let selectedRound = 1 // fallback
     if (roundSelector) {
-        const activeRound = roundSelector.querySelector('.round-option.active') as HTMLElement | null
+        const activeRound = roundSelector.querySelector('.round-option.active')
         if (activeRound && activeRound.dataset.round) {
             selectedRound = parseInt(activeRound.dataset.round, 10)
         }
@@ -191,9 +190,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // Player count selection
     if (playerButtons) {
         playerButtons.querySelectorAll('button').forEach((btn) => {
-            const btnEl = btn as HTMLElement
+            const btnEl = btn
             btnEl.addEventListener('click', () => {
-                playerButtons.querySelectorAll('button').forEach((b) => (b as HTMLElement).classList.remove('active'))
+                playerButtons.querySelectorAll('button').forEach((b) => b.classList.remove('active'))
                 btnEl.classList.add('active')
                 if (btnEl.dataset.count) {
                     selectedPlayers = parseInt(btnEl.dataset.count, 10)
@@ -207,11 +206,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // Round selection
     if (roundSelector) {
         roundSelector.querySelectorAll('.round-option').forEach((opt) => {
-            const optEl = opt as HTMLElement
+            const optEl = opt
             optEl.addEventListener('click', () => {
-                roundSelector
-                    .querySelectorAll('.round-option')
-                    .forEach((o) => (o as HTMLElement).classList.remove('active'))
+                roundSelector.querySelectorAll('.round-option').forEach((o) => o.classList.remove('active'))
                 optEl.classList.add('active')
                 if (optEl.dataset.round) {
                     selectedRound = parseInt(optEl.dataset.round, 10)
@@ -226,49 +223,44 @@ window.addEventListener('DOMContentLoaded', () => {
     updateBoard(gameBoard, selectedPlayers)
 
     // WebSocket and API event listeners
-    window.addEventListener('joinrole', (e: Event) => {
-        const detail = (e as CustomEvent).detail
+    window.addEventListener('joinrole', (e) => {
+        const detail = e.detail
         const username = detail?.username
         if (!username) return
         if (detail.roomAction === 'create' && detail.roomId) {
             updateGameCode(detail.roomId)
-            joinRoom(apiUrl, detail.roomId, username, (roomId: string) =>
+            joinRoom(apiUrl, detail.roomId, username, (roomId) =>
                 fetchGameState(
                     apiUrl,
                     roomId,
-                    (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
-                        renderPlayers(p, h, s, a, addDnDEvents),
-                    (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
+                    (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
+                    (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
                 )
             )
             connectWebSocket(apiUrl, detail.roomId, username)
             fetchGameState(
                 apiUrl,
                 detail.roomId,
-                (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
-                    renderPlayers(p, h, s, a, addDnDEvents),
-                (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
+                (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
+                (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
             )
         } else if (detail.roomAction === 'join' && detail.roomCode) {
             updateGameCode(detail.roomCode)
-            joinRoom(apiUrl, detail.roomCode, username, (roomId: string) =>
+            joinRoom(apiUrl, detail.roomCode, username, (roomId) =>
                 fetchGameState(
                     apiUrl,
                     roomId,
-                    (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
-                        renderPlayers(p, h, s, a, addDnDEvents),
-                    (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
+                    (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
+                    (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
                 )
             )
             connectWebSocket(apiUrl, detail.roomCode, username)
             fetchGameState(
                 apiUrl,
                 detail.roomCode,
-                (p: string[], h: string, s: string[], a: Record<string, boolean>) =>
-                    renderPlayers(p, h, s, a, addDnDEvents),
-                (s: string[], h: string, a: Record<string, boolean>) => renderSpectators(s, h, a, addDnDEvents)
+                (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
+                (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
             )
         }
     })
 })
-export {}

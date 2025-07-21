@@ -1,16 +1,16 @@
 // DOM manipulation helpers for Penny Game
 
-export function updateGameCode(code: string) {
+export function updateGameCode(code) {
     const gameCodeSpan = document.getElementById('game-code')
     if (gameCodeSpan) gameCodeSpan.textContent = code
 }
 
 export function renderPlayers(
-    players: string[],
-    host: string,
-    spectators: string[],
-    activity: Record<string, boolean>,
-    addDnDEvents: (list: HTMLElement | null) => void
+    players,
+    host,
+    spectators,
+    activity,
+    addDnDEvents
 ) {
     const playerList = document.getElementById('playerList')
     if (!playerList) return
@@ -39,10 +39,10 @@ export function renderPlayers(
 }
 
 export function renderSpectators(
-    spectators: string[],
-    host: string,
-    activity: Record<string, boolean>,
-    addDnDEvents: (list: HTMLElement | null) => void
+    spectators,
+    host,
+    activity,
+    addDnDEvents
 ) {
     const spectatorList = document.getElementById('spectatorList')
     if (!spectatorList) return
@@ -71,16 +71,16 @@ export function renderSpectators(
 }
 
 export function updateConfig(
-    playersSpan: HTMLElement | null,
-    roundSpan: HTMLElement | null,
-    selectedPlayers: number,
-    selectedRound: number
+    playersSpan,
+    roundSpan,
+    selectedPlayers,
+    selectedRound
 ) {
     if (playersSpan) playersSpan.textContent = selectedPlayers.toString()
     if (roundSpan) roundSpan.textContent = selectedRound.toString()
 }
 
-export function updateBoard(gameBoard: HTMLElement | null, selectedPlayers: number) {
+export function updateBoard(gameBoard, selectedPlayers) {
     if (!gameBoard) return
     gameBoard.className = `game-board players-${selectedPlayers}`
 }

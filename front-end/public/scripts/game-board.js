@@ -1,8 +1,8 @@
 // Game start logic for Penny Game (migrated from inline script in index.astro)
 
 // Helper to fetch player names from API for board rendering
-export async function fetchBoardGameState(gameCode: string): Promise<any> {
-    const apiUrl = (document.getElementById('joinRoleModal') as HTMLElement | null)?.getAttribute('data-api-url') || ''
+export async function fetchBoardGameState(gameCode) {
+    const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     if (!apiUrl || !gameCode) return null
     try {
         const res = await fetch(`${apiUrl}/game/state/${gameCode}`)
@@ -14,11 +14,11 @@ export async function fetchBoardGameState(gameCode: string): Promise<any> {
     }
 }
 
-export function renderPlayerSections(players: string[], turn: number, pennies: any[]): void {
-    const gameBoard = document.getElementById('gameBoard') as HTMLElement | null
+export function renderPlayerSections(players, turn, pennies) {
+    const gameBoard = document.getElementById('gameBoard')
     if (!gameBoard) return
     gameBoard.innerHTML = ''
-    players.forEach((player: string, idx: number) => {
+    players.forEach((player, idx) => {
         const section = document.createElement('section')
         section.className = 'player-zone'
         section.innerHTML = `<h3>Joueur ${idx + 1}: ${player}</h3>`
