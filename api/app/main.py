@@ -1,21 +1,13 @@
-from fastapi import Body, Request, Response, Cookie
-from fastapi import Cookie
-from fastapi import Response
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from typing import Dict, List
+import asyncio
+import json
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Dict, List, Optional
 from uuid import uuid4
-from datetime import timedelta
-from fastapi import HTTPException
+
+from fastapi import Body, Cookie, FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-import json
-from datetime import datetime
-import asyncio
-from enum import Enum
-from fastapi import Response
-import json
 
 app = FastAPI()
 
@@ -81,9 +73,7 @@ def create_game():
         host_secret=host_secret,
     )
 
-    response = Response(
-        content=json.dumps({"room_id": room_id}), media_type="application/json"
-    )
+    response = Response(content=json.dumps({"room_id": room_id}), media_type="application/json")
     response.set_cookie(
         key="host_secret",
         value=host_secret,
@@ -105,9 +95,7 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
         raise HTTPException(status_code=404, detail="Game not found")
     username = join.username
     if username == game.host:
-        raise HTTPException(
-            status_code=400, detail="Host cannot join as player or spectator"
-        )
+        raise HTTPException(status_code=400, detail="Host cannot join as player or spectator")
     if username in game.players or username in game.spectators:
         raise HTTPException(status_code=400, detail="User already joined")
     if room_id not in rooms:
@@ -185,9 +173,7 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
     if game.started_at is not None:
         raise HTTPException(status_code=400, detail="Game already started")
     if len(game.players) < 2:
-        raise HTTPException(
-            status_code=400, detail="Need at least 2 players to start the game"
-        )
+        raise HTTPException(status_code=400, detail="Need at least 2 players to start the game")
     if not host_secret or host_secret != game.host_secret:
         raise HTTPException(status_code=403, detail="Invalid host secret")
     now = datetime.now()
