@@ -19,29 +19,28 @@ export function handleWSMessage(data: any) {
             const results = document.getElementById('results') as HTMLElement | null
             let stateMsg = ''
             switch (msg.state) {
-                case 'lobby':
+                case 'lobby': // Default/Switch to lobby view
                     stateMsg = 'The game is waiting in the lobby.'
                     if (gameSetup) gameSetup.style.display = ''
                     if (gameControls) gameControls.style.display = ''
                     if (results) results.style.display = 'none'
                     if (gameBoard) gameBoard.style.display = 'none'
                     break
-                case 'active':
+                case 'active': // Switch to game view
                     stateMsg = 'The game is starting!'
-                    // Switch to game view
                     if (gameSetup) gameSetup.style.display = 'none'
                     if (gameControls) gameControls.style.display = 'none'
                     if (results) results.style.display = 'none'
                     if (gameBoard) gameBoard.style.display = ''
                     break
-                case 'results':
+                case 'results': // Switch to results view
                     stateMsg = 'The game is over. Results are displayed.'
                     if (gameSetup) gameSetup.style.display = 'none'
                     if (gameControls) gameControls.style.display = 'none'
                     if (results) results.style.display = ''
                     if (gameBoard) gameBoard.style.display = 'none'
                     break
-                default:
+                default: // WTF is this state?
                     stateMsg = `Game state changed: ${msg.state}`
             }
             console.debug(stateMsg)
