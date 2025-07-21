@@ -16,7 +16,7 @@
 }
 
 .btn-primary:hover {
-    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 8px 20px rgb(52 152 219 / 30%);
     transform: translateY(-2px);
 }
 
@@ -26,7 +26,7 @@
 }
 
 .btn-success:hover {
-    box-shadow: 0 8px 20px rgba(46, 204, 113, 0.3);
+    box-shadow: 0 8px 20px rgb(46 204 113 / 30%);
     transform: translateY(-2px);
 }
 
@@ -38,9 +38,9 @@
 
 .container {
     backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.95);
+    background: rgb(255 255 255 / 95%);
     border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 40px rgb(0 0 0 / 10%);
     margin: 0 auto;
     max-width: 1200px;
     padding: 30px;
@@ -87,15 +87,15 @@
 }
 
 .game-setup {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 90%);
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 10%);
     margin-bottom: 30px;
     padding: 30px;
 }
 
 .insights {
-    background: rgba(52, 152, 219, 0.1);
+    background: rgb(52, 152, 219 / 10%);
     border-left: 4px solid #3498db;
     border-radius: 0 10px 10px 0;
     margin-top: 20px;
@@ -129,7 +129,7 @@
 }
 
 .pass-btn:hover {
-    box-shadow: 0 5px 15px rgba(155, 89, 182, 0.3);
+    box-shadow: 0 5px 15px rgb(155 89 182 / 30%);
     transform: translateY(-2px);
 }
 
@@ -137,7 +137,7 @@
     align-items: center;
     background: linear-gradient(45deg, #f39c12, #e67e22);
     border-radius: 50%;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 3px 10px rgb(0 0 0 / 20%);
     color: #fff;
     display: flex;
     font-size: 12px;
@@ -150,7 +150,7 @@
 
 .penny-container {
     align-items: center;
-    background: rgba(241, 196, 15, 0.2);
+    background: rgb(241 196 15 / 20%);
     border-radius: 10px;
     display: flex;
     flex-wrap: wrap;
@@ -202,17 +202,17 @@
 }
 
 .setup-controls > div {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 90%);
     border: 2px solid #ecf0f1;
     border-radius: 10px;
     padding: 20px;
 }
 
 .player-zone {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 90%);
     border: 3px solid transparent;
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 10%);
     padding: 20px;
     text-align: center;
     transition: all 0.3s ease;
@@ -220,17 +220,17 @@
 
 .player-zone.active {
     border-color: #3498db;
-    box-shadow: 0 15px 40px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 15px 40px rgb(52 152 219 / 30%);
     transform: scale(1.05);
 }
 
 .player-zone.completed {
-    background: rgba(46, 204, 113, 0.1);
+    background: rgb(46 204 113 / 10%);
     border-color: #27ae60;
 }
 
 .results {
-    background: rgba(236, 240, 241, 0.9);
+    background: rgb(236 240 241 / 90%);
     border-radius: 15px;
     margin-top: 30px;
     padding: 25px;
@@ -257,7 +257,7 @@
 }
 
 .round-option {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 90%);
     border: 2px solid #ecf0f1;
     border-radius: 12px;
     cursor: pointer;
@@ -267,15 +267,15 @@
 }
 
 .round-option.active {
-    background: rgba(52, 152, 219, 0.1);
+    background: rgb(52 152 219 / 10%);
     border-color: #3498db;
-    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 8px 20px rgb(52 152 219 / 30%);
     transform: translateY(-2px);
 }
 
 .round-option:hover {
     border-color: #3498db;
-    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.2);
+    box-shadow: 0 8px 20px rgb(52 152 219 / 20%);
     transform: translateY(-2px);
 }
 
@@ -358,7 +358,7 @@
 .stat-card {
     background: #fff;
     border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgb(0 0 0 / 10%);
     padding: 20px;
     text-align: center;
 }
@@ -397,7 +397,7 @@
 }
 
 .total-time {
-    background: rgba(231, 76, 60, 0.1);
+    background: rgb(231 76 60 / 10%);
     border-radius: 10px;
     color: #e74c3c;
     font-size: 1.8em;
@@ -421,7 +421,7 @@ p {
 }
 
 .rules {
-    background: rgb(from #e6ab22 r g b / 0.1) !important;
+    background: rgb(from #e6ab22 r g b / 10%) !important;
     border: 2px solid #f3b712 !important;
 }
 
@@ -442,7 +442,7 @@ p {
 }
 
 .user-list.drag-over {
-    background: rgba(0, 128, 128, 0.18);
+    background: rgb(0 128 128 / 18%);
     border-color: #008080;
 }
 
