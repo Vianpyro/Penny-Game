@@ -1,7 +1,7 @@
 {
     "name": "penny_game",
     "type": "module",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "dependencies": {
         "astro": "^5.12.0"
     },
