@@ -186,18 +186,15 @@ let showJoinRole = true
             startBtn.addEventListener('click', async () => {
                 // Get game code from UI
                 const gameCode = document.getElementById('gameCode')?.textContent?.trim() || ''
-                // Fetch full game state from API
+                // Fetch full game state from API (optional, for validation)
                 const state = await fetchGameState(gameCode)
                 if (!state) return
-                // Hide setup, show board
-                gameSetup.style.display = 'none'
-                gameControls.style.display = 'none'
-                gameBoard.style.display = ''
-                renderPlayerSections(state.players || [], state.turn ?? 0, state.pennies || [])
-                // Send WebSocket signal to all players to switch to game screen
+                // Only the host should send the ws message to start the game
+                // Assume the host is the only one who sees the start button
                 if (window.pennyGameWS && window.pennyGameWS.readyState === 1) {
                     window.pennyGameWS.send(JSON.stringify({ type: 'start_game' }))
                 }
+                // Do NOT switch to the board view here; wait for the ws message
             })
         }
 
@@ -206,6 +203,7 @@ let showJoinRole = true
             window.pennyGameWS.addEventListener('message', (event) => {
                 try {
                     const msg = JSON.parse(event.data)
+                    console.log('WS message received:', msg.type || msg)
                     if (msg.type === 'start_game') {
                         const gameSetup = document.querySelector('.game-setup')
                         const gameControls = document.querySelector('.game-controls')
