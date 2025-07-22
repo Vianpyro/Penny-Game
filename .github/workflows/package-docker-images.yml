@@ -6,10 +6,9 @@ permissions:
   contents: write
 
 on:
-  release:
-    types:
-      - published
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build-and-push-api:
