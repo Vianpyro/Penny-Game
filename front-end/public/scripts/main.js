@@ -59,7 +59,7 @@ if (window.pennyGameWS) {
                     }
                 })
             }
-        } catch { }
+        } catch {}
     })
 }
 
