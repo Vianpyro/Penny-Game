@@ -36,7 +36,7 @@ jobs:
 
       - name: Validate Dockerfile exists
         run: |
-          [ ! -f "api/Dockerfile" ] && echo "Dockerfile not found in api/" && exit 1
+          test -f "api/Dockerfile" || (echo "Dockerfile not found in api/" && exit 1)
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
