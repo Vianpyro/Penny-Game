@@ -225,43 +225,33 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // WebSocket and API event listeners
     window.addEventListener('joinrole', (e) => {
-        const detail = e.detail
-        const username = detail?.username
+        const { username, roomAction, roomId, roomCode } = e.detail || {}
         if (!username) return
-        if (detail.roomAction === 'create' && detail.roomId) {
-            updateGameCode(detail.roomId)
-            joinRoom(apiUrl, detail.roomId, username, (roomId) =>
-                fetchGameState(
-                    apiUrl,
-                    roomId,
-                    (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
-                    (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
-                )
-            )
-            connectWebSocket(apiUrl, detail.roomId, username)
-            fetchGameState(
-                apiUrl,
-                detail.roomId,
-                (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
-                (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
-            )
-        } else if (detail.roomAction === 'join' && detail.roomCode) {
-            updateGameCode(detail.roomCode)
-            joinRoom(apiUrl, detail.roomCode, username, (roomId) =>
-                fetchGameState(
-                    apiUrl,
-                    roomId,
-                    (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
-                    (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
-                )
-            )
-            connectWebSocket(apiUrl, detail.roomCode, username)
-            fetchGameState(
-                apiUrl,
-                detail.roomCode,
-                (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
-                (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
-            )
+
+        // Determine which room identifier to use
+        let gameRoomId = null
+        if (roomAction === 'create' && roomId) {
+            gameRoomId = roomId
+        } else if (roomAction === 'join' && roomCode) {
+            gameRoomId = roomCode
         }
+        if (!gameRoomId) return
+
+        updateGameCode(gameRoomId)
+        joinRoom(apiUrl, gameRoomId, username, (joinedRoomId) =>
+            fetchGameState(
+                apiUrl,
+                joinedRoomId,
+                (players, host, spectators, actions) => renderPlayers(players, host, spectators, actions, addDnDEvents),
+                (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
+            )
+        )
+        connectWebSocket(apiUrl, gameRoomId, username)
+        fetchGameState(
+            apiUrl,
+            gameRoomId,
+            (players, host, spectators, actions) => renderPlayers(players, host, spectators, actions, addDnDEvents),
+            (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
+        )
     })
 })
