@@ -1,17 +1,13 @@
-from fastapi import Body
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from typing import Dict, List
+import asyncio
+import json
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Dict, List, Optional
 from uuid import uuid4
-from datetime import timedelta
-from fastapi import HTTPException
+
+from fastapi import Body, Cookie, FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
-import json
-from datetime import datetime
-import asyncio
-from enum import Enum
 
 app = FastAPI()
 
@@ -23,8 +19,8 @@ PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
 # Allow all origins for MVP simplicity
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["http://localhost:4321", "https://vianpyro.github.io/Penny-Game"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -50,6 +46,7 @@ class PennyGame(BaseModel):
     players: List[str]
     spectators: List[str] = []
     host: Optional[str] = None
+    host_secret: Optional[str] = None  # Secret token for host actions
     pennies: List[bool] = [True] * 20  # Shared coins, True=heads, False=tails
     turn: int = 0  # Index of current player
     created_at: datetime
@@ -66,14 +63,25 @@ games: Dict[str, PennyGame] = {}
 def create_game():
     room_id = str(uuid4())[:8]
     now = datetime.now()
+    host_secret = str(uuid4())
     games[room_id] = PennyGame(
         room_id=room_id,
         players=[],
         pennies=[True] * 20,
         created_at=now,
         last_active_at=now,
+        host_secret=host_secret,
     )
-    return {"room_id": room_id}
+
+    response = Response(content=json.dumps({"room_id": room_id}), media_type="application/json")
+    response.set_cookie(
+        key="host_secret",
+        value=host_secret,
+        httponly=True,
+        samesite="strict",
+        max_age=10,
+    )
+    return response
 
 
 class JoinRequest(BaseModel):
@@ -87,9 +95,7 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
         raise HTTPException(status_code=404, detail="Game not found")
     username = join.username
     if username == game.host:
-        raise HTTPException(
-            status_code=400, detail="Host cannot join as player or spectator"
-        )
+        raise HTTPException(status_code=400, detail="Host cannot join as player or spectator")
     if username in game.players or username in game.spectators:
         raise HTTPException(status_code=400, detail="User already joined")
     if room_id not in rooms:
@@ -104,46 +110,7 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
     else:
         current_state = GameState.ACTIVE
     # Add user to the game
-    if game.host is None:
-        game.host = username
-        # Inform all clients of the current state
-        asyncio.run(broadcast_game_state(room_id, state=current_state))
-        return {
-            "success": True,
-            "players": game.players,
-            "spectators": game.spectators,
-            "host": game.host,
-            "pennies": game.pennies,
-            "state": current_state.value,
-            "note": "Host created the room and does not play.",
-        }
-    if spectator:
-        game.spectators.append(username)
-        asyncio.run(broadcast_game_state(room_id, state=current_state))
-        return {
-            "success": True,
-            "players": game.players,
-            "spectators": game.spectators,
-            "host": game.host,
-            "pennies": game.pennies,
-            "state": current_state.value,
-        }
-    if len(game.players) >= MAX_PLAYERS:
-        game.spectators.append(username)
-        asyncio.run(broadcast_game_state(room_id, state=current_state))
-        return {
-            "success": True,
-            "players": game.players,
-            "spectators": game.spectators,
-            "host": game.host,
-            "note": "Joined as spectator (game full)",
-            "pennies": game.pennies,
-            "state": current_state.value,
-        }
-    game.players.append(username)
-    # No per-player pennies, shared coins only
-    asyncio.run(broadcast_game_state(room_id, state=current_state))
-    return {
+    response_data = {
         "success": True,
         "players": game.players,
         "spectators": game.spectators,
@@ -151,6 +118,21 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
         "pennies": game.pennies,
         "state": current_state.value,
     }
+
+    if game.host is None:
+        game.host = username
+        response_data["note"] = "Host created the room and does not play."
+    elif spectator:
+        game.spectators.append(username)
+    elif len(game.players) >= MAX_PLAYERS:
+        game.spectators.append(username)
+        response_data["note"] = "Joined as spectator (game full)"
+    else:
+        game.players.append(username)
+        # No per-player pennies, shared coins only
+
+    asyncio.run(broadcast_game_state(room_id, state=current_state))
+    return response_data
 
 
 class MoveRequest(BaseModel):
@@ -160,19 +142,23 @@ class MoveRequest(BaseModel):
 
 # New endpoint to start the game (host only)
 @app.post("/game/start/{room_id}")
-def start_game(room_id: str):
+async def start_game(room_id: str, host_secret: str = Cookie(None)):
     game = games.get(room_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
     if game.started_at is not None:
         raise HTTPException(status_code=400, detail="Game already started")
+    if len(game.players) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 players to start the game")
+    if not host_secret or host_secret != game.host_secret:
+        raise HTTPException(status_code=403, detail="Invalid host secret")
     now = datetime.now()
     game.started_at = now
     game.turn_timestamps.append(now)
     # Do not rotate turn here; first move will do that
     game.last_active_at = now
     # Broadcast game state change to all clients
-    asyncio.run(broadcast_game_state(room_id, state=GameState.ACTIVE))
+    await broadcast_game_state(room_id, state=GameState.ACTIVE)
     return {"success": True, "state": GameState.ACTIVE}
 
 
@@ -209,7 +195,10 @@ def make_move(room_id: str, move: MoveRequest):
     if all(not v for v in game.pennies):
         asyncio.create_task(broadcast_game_state(room_id, state=GameState.RESULTS))
 
-    return game.model_dump()
+    data = game.model_dump()
+    if "host_secret" in data:
+        del data["host_secret"]
+    return data
 
 
 # Broadcast game state (menu, game, results) to all clients
@@ -224,7 +213,10 @@ def get_game_state(room_id: str):
     game = games.get(room_id)
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-    return game.model_dump()
+    data = game.model_dump()
+    if "host_secret" in data:
+        del data["host_secret"]
+    return data
 
 
 # Cleanup endpoint to remove inactive games and players

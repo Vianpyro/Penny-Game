@@ -5,13 +5,7 @@ export function updateGameCode(code) {
     if (gameCodeSpan) gameCodeSpan.textContent = code
 }
 
-export function renderPlayers(
-    players,
-    host,
-    spectators,
-    activity,
-    addDnDEvents
-) {
+export function renderPlayers(players, host, spectators, activity, addDnDEvents) {
     const playerList = document.getElementById('playerList')
     if (!playerList) return
     playerList.innerHTML = ''
@@ -38,12 +32,7 @@ export function renderPlayers(
     addDnDEvents(playerList)
 }
 
-export function renderSpectators(
-    spectators,
-    host,
-    activity,
-    addDnDEvents
-) {
+export function renderSpectators(spectators, host, activity, addDnDEvents) {
     const spectatorList = document.getElementById('spectatorList')
     if (!spectatorList) return
     spectatorList.innerHTML = ''
@@ -70,12 +59,7 @@ export function renderSpectators(
     addDnDEvents(spectatorList)
 }
 
-export function updateConfig(
-    playersSpan,
-    roundSpan,
-    selectedPlayers,
-    selectedRound
-) {
+export function updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound) {
     if (playersSpan) playersSpan.textContent = selectedPlayers.toString()
     if (roundSpan) roundSpan.textContent = selectedRound.toString()
 }

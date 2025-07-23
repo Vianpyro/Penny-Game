@@ -6,6 +6,7 @@ export function joinRoom(apiUrl, roomId, username, fetchGameState) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
+        credentials: 'include',
     })
         .then((response) => {
             if (!response.ok) throw new Error('Erreur lors de la connexion à la salle')
@@ -17,7 +18,7 @@ export function joinRoom(apiUrl, roomId, username, fetchGameState) {
 
 export function fetchGameState(apiUrl, roomId, renderPlayers, renderSpectators) {
     if (!apiUrl || !roomId) return
-    fetch(`${apiUrl}/game/state/${roomId}`)
+    fetch(`${apiUrl}/game/state/${roomId}`, { credentials: 'include' })
         .then((response) => response.json())
         .then((data) => {
             // Fallback: if no activity info, assume all users online
@@ -41,6 +42,7 @@ export function changeRole(apiUrl, roomId, username, newRole, fetchGameState) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, role: newRole }),
+        credentials: 'include',
     })
         .then((response) => {
             if (!response.ok) throw new Error('Erreur lors du changement de rôle')
