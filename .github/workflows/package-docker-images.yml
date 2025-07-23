@@ -28,6 +28,12 @@ jobs:
         id: repo
         run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
+      - name: List files
+        run: ls -lR
+
+      - name: Check Dockerfile
+        run: ls -l api/Dockerfile
+
       - name: Validate Dockerfile exists
         run: |
           [ ! -f "api/Dockerfile" ] && echo "Dockerfile not found in api/" && exit 1
