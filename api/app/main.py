@@ -110,46 +110,7 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
     else:
         current_state = GameState.ACTIVE
     # Add user to the game
-    if game.host is None:
-        game.host = username
-        # Inform all clients of the current state
-        asyncio.run(broadcast_game_state(room_id, state=current_state))
-        return {
-            "success": True,
-            "players": game.players,
-            "spectators": game.spectators,
-            "host": game.host,
-            "pennies": game.pennies,
-            "state": current_state.value,
-            "note": "Host created the room and does not play.",
-        }
-    if spectator:
-        game.spectators.append(username)
-        asyncio.run(broadcast_game_state(room_id, state=current_state))
-        return {
-            "success": True,
-            "players": game.players,
-            "spectators": game.spectators,
-            "host": game.host,
-            "pennies": game.pennies,
-            "state": current_state.value,
-        }
-    if len(game.players) >= MAX_PLAYERS:
-        game.spectators.append(username)
-        asyncio.run(broadcast_game_state(room_id, state=current_state))
-        return {
-            "success": True,
-            "players": game.players,
-            "spectators": game.spectators,
-            "host": game.host,
-            "note": "Joined as spectator (game full)",
-            "pennies": game.pennies,
-            "state": current_state.value,
-        }
-    game.players.append(username)
-    # No per-player pennies, shared coins only
-    asyncio.run(broadcast_game_state(room_id, state=current_state))
-    return {
+    response_data = {
         "success": True,
         "players": game.players,
         "spectators": game.spectators,
@@ -157,6 +118,21 @@ def join_game(room_id: str, join: JoinRequest, spectator: Optional[bool] = False
         "pennies": game.pennies,
         "state": current_state.value,
     }
+
+    if game.host is None:
+        game.host = username
+        response_data["note"] = "Host created the room and does not play."
+    elif spectator:
+        game.spectators.append(username)
+    elif len(game.players) >= MAX_PLAYERS:
+        game.spectators.append(username)
+        response_data["note"] = "Joined as spectator (game full)"
+    else:
+        game.players.append(username)
+        # No per-player pennies, shared coins only
+
+    asyncio.run(broadcast_game_state(room_id, state=current_state))
+    return response_data
 
 
 class MoveRequest(BaseModel):

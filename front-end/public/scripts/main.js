@@ -114,8 +114,9 @@ window.addEventListener('DOMContentLoaded', () => {
                     fetchGameState(
                         apiUrl,
                         roomId,
-                        (p, h, s, a) => renderPlayers(p, h, s, a, addDnDEvents),
-                        (s, h, a) => renderSpectators(s, h, a, addDnDEvents)
+                        (players, host, spectators, actions) =>
+                            renderPlayers(players, host, spectators, actions, addDnDEvents),
+                        (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
                     )
                 )
             }
