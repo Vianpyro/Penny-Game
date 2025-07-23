@@ -26,6 +26,7 @@ def create_new_game():
         last_active_at=now,
         host_secret=host_secret,
     )
+    rooms[room_id] = []
     return room_id, host_secret
 
 
