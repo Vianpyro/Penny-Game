@@ -55,3 +55,13 @@ export function changeRole(apiUrl, roomId, username, newRole, fetchGameState) {
             alert(err.message || 'Impossible de changer le rôle')
         })
 }
+
+export function isHostForRoom(roomId) {
+    return fetch(`/api/game/state/${roomId}`, { credentials: 'include' })
+        .then((response) => response.json())
+        .then((data) => {
+            const username = window.currentUsername || ''
+            return data.host === username
+        })
+        .catch(() => false)
+}

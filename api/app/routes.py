@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Body, Cookie, HTTPException, Response
 
@@ -20,7 +20,7 @@ def create_game():
         value=host_secret,
         httponly=True,
         samesite="strict",
-        max_age=10,
+        max_age=int(timedelta(minutes=30).total_seconds()),
     )
     return response
 
@@ -34,10 +34,8 @@ def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
 
     username = join.username
 
-    if username == game.host:
-        raise HTTPException(status_code=400, detail="Host cannot join as player or spectator")
-    if username in game.players or username in game.spectators:
-        raise HTTPException(status_code=400, detail="User already joined")
+    if username == game.host or username in game.players or username in game.spectators:
+        raise HTTPException(status_code=400, detail="Username already taken")
     if room_id not in rooms:
         rooms[room_id] = []
 
