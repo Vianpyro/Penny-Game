@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "front-end/**"
+      - ".github/workflows/deploy-to-pages.yml"
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
