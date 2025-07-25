@@ -25,10 +25,3 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
-
-# Super-linter outputs
-super-linter-output
-super-linter.log
-
-# GitHub Actions leftovers
-github_conf
