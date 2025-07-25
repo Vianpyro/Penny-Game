@@ -6,6 +6,7 @@ from .models import PennyGame
 
 MAX_PLAYERS = 5
 MAX_CONNECTIONS = 50
+MAX_PENNIES = 12
 ROOM_INACTIVITY_THRESHOLD = timedelta(minutes=60)
 PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
 
@@ -21,7 +22,7 @@ def create_new_game():
     games[room_id] = PennyGame(
         room_id=room_id,
         players=[],
-        pennies=[True] * 20,
+        pennies=[True] * MAX_PENNIES,
         created_at=now,
         last_active_at=now,
         host_secret=host_secret,
