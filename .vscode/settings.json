@@ -1,45 +1,33 @@
 {
-    "editor.formatOnSave": true,
-    "editor.insertSpaces": true,
-    "editor.tabSize": 4,
-    "files.insertFinalNewline": true,
-    "files.trimFinalNewlines": true,
-    "files.trimTrailingWhitespace": false,
-    "[yaml]": {
-        "editor.tabSize": 2
+  "editor.formatOnSave": true,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": false,
+  "[yaml]": {
+    "editor.tabSize": 2
+  },
+  "python.analysis.extraPaths": ["./api"],
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/*.egg-info": true
+  },
+  "[python]": {
+    "editor.rulers": [120],
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "always",
+      "source.unusedImports": "explicit"
     },
-    "python.analysis.extraPaths": [
-        "./api"
-    ],
-    "files.exclude": {
-        "**/__pycache__": true,
-        "**/.pytest_cache": true,
-        "**/*.egg-info": true
-    },
-    "[python]": {
-        "editor.rulers": [
-            120
-        ],
-        "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "always",
-            "source.unusedImports": "explicit"
-        },
-        "editor.formatOnSave": true
-    },
-    "black-formatter.args": [
-        "--line-length=120"
-    ],
-    "isort.args": [
-        "--profile",
-        "black",
-        "--line-length=120"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true,
-    "triggerTaskOnSave.tasks": {
-        "Prettify Current File": [
-            "front-end/**/*"
-        ]
-    }
+    "editor.formatOnSave": true
+  },
+  "black-formatter.args": ["--line-length=120"],
+  "isort.args": ["--profile", "black", "--line-length=120"],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "triggerTaskOnSave.tasks": {
+    "Prettify Current File": ["front-end/**/*"]
+  }
 }
