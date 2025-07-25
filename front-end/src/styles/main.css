@@ -1,3 +1,7 @@
+* {
+    user-select: none;
+}
+
 h1 {
     margin-block-start: 0;
     text-align: center;
@@ -55,19 +59,18 @@ p {
     padding: 30px;
 }
 
-.penny {
-    align-items: center;
-    background: linear-gradient(45deg, #f39c12, #e67e22);
-    border-radius: 50%;
-    box-shadow: 0 3px 10px rgb(0 0 0 / 20%);
-    color: #fff;
-    display: flex;
-    font-size: 12px;
-    font-weight: 700;
-    height: 30px;
-    justify-content: center;
-    transition: all 0.3s ease;
-    width: 30px;
+.flip {
+    cursor: pointer;
+    display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.flip.flipped {
+    transform: rotateY(180deg);
+}
+
+.flip.grayscale {
+    filter: grayscale(100%);
 }
 
 @media screen and (width<=850px) {

@@ -1,3 +1,4 @@
 #game-code {
     text-transform: uppercase;
+    user-select: all !important;
 }

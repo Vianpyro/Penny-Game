@@ -156,15 +156,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     setupDropZones()
 
-    // Flip coin logic
-    const coinFlip = document.getElementById('coinFlip')
-    if (coinFlip) {
-        coinFlip.style.cursor = 'pointer'
-        coinFlip.addEventListener('click', () => {
-            coinFlip.classList.toggle('flipped')
-            setTimeout(() => coinFlip.classList.toggle('grayscale'), 400 / 2)
-        })
-    }
     const playerButtons = document.getElementById('playerButtons')
     const roundSelector = document.getElementById('roundSelector')
     const gameBoard = document.getElementById('gameBoard')

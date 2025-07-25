@@ -1,35 +1,50 @@
-#gameBoard {
-    display: flex;
-    flex-direction: column;
+.game-board {
+    background: rgb(255 255 255 / 90%);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 10%);
+    margin-bottom: 30px;
+    padding: 30px;
 }
 
 .board-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 20px;
+}
+
+.board-player {
+    border: 2px solid #ecf0f1;
+    border-radius: 10px;
+    padding: 5px;
+    border-color: #ecf0f1;
+    border-radius: 15px;
+    border-width: 2px;
+    flex: 1 1 0;
+    min-width: fit-content;
+    padding: 5px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.board-player[active] {
+    flex-basis: 100%;
+    order: 0;
+}
+
+.board-player:not([active]) {
+    order: 1;
+}
+
+.board-player>p {
+    margin: 0;
+    font-weight: bold;
 }
 
 .penny-container {
-    align-items: center;
-    background: rgb(241 196 15 / 20%);
-    border-radius: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-    margin-bottom: 15px;
-    min-height: 100px;
-    padding: 15px;
-    min-width: 170px;
-}
-
-.game-board {
     display: grid;
-    gap: 20px;
-}
-
-@media screen and (width<=850px) {
-    .game-board {
-        grid-template-columns: repeat(2, 1fr) !important;
-    }
+    grid-template-columns: repeat(4, auto);
+    gap: 0.5rem;
+    justify-content: center;
+    font-size: xx-large;
 }
