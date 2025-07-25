@@ -82,7 +82,14 @@ def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
             "state": current_state.value,
         }
     game.players.append(username)
-    game.pennies[username] = [True] * MAX_PENNIES
+    # Only first worker gets all pennies at start
+    if len(game.players) == 1:
+        game.pennies[username] = [True] * MAX_PENNIES
+    else:
+        game.pennies[username] = []
+    # Set batch size for round 1 (default 12)
+    if not hasattr(game, "batch_size"):
+        game.batch_size = MAX_PENNIES
     return {
         "success": True,
         "players": game.players,
@@ -130,27 +137,37 @@ def make_move(room_id: str, move: MoveRequest):
     if move.flip not in [1, 2, 3]:
         raise HTTPException(status_code=400, detail="Invalid move")
 
-    # Each player flips their own pennies
+    # Batch processing logic
+    player_index = game.players.index(move.username)
     player_pennies = game.pennies.get(move.username)
     if player_pennies is None:
         raise HTTPException(status_code=400, detail="Player has no pennies")
-    heads_indices = [i for i, v in enumerate(player_pennies) if v]
-
-    if len(heads_indices) < move.flip:
-        raise HTTPException(status_code=400, detail="Not enough heads to flip")
-
-    for i in heads_indices[: move.flip]:
+    if not player_pennies:
+        raise HTTPException(status_code=400, detail="No coins to process")
+    batch_size = getattr(game, "batch_size", MAX_PENNIES)
+    to_flip = min(batch_size, len(player_pennies))
+    if move.flip != to_flip:
+        raise HTTPException(status_code=400, detail=f"Must flip exactly {to_flip} coins in this round")
+    # Flip coins
+    for i in range(to_flip):
         player_pennies[i] = False
-
+    # Pass batch to next worker if not last
+    if player_index < len(game.players) - 1:
+        next_worker = game.players[player_index + 1]
+        if next_worker not in game.pennies:
+            game.pennies[next_worker] = []
+        # Pass batch (all coins just processed)
+        game.pennies[next_worker].extend([False] * to_flip)
+    # Remove processed coins from current worker
+    game.pennies[move.username] = player_pennies[to_flip:]
     now = datetime.now()
     game.last_active_at = now
     game.turn_timestamps.append(now)
     game.turn = (game.turn + 1) % len(game.players)
-
-    # Check if all pennies for all players are gone
-    if all(all(not v for v in p_list) for p_list in game.pennies.values()):
+    # Check if all coins are processed (last worker has no coins left)
+    last_worker = game.players[-1]
+    if not game.pennies[last_worker]:
         asyncio.create_task(broadcast_game_state(room_id, state=GameState.RESULTS))
-
     data = game.model_dump()
     if "host_secret" in data:
         del data["host_secret"]
@@ -188,7 +205,11 @@ def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
                 raise HTTPException(status_code=400, detail="Player limit reached")
             game.spectators.remove(username)
             game.players.append(username)
-            game.pennies[username] = [True] * MAX_PENNIES
+            # Only assign coins if first worker
+            if len(game.players) == 1:
+                game.pennies[username] = [True] * MAX_PENNIES
+            else:
+                game.pennies[username] = []
         else:
             raise HTTPException(status_code=400, detail="User is not a spectator")
     elif new_role == "spectator":
