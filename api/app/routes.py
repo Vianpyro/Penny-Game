@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Body, Cookie, HTTPException, Response
 
-from .game_logic import MAX_PLAYERS, cleanup, create_new_game, get_game, rooms
+from .game_logic import MAX_PENNIES, MAX_PLAYERS, cleanup, create_new_game, get_game, rooms
 from .models import ChangeRoleRequest, GameState, JoinRequest, MoveRequest
 from .websocket import broadcast_activity, broadcast_game_state
 
@@ -82,6 +82,7 @@ def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
             "state": current_state.value,
         }
     game.players.append(username)
+    game.pennies[username] = [True] * MAX_PENNIES
     return {
         "success": True,
         "players": game.players,
@@ -129,21 +130,25 @@ def make_move(room_id: str, move: MoveRequest):
     if move.flip not in [1, 2, 3]:
         raise HTTPException(status_code=400, detail="Invalid move")
 
-    penny_list = game.pennies
-    heads_indices = [i for i, v in enumerate(penny_list) if v]
+    # Each player flips their own pennies
+    player_pennies = game.pennies.get(move.username)
+    if player_pennies is None:
+        raise HTTPException(status_code=400, detail="Player has no pennies")
+    heads_indices = [i for i, v in enumerate(player_pennies) if v]
 
     if len(heads_indices) < move.flip:
         raise HTTPException(status_code=400, detail="Not enough heads to flip")
 
     for i in heads_indices[: move.flip]:
-        penny_list[i] = False
+        player_pennies[i] = False
 
     now = datetime.now()
     game.last_active_at = now
     game.turn_timestamps.append(now)
     game.turn = (game.turn + 1) % len(game.players)
 
-    if all(not v for v in game.pennies):
+    # Check if all pennies for all players are gone
+    if all(all(not v for v in p_list) for p_list in game.pennies.values()):
         asyncio.create_task(broadcast_game_state(room_id, state=GameState.RESULTS))
 
     data = game.model_dump()
@@ -183,12 +188,15 @@ def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
                 raise HTTPException(status_code=400, detail="Player limit reached")
             game.spectators.remove(username)
             game.players.append(username)
+            game.pennies[username] = [True] * MAX_PENNIES
         else:
             raise HTTPException(status_code=400, detail="User is not a spectator")
     elif new_role == "spectator":
         if username in game.players:
             game.players.remove(username)
             game.spectators.append(username)
+            if username in game.pennies:
+                del game.pennies[username]
         else:
             raise HTTPException(status_code=400, detail="User is not a player")
     else:

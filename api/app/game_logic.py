@@ -22,7 +22,7 @@ def create_new_game():
     games[room_id] = PennyGame(
         room_id=room_id,
         players=[],
-        pennies=[True] * MAX_PENNIES,
+        pennies={},
         created_at=now,
         last_active_at=now,
         host_secret=host_secret,

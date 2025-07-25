@@ -19,7 +19,7 @@ class PennyGame(BaseModel):
     spectators: List[str] = []
     host: Optional[str] = None
     host_secret: Optional[str] = None
-    pennies: List[bool] = [True] * 20
+    pennies: dict = {}
     turn: int = 0
     created_at: datetime
     last_active_at: datetime
