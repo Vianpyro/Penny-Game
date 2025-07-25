@@ -9,6 +9,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "api/**"
+      - ".github/workflows/package-docker-images.yml"
 
 jobs:
   build-and-push-api:
