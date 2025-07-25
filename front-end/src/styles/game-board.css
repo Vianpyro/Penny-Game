@@ -22,3 +22,14 @@
     padding: 15px;
     min-width: 170px;
 }
+
+.game-board {
+    display: grid;
+    gap: 20px;
+}
+
+@media screen and (width<=850px) {
+    .game-board {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}

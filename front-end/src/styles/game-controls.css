@@ -1,0 +1,12 @@
+.game-controls {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+@media screen and (width<=850px) {
+    .game-controls {
+        align-items: center;
+        flex-direction: column;
+    }
+}
