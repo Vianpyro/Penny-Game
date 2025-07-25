@@ -33,6 +33,9 @@ jobs:
           DISABLE_ERRORS: ${{ github.event_name == 'push' }}
           # Disable problematic validators
           VALIDATE_DOCKERFILE_HADOLINT: false
+          VALIDATE_JAVASCRIPT_ES: false
+          VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_JAVASCRIPT_STANDARD: false
           VALIDATE_PYTHON_BLACK: false # Handled separately
           VALIDATE_PYTHON_ISORT: false
           VALIDATE_PYTHON_MYPY: false

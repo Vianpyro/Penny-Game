@@ -44,7 +44,7 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
         spectatorList.appendChild(li)
     }
     ;(spectators || [])
-        .filter((s) => s !== host)
+        .filter((spectator) => spectator !== host)
         .forEach((spectator) => {
             const li = document.createElement('li')
             const isOnline = activity && activity[spectator]
