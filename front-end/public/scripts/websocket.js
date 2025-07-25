@@ -48,7 +48,7 @@ export function handleWSMessage(data) {
         if (msg.type === 'activity') {
             renderPlayers(msg.players, msg.host, msg.spectators, msg.activity, addDnDEvents)
             renderSpectators(msg.spectators, msg.host, msg.activity, addDnDEvents)
-        } else if (msg.type !== 'game_state') {
+        } else {
             renderPlayers(msg.players, msg.host, msg.spectators, {}, addDnDEvents)
             renderSpectators(msg.spectators, msg.host, {}, addDnDEvents)
         }
