@@ -8,7 +8,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4321", "https://vianpyro.github.io/Penny-Game"],
+    allow_origins=["http://localhost:4321", "https://vianpyro.github.io"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
