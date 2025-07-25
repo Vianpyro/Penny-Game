@@ -38,7 +38,6 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
     spectatorList.innerHTML = ''
     if (host) {
         const li = document.createElement('li')
-        const isOnline = activity && activity[host]
         li.className = 'spectator host'
         li.title = 'Hôte de la partie'
         li.innerHTML = `<span class="status-indicator">👑</span> ${host}`
