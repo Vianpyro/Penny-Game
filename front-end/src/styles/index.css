@@ -68,22 +68,6 @@
     gap: 20px;
 }
 
-.game-board.players-2 {
-    grid-template-columns: repeat(2, 1fr);
-}
-
-.game-board.players-3 {
-    grid-template-columns: repeat(3, 1fr);
-}
-
-.game-board.players-4 {
-    grid-template-columns: repeat(4, 1fr);
-}
-
-.game-board.players-5 {
-    grid-template-columns: repeat(5, 1fr);
-}
-
 .game-controls {
     display: flex;
     gap: 20px;
@@ -150,19 +134,6 @@
     justify-content: center;
     transition: all 0.3s ease;
     width: 30px;
-}
-
-.penny-container {
-    align-items: center;
-    background: rgb(241 196 15 / 20%);
-    border-radius: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-    margin-bottom: 15px;
-    min-height: 100px;
-    padding: 15px;
 }
 
 .player-buttons {

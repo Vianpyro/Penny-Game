@@ -1,0 +1,22 @@
+<div class="results" id="results" style="display: none;">
+    <h2>📊 Résultats de la Simulation</h2>
+    <div class="total-time" id="totalTime"></div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="insights">
+        <h3>💡 Enseignements Lean</h3>
+        <ul id="insightsList">
+            {
+                [
+                    "Batch Size: Observer l'impact de la taille des lots sur le temps de cycle",
+                    "Flow: Analyser les goulots d'étranglement et les temps d'attente",
+                    'Lead Time: Comparer le temps individuel vs. temps total du processus',
+                    'Amélioration Continue: Discuter des optimisations possibles',
+                ].map((insight) => (
+                    <li>
+                        <strong>{insight.split(':')[0]}:</strong> {insight.split(':')[1]}
+                    </li>
+                ))
+            }
+        </ul>
+    </div>
+</div>

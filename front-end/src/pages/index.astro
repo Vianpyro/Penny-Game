@@ -1,11 +1,18 @@
 ---
 import '../styles/main.css'
 import '../styles/index.css'
+import '../styles/game-board.css'
 import Main from '../layouts/Main.astro'
 import JoinRole from '../components/JoinRole.astro'
-import { SITE_NAME } from '../config.js'
+import PlayerSelector from '../components/PlayerSelector.astro'
+import Rules from '../components/Rules.astro'
+import GameInfo from '../components/GameInfo.astro'
+import RoundSelector from '../components/RoundSelector.astro'
+import GameControls from '../components/GameControls.astro'
+import GameBoard from '../components/GameBoard.astro'
+import Results from '../components/Results.astro'
+import { SITE_NAME, MAX_PLAYERS } from '../config.js'
 
-const MAX_PLAYERS = 5
 let showJoinRole = true
 ---
 
@@ -17,126 +24,38 @@ let showJoinRole = true
 
         <div class="game-setup">
             <div class="setup-controls">
-                <div class="player-selector">
-                    <h3>👥 Nombre de Joueurs</h3>
-                    <div class="player-buttons" id="playerButtons">
-                        {
-                            Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => {
-                                const count = i + 2
-                                return (
-                                    <button
-                                        class={`player-count-btn${count === MAX_PLAYERS ? ' active' : ''}`}
-                                        data-count={count}
-                                    >
-                                        {count} Joueurs
-                                    </button>
-                                )
-                            })
-                        }
-                    </div>
-                    <div class="player-list">
-                        <h3>👋 Liste des Joueurs</h3>
-                        <ul class="user-list" id="playerList">
-                            <!-- Player list will be rendered by JS -->
-                        </ul>
-                    </div>
-                    <div class="spectator-list">
-                        <h3>👀 Spectateurs</h3>
-                        <ul class="user-list" id="spectatorList">
-                            <!-- Spectator list will be rendered by JS -->
-                        </ul>
-                    </div>
-                </div>
+                <PlayerSelector />
 
-                <div class="rules">
-                    <h3>📜 Règles du Jeu</h3>
-                    <p>
-                        Le Penny Game est une simulation Lean visant à mesurer le flow et le lead time dans un processus
-                        de production. Les joueurs doivent passer des pièces de monnaie d'une zone à une autre en
-                        respectant les règles de batch size. Le but est d'optimiser le temps total de passage des
-                        pièces.
-                    </p>
-                </div>
+                <Rules />
 
-                <div class="game-info">
-                    <div class="share-room" style="margin-top: 18px;">
-                        <h3>🔗 Partager la Salle</h3>
-                        <p>
-                            Code de la Salle: <span id="game-code">ABCD1234</span>
-                            <button class="btn btn-success" id="copyCodeBtn" style="margin-left: 10px;"
-                                >Copier le code</button
-                            >
-                        </p>
-                        <p style="font-size: 0.95em; color: #7f8c8d;">
-                            Partagez ce code avec les autres joueurs pour qu'ils rejoignent la partie.
-                        </p>
-                    </div>
-                </div>
+                <GameInfo />
 
                 <div class="round-selector-container">
-                    <h3>🏁 Choix de la Manche</h3>
-                    <!-- TODO: Toggle desired round(s) -->
-                    <div class="round-selector" id="roundSelector">
-                        {
-                            [
-                                {
-                                    title: 'Batch de 12',
-                                    description: "Passer TOUTES les 12 pièces d'un coup",
-                                },
-                                {
-                                    title: 'Batch de 4',
-                                    description: 'Passer les pièces 4 par 4',
-                                },
-                                {
-                                    title: 'Batch de 1',
-                                    description: 'Passer les pièces une par une',
-                                },
-                            ].map((opt, idx) => (
-                                <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1}>
-                                    <div class="round-number">Manche {idx + 1}</div>
-                                    <div class="round-title">{opt.title}</div>
-                                    <div class="round-description">{opt.description}</div>
-                                </div>
-                            ))
-                        }
-                    </div>
+                    <RoundSelector
+                        rounds={[
+                            {
+                                title: 'Batch de 12',
+                                description: "Passer TOUTES les 12 pièces d'un coup",
+                            },
+                            {
+                                title: 'Batch de 4',
+                                description: 'Passer les pièces 4 par 4',
+                            },
+                            {
+                                title: 'Batch de 1',
+                                description: 'Passer les pièces une par une',
+                            },
+                        ]}
+                    />
                 </div>
             </div>
         </div>
 
-        <div class="game-controls">
-            <button class="btn btn-primary" id="startBtn"
-                >Démarrer avec <span id="playerCount">{MAX_PLAYERS}</span> joueurs</button
-            >
-            <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
-        </div>
+        <GameControls MAX_PLAYERS={MAX_PLAYERS} />
 
-        <div class="game-board players-5" id="gameBoard" style="display: none;">
-            <!-- TODO: Dynamically generate the player zones -->
-        </div>
+        <GameBoard MAX_PLAYERS={MAX_PLAYERS} />
 
-        <div class="results" id="results" style="display: none;">
-            <h2>📊 Résultats de la Simulation</h2>
-            <div class="total-time" id="totalTime"></div>
-            <div class="stats-grid" id="statsGrid"></div>
-            <div class="insights">
-                <h3>💡 Enseignements Lean</h3>
-                <ul id="insightsList">
-                    {
-                        [
-                            "Batch Size: Observer l'impact de la taille des lots sur le temps de cycle",
-                            "Flow: Analyser les goulots d'étranglement et les temps d'attente",
-                            'Lead Time: Comparer le temps individuel vs. temps total du processus',
-                            'Amélioration Continue: Discuter des optimisations possibles',
-                        ].map((insight) => (
-                            <li>
-                                <strong>{insight.split(':')[0]}:</strong> {insight.split(':')[1]}
-                            </li>
-                        ))
-                    }
-                </ul>
-            </div>
-        </div>
+        <Results />
     </div>
 </Main>
 
