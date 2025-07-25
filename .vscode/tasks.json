@@ -34,7 +34,7 @@
                 "runOn": "folderOpen"
             },
             "presentation": {
-                "close": true
+                "close": true,
             },
             "options": {
                 "cwd": "${workspaceFolder}/front-end"
@@ -46,6 +46,7 @@
             "type": "shell",
             "command": "npx prettier --write ${file}",
             "presentation": {
+                "close": true,
                 "showReuseMessage": false
             },
             "options": {
