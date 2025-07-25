@@ -59,7 +59,9 @@ if (window.pennyGameWS) {
                     }
                 })
             }
-        } catch {}
+        } catch {
+            console.error('Error parsing WS message:', event.data)
+        }
     })
 }
 
@@ -94,8 +96,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // Drag & Drop joueurs/spectateurs
-    const playerList = document.getElementById('playerList')
-    const spectatorList = document.getElementById('spectatorList')
     let _draggedItem = draggedItem
 
     function handleDrop(e, targetList) {
