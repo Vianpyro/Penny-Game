@@ -1,5 +1,6 @@
-// Game board logic for Penny Game with move controls
-import { enableFlip } from './utility.js'
+// Game board logic for Penny Game with cooperative mechanics
+import { flipCoin, sendBatch } from './api.js'
+import { showNotification } from './utility.js'
 
 export async function fetchBoardGameState(gameCode) {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
@@ -18,9 +19,9 @@ export async function fetchBoardGameState(gameCode) {
     }
 }
 
-export function renderPlayerSections(players, turn, pennies) {
+export function renderGameBoard(gameState) {
     const gameBoard = document.getElementById('gameBoard')
-    if (!gameBoard) return
+    if (!gameBoard || !gameState) return
 
     gameBoard.innerHTML = ''
 
@@ -29,187 +30,270 @@ export function renderPlayerSections(players, turn, pennies) {
     gameStatus.className = 'game-status'
     gameStatus.innerHTML = `
         <div class="status-header">
-            <h2>🎲 Partie en cours</h2>
-            <div id="turnIndicator" class="turn-indicator"></div>
+            <h2>🎲 Partie en cours - Lot de ${gameState.batch_size}</h2>
+            <div class="game-progress">
+                <div class="progress-stats">
+                    <span class="stat">🪙 Total: ${gameState.total_completed}/12 terminées</span>
+                    <span class="stat">⏳ ${gameState.tails_remaining} pièces à traiter</span>
+                </div>
+            </div>
         </div>
     `
     gameBoard.appendChild(gameStatus)
 
     // Add reset button for hosts
-    addResetButton()
+    if (window.isHost) {
+        addResetButton()
+    }
 
-    // Add players sections
-    const playersContainer = document.createElement('div')
-    playersContainer.className = 'players-container'
+    // Add production line visualization
+    const productionLine = document.createElement('div')
+    productionLine.className = 'production-line'
 
-    players.forEach((player, idx) => {
-        const section = document.createElement('section')
-        section.className = `player-zone ${idx === turn ? 'active' : ''}`
+    gameState.players.forEach((player, index) => {
+        const playerStation = createPlayerStation(player, gameState, index)
+        productionLine.appendChild(playerStation)
 
-        const isCurrentPlayer = idx === turn
-        const statusIcon = isCurrentPlayer ? '⭐' : '⏳'
-        const statusText = isCurrentPlayer ? 'Tour actuel' : 'En attente...'
-
-        section.innerHTML = `
-            <h3>${statusIcon} ${player}</h3>
-            <div class="player-status">${statusText}</div>
-        `
-        const penniesDisplay = document.createElement('div')
-        penniesDisplay.className = 'pennies-display'
-        if (isCurrentPlayer) {
-            penniesDisplay.appendChild(renderPenniesForPlayer(pennies))
+        // Add arrow between players (except after last player)
+        if (index < gameState.players.length - 1) {
+            const arrow = document.createElement('div')
+            arrow.className = 'flow-arrow'
+            arrow.innerHTML = '➡️'
+            productionLine.appendChild(arrow)
         }
-        section.appendChild(penniesDisplay)
-
-        playersContainer.appendChild(section)
     })
 
-    gameBoard.appendChild(playersContainer)
+    // Add completion area
+    const completionArea = document.createElement('div')
+    completionArea.className = 'completion-area'
+    completionArea.innerHTML = `
+        <div class="completion-station">
+            <h3>✅ Terminé</h3>
+            <div class="completed-coins">
+                ${Array(gameState.total_completed).fill('🪙').join('')}
+            </div>
+            <div class="completion-count">${gameState.total_completed}/12</div>
+        </div>
+    `
+    productionLine.appendChild(completionArea)
 
-    // Update turn indicator
-    updateTurnIndicator(players[turn], Array.isArray(pennies) ? pennies.filter(Boolean).length : 0)
+    gameBoard.appendChild(productionLine)
+
+    // Add game rules reminder
+    const rulesReminder = document.createElement('div')
+    rulesReminder.className = 'rules-reminder'
+    rulesReminder.innerHTML = `
+        <h4>📋 Rappel des règles :</h4>
+        <ul>
+            <li>🔄 Retournez les pièces de pile (⚫) vers face (🪙)</li>
+            <li>📦 Envoyez par lots de ${gameState.batch_size} pièce${gameState.batch_size > 1 ? 's' : ''}</li>
+            <li>⚡ Travaillez en parallèle - pas de tour de rôle !</li>
+            <li>🎯 Objectif : terminer le plus vite possible ensemble</li>
+        </ul>
+    `
+    gameBoard.appendChild(rulesReminder)
 }
 
-function renderPenniesForPlayer(pennies) {
-    if (!Array.isArray(pennies)) {
-        const noPennies = document.createElement('div')
-        noPennies.className = 'no-pennies'
-        noPennies.textContent = 'Aucune pièce'
-        return noPennies
+function createPlayerStation(player, gameState, playerIndex) {
+    const station = document.createElement('div')
+    station.className = 'player-station'
+
+    const currentUsername = window.currentUsername
+    const isCurrentPlayer = player === currentUsername
+    const isHost = window.isHost
+    const playerCoins = gameState.player_coins[player] || []
+
+    // Count coins by state
+    const tailsCount = playerCoins.filter((coin) => !coin).length
+    const headsCount = playerCoins.filter((coin) => coin).length
+    const totalCoins = playerCoins.length
+
+    // Determine if player can send batch
+    const canSend = headsCount >= gameState.batch_size || (headsCount > 0 && headsCount === totalCoins)
+
+    // Determine if player can interact (only current player, not host, and not spectator)
+    const canInteract = isCurrentPlayer && !isHost && window.userRole === 'player'
+
+    station.innerHTML = `
+        <div class="station-header">
+            <h3>${isCurrentPlayer ? '⭐' : '👤'} ${player}</h3>
+            <div class="player-status">
+                ${isCurrentPlayer ? 'Votre station' : 'Station partenaire'}
+                ${!canInteract && isCurrentPlayer ? ' (Hôte - observation seulement)' : ''}
+            </div>
+        </div>
+        <div class="station-stats">
+            <span class="stat">🪙 ${totalCoins} pièces</span>
+            <span class="stat">⚫ ${tailsCount} à retourner</span>
+            <span class="stat">🟡 ${headsCount} prêtes</span>
+        </div>
+    `
+
+    // Add coins display
+    const coinsContainer = document.createElement('div')
+    coinsContainer.className = 'coins-container'
+
+    if (totalCoins > 0) {
+        playerCoins.forEach((isHeads, index) => {
+            const coin = document.createElement('div')
+            coin.className = `coin ${isHeads ? 'heads' : 'tails'}`
+            coin.textContent = isHeads ? '🪙' : '⚫'
+            coin.title = isHeads ? 'Face - Prête à envoyer' : 'Pile - Cliquez pour retourner'
+
+            // CRITICAL: Only allow interaction for current player who can interact with tails coins
+            if (canInteract && !isHeads) {
+                coin.classList.add('interactive', 'clickable')
+                coin.addEventListener('click', () => handleCoinFlip(index))
+            } else if (isCurrentPlayer && isHeads) {
+                coin.classList.add('ready') // Visual indicator for ready coins
+                coin.title = 'Face - Prête à envoyer'
+            } else if (!isCurrentPlayer) {
+                coin.classList.add('other-player') // Visual indicator for other player's coins
+                coin.title = `Pièce de ${player}`
+            }
+
+            coinsContainer.appendChild(coin)
+        })
+    } else {
+        const emptyMessage = document.createElement('div')
+        emptyMessage.className = 'empty-station'
+        emptyMessage.textContent = totalCoins === 0 ? 'En attente de pièces...' : 'Station vide'
+        coinsContainer.appendChild(emptyMessage)
     }
 
-    const headsCount = pennies.filter(Boolean).length
-    if (headsCount === 0) {
-        const allFlipped = document.createElement('div')
-        allFlipped.className = 'no-pennies'
-        allFlipped.textContent = 'Toutes les pièces ont été retournées !'
-        return allFlipped
+    station.appendChild(coinsContainer)
+
+    // Add action buttons ONLY for current player who can interact
+    if (canInteract && totalCoins > 0) {
+        const actionsContainer = document.createElement('div')
+        actionsContainer.className = 'station-actions'
+
+        // Send batch button
+        const sendButton = document.createElement('button')
+        sendButton.className = `btn ${canSend ? 'btn-primary' : 'btn-disabled'}`
+        sendButton.textContent =
+            playerIndex === gameState.players.length - 1
+                ? `Terminer ${headsCount} pièce${headsCount > 1 ? 's' : ''}`
+                : `Envoyer lot (${headsCount}/${gameState.batch_size})`
+        sendButton.disabled = !canSend
+
+        if (canSend) {
+            sendButton.addEventListener('click', () => handleSendBatch())
+        } else {
+            sendButton.title = `Retournez ${gameState.batch_size - headsCount} pièce${gameState.batch_size - headsCount > 1 ? 's' : ''} de plus`
+        }
+
+        actionsContainer.appendChild(sendButton)
+        station.appendChild(actionsContainer)
+    } else if (isCurrentPlayer && window.userRole === 'spectator') {
+        // Show message for spectators
+        const spectatorMessage = document.createElement('div')
+        spectatorMessage.className = 'spectator-message'
+        spectatorMessage.textContent = 'Vous êtes spectateur - observation seulement'
+        station.appendChild(spectatorMessage)
+    } else if (isCurrentPlayer && isHost) {
+        // Show message for host
+        const hostMessage = document.createElement('div')
+        hostMessage.className = 'host-message'
+        hostMessage.textContent = 'Vous êtes hôte - observation seulement'
+        station.appendChild(hostMessage)
     }
 
-    // Create pennies as DOM nodes
-    const container = document.createElement('div')
-    container.className = 'pennies-container'
-    pennies.forEach((isHeads, index) => {
-        const penny = document.createElement('div')
-        penny.className = 'flip' + (isHeads ? '' : ' flipped')
-        penny.title = isHeads ? 'Pile' : 'Face'
-        penny.textContent = '🪙'
-        enableFlip(penny)
-        container.appendChild(penny)
-    })
-
-    const summary = document.createElement('div')
-    summary.className = 'pennies-summary'
-    summary.innerHTML = `<strong>${headsCount}</strong> pièce${headsCount > 1 ? 's' : ''} à retourner`
-
-    // Return combined DOM node
-    const wrapper = document.createElement('div')
-    wrapper.appendChild(container)
-    wrapper.appendChild(summary)
-    return wrapper
+    return station
 }
 
-function updateTurnIndicator(currentPlayer, headsRemaining) {
-    const turnIndicator = document.getElementById('turnIndicator')
-    if (turnIndicator && currentPlayer) {
-        turnIndicator.innerHTML = `
-            <span class="current-player">Tour de <strong>${currentPlayer}</strong>:</span>
-            <span class="heads-remaining">${headsRemaining} pièce${headsRemaining > 1 ? 's' : ''} restante${headsRemaining > 1 ? 's' : ''}</span>
-        `
-    }
-}
-
-async function makeMove(flipCount) {
+async function handleCoinFlip(coinIndex) {
     const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     const username = window.currentUsername
 
     if (!apiUrl || !gameCode || !username) {
-        console.error('Missing required data for move')
+        console.error('Missing required data for coin flip')
         return
     }
 
-    // Disable move buttons during request
-    const moveButtons = document.querySelectorAll('.move-btn')
-    moveButtons.forEach((btn) => {
-        btn.disabled = true
-        btn.textContent = 'En cours...'
-    })
+    // Double-check permissions
+    if (window.isHost) {
+        showNotification('Les hôtes ne peuvent pas jouer', 'error')
+        return
+    }
+
+    if (window.userRole !== 'player') {
+        showNotification('Seuls les joueurs peuvent retourner les pièces', 'error')
+        return
+    }
 
     try {
-        const response = await fetch(`${apiUrl}/game/move/${gameCode}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                username: username,
-                flip: flipCount,
-            }),
-            credentials: 'include',
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.detail || `Échec du mouvement: ${response.status}`)
-        }
-
-        const result = await response.json()
-        console.log('Move successful:', result)
-
+        await flipCoin(apiUrl, gameCode, username, coinIndex)
         // The websocket will handle updating the UI
+        showNotification('Pièce retournée !', 'success')
     } catch (error) {
-        console.error('Error making move:', error)
-        alert(`Erreur lors du mouvement: ${error.message}`)
+        console.error('Error flipping coin:', error)
+        // Error notification is handled in the API function
+    }
+}
 
-        // Re-enable buttons on error
-        moveButtons.forEach((btn, index) => {
-            btn.disabled = false
-            btn.textContent = `Retourner ${index + 1} pièce${index > 0 ? 's' : ''}`
-        })
+async function handleSendBatch() {
+    const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+    const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+    const username = window.currentUsername
+
+    console.log('HandleSendBatch called with:', { gameCode, apiUrl, username })
+
+    if (!apiUrl || !gameCode || !username) {
+        console.error('Missing required data for send batch:', { apiUrl, gameCode, username })
+        showNotification('Données manquantes pour envoyer le lot', 'error')
+        return
+    }
+
+    // Double-check permissions
+    if (window.isHost) {
+        console.warn('Host trying to send batch')
+        showNotification('Les hôtes ne peuvent pas jouer', 'error')
+        return
+    }
+
+    if (window.userRole !== 'player') {
+        console.warn('Non-player trying to send batch, role:', window.userRole)
+        showNotification('Seuls les joueurs peuvent envoyer des lots', 'error')
+        return
+    }
+
+    // Check game state
+    if (!window.gameState || window.gameState.state !== 'active') {
+        console.warn('Game not in active state:', window.gameState?.state)
+        showNotification('La partie n\'est pas active', 'error')
+        return
+    }
+
+    try {
+        console.log('Attempting to send batch...')
+        await sendBatch(apiUrl, gameCode, username)
+        // The websocket will handle updating the UI
+        showNotification('Lot envoyé !', 'success')
+    } catch (error) {
+        console.error('Error sending batch:', error)
+
+        // Provide more specific error messages
+        if (error.message.includes('Failed to fetch')) {
+            showNotification('Erreur de connexion au serveur', 'error')
+        } else {
+            showNotification(`Erreur: ${error.message}`, 'error')
+        }
     }
 }
 
 export function updateGameUI(gameState) {
     if (!gameState) return
 
-    // Update pennies display
-    const headsRemaining = document.getElementById('headsRemaining')
-    if (headsRemaining) {
-        const count = Array.isArray(gameState.pennies) ? gameState.pennies.filter(Boolean).length : 0
-        headsRemaining.textContent = count
-    }
+    // Re-render the entire board to reflect new state
+    renderGameBoard(gameState)
 
-    // Update turn indicator
-    if (gameState.current_player) {
-        updateTurnIndicator(gameState.current_player, gameState.heads_remaining || 0)
-    }
-
-    // Update move controls visibility
-    const currentUsername = window.currentUsername
-    const isCurrentPlayerTurn = gameState.current_player === currentUsername
-
-    const moveControls = document.querySelector('.move-controls')
-    if (moveControls) {
-        moveControls.style.display = isCurrentPlayerTurn ? '' : 'none'
-    }
-
-    // Update move buttons based on available heads
-    const moveButtons = document.querySelectorAll('.move-btn')
-    const headsCount = gameState.heads_remaining || 0
-
-    moveButtons.forEach((btn, index) => {
-        const flipCount = index + 1
-        const canMakeMove = flipCount <= headsCount && isCurrentPlayerTurn
-
-        btn.disabled = !canMakeMove
-        btn.style.opacity = canMakeMove ? '1' : '0.5'
-
-        if (flipCount > headsCount) {
-            btn.title = `Impossible: seulement ${headsCount} pièce${headsCount > 1 ? 's' : ''} disponible${headsCount > 1 ? 's' : ''}`
-        } else {
-            btn.title = ''
-        }
+    // Update batch size display if changed
+    const batchSizeSelectors = document.querySelectorAll('.batch-size-option')
+    batchSizeSelectors.forEach((option) => {
+        const size = parseInt(option.dataset.size)
+        option.classList.toggle('active', size === gameState.batch_size)
     })
 }
 
@@ -217,10 +301,6 @@ export function updateGameUI(gameState) {
 export function addResetButton() {
     const gameBoard = document.getElementById('gameBoard')
     if (!gameBoard) return
-
-    // Check if user is host
-    const isHost = checkIfHost()
-    if (!isHost) return
 
     const resetContainer = document.createElement('div')
     resetContainer.className = 'host-controls'
@@ -259,12 +339,9 @@ async function resetGame() {
         console.log('Game reset successful')
     } catch (error) {
         console.error('Error resetting game:', error)
-        alert(`Erreur lors de la réinitialisation: ${error.message}`)
+        showNotification(`Erreur lors de la réinitialisation: ${error.message}`, 'error')
     }
 }
 
-function checkIfHost() {
-    // This would need to be implemented based on your auth system
-    // For now, return false
-    return false
-}
+// Export utility functions for use in other modules
+export { handleCoinFlip, handleSendBatch, resetGame }

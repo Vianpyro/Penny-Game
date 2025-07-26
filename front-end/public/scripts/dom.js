@@ -43,7 +43,7 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
         li.innerHTML = `<span class="status-indicator">👑</span> ${host}`
         spectatorList.appendChild(li)
     }
-    ;(spectators || [])
+    ; (spectators || [])
         .filter((spectator) => spectator !== host)
         .forEach((spectator) => {
             const li = document.createElement('li')
@@ -61,9 +61,4 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
 export function updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound) {
     if (playersSpan) playersSpan.textContent = selectedPlayers.toString()
     if (roundSpan) roundSpan.textContent = selectedRound.toString()
-}
-
-export function updateBoard(gameBoard, selectedPlayers) {
-    if (!gameBoard) return
-    gameBoard.className = `game-board players-${selectedPlayers}`
 }

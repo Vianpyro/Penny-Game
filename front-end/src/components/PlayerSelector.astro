@@ -12,7 +12,7 @@ import { MAX_PLAYERS } from '../config.js'
             Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => {
                 const count = i + 2
                 return (
-                    <button class={`player-count-btn${count === MAX_PLAYERS ? ' active' : ''}`} data-count={count}>
+                    <button class={`player-count-btn${count === MAX_PLAYERS ? ' active' : ''}`} data-count={count} disabled>
                         {count} Joueurs
                     </button>
                 )

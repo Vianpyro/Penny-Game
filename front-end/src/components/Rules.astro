@@ -5,9 +5,283 @@ import '../styles/rules.css'
 
 <div class="rules">
     <h3>📜 Règles du Jeu</h3>
-    <p>
-        Le Penny Game est une simulation Lean visant à mesurer le flow et le lead time dans un processus de production.
-        Les joueurs doivent passer des pièces de monnaie d'une zone à une autre en respectant les règles de batch size.
-        Le but est d'optimiser le temps total de passage des pièces.
-    </p>
+    <div class="rules-content">
+        <div class="rules-overview">
+            <p>
+                <strong>Le Penny Game</strong> est une simulation Lean <strong>coopérative</strong> qui visualise l'impact de la taille des lots sur l'efficacité du flux de production.
+            </p>
+        </div>
+        
+        <div class="rules-sections">
+            <div class="rule-section">
+                <h4>🎯 Objectif</h4>
+                <p>Travaillez <strong>ensemble</strong> pour faire passer toutes les pièces de la chaîne de production le plus rapidement possible.</p>
+            </div>
+
+            <div class="rule-section">
+                <h4>👥 Joueurs</h4>
+                <ul>
+                    <li>2 à 5 joueurs forment une <strong>chaîne de production</strong></li>
+                    <li>Le premier joueur reçoit toutes les pièces au début</li>
+                    <li>Chaque joueur traite puis passe au suivant</li>
+                    <li>L'hôte démarre la partie mais ne joue pas</li>
+                </ul>
+            </div>
+
+            <div class="rule-section">
+                <h4>🪙 Mécaniques</h4>
+                <ul>
+                    <li><strong>12 pièces</strong> commencent en position "pile" (<span style="filter: grayscale(100%)">🪙</span>)</li>
+                    <li><strong>Retournez</strong> vos pièces de pile vers face (🪙)</li>
+                    <li><strong>Envoyez</strong> par lots selon la taille configurée</li>
+                    <li>Seules les pièces "face" peuvent être envoyées</li>
+                    <li>Le dernier joueur <strong>termine</strong> les pièces</li>
+                </ul>
+            </div>
+
+            <div class="rule-section">
+                <h4>📦 Tailles de Lots</h4>
+                <ul>
+                    <li><strong>Lot de 12 :</strong> Toutes les pièces d'un coup (beaucoup d'attente)</li>
+                    <li><strong>Lot de 4 :</strong> Par groupes de 4 (compromis)</li>
+                    <li><strong>Lot de 1 :</strong> Une par une (flux continu)</li>
+                </ul>
+            </div>
+
+            <div class="rule-section cooperative">
+                <h4>⚡ Jeu Coopératif</h4>
+                <ul>
+                    <li><strong>Pas de tours :</strong> Agissez dès que possible</li>
+                    <li><strong>Parallélisme :</strong> Tous peuvent agir simultanément</li>
+                    <li><strong>Objectif commun :</strong> Optimiser le temps total</li>
+                    <li><strong>Communication :</strong> Coordonnez-vous !</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="lean-insights">
+            <h4>💡 Enseignements Lean</h4>
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <strong>Batch Size</strong>
+                    <p>Impact de la taille des lots sur les temps d'attente</p>
+                </div>
+                <div class="insight-card">
+                    <strong>Flow</strong>
+                    <p>Visualisation des goulots d'étranglement</p>
+                </div>
+                <div class="insight-card">
+                    <strong>Lead Time</strong>
+                    <p>Différence entre temps individuel et temps total</p>
+                </div>
+                <div class="insight-card">
+                    <strong>Waste</strong>
+                    <p>Identification des temps d'attente inutiles</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    .rules {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #3498db;
+        max-height: 20svh;
+        overflow-y: auto;
+    }
+
+    .rules h3 {
+        margin: 0 0 20px 0;
+        color: #2c3e50;
+        font-size: 1.4em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .rules-overview {
+        background: rgba(52, 152, 219, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border-left: 4px solid #3498db;
+    }
+
+    .rules-overview p {
+        margin: 0;
+        font-size: 1.05em;
+        line-height: 1.5;
+        color: #2c3e50;
+    }
+
+    .rules-sections {
+        display: grid;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .rule-section {
+        background: rgba(236, 240, 241, 0.3);
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 3px solid #95a5a6;
+    }
+
+    .rule-section.cooperative {
+        background: rgba(46, 204, 113, 0.1);
+        border-left-color: #27ae60;
+    }
+
+    .rule-section h4 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-size: 1.1em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .rule-section p {
+        margin: 0;
+        color: #34495e;
+        line-height: 1.4;
+        font-size: 0.95em;
+    }
+
+    .rule-section ul {
+        margin: 5px 0 0 0;
+        padding-left: 20px;
+        list-style: none;
+    }
+
+    .rule-section li {
+        margin-bottom: 6px;
+        color: #34495e;
+        font-size: 0.95em;
+        line-height: 1.4;
+        position: relative;
+        padding-left: 15px;
+    }
+
+    .rule-section li::before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+        color: #3498db;
+        font-weight: bold;
+    }
+
+    .lean-insights {
+        background: rgba(241, 196, 15, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 4px solid #f1c40f;
+    }
+
+    .lean-insights h4 {
+        margin: 0 0 15px 0;
+        color: #2c3e50;
+        font-size: 1.1em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+
+    .insight-card {
+        background: rgba(255, 255, 255, 0.8);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(241, 196, 15, 0.3);
+        text-align: center;
+    }
+
+    .insight-card strong {
+        display: block;
+        color: #f39c12;
+        font-size: 1em;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .insight-card p {
+        margin: 0;
+        color: #7f8c8d;
+        font-size: 0.85em;
+        line-height: 1.3;
+    }
+
+    @media screen and (max-width: 768px) {
+        .rules {
+            padding: 20px;
+        }
+
+        .rules h3 {
+            font-size: 1.3em;
+        }
+
+        .rules-overview {
+            padding: 12px;
+        }
+
+        .rule-section {
+            padding: 12px;
+        }
+
+        .rule-section h4 {
+            font-size: 1.05em;
+        }
+
+        .lean-insights {
+            padding: 15px;
+        }
+
+        .insights-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .insight-card {
+            padding: 10px;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .rules {
+            padding: 15px;
+        }
+
+        .rules h3 {
+            font-size: 1.2em;
+        }
+
+        .rules-overview p {
+            font-size: 1em;
+        }
+
+        .rule-section p,
+        .rule-section li {
+            font-size: 0.9em;
+        }
+
+        .insight-card strong {
+            font-size: 0.95em;
+        }
+
+        .insight-card p {
+            font-size: 0.8em;
+        }
+    }
+</style>

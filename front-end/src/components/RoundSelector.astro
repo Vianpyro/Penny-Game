@@ -2,20 +2,82 @@
 import '../styles/main.css'
 import '../styles/round-selector.css'
 
-const { rounds } = Astro.props
+const batchOptions = [
+    {
+        size: 12,
+        title: 'Lot de 12',
+        description: 'Passer TOUTES les 12 pièces en une fois (production en lots)'
+    },
+    {
+        size: 4,
+        title: 'Lot de 4', 
+        description: 'Passer les pièces par groupes de 4 (production hybride)'
+    },
+    {
+        size: 1,
+        title: 'Lot de 1',
+        description: 'Passer les pièces une par une (flux continu)'
+    }
+]
 ---
 
 <div class="round-selector-container">
-    <h3>🏁 Choix de la Manche</h3>
+    <h3>📦 Taille des Lots</h3>
+    <p class="batch-description">
+        La taille de lot détermine combien de pièces peuvent être envoyées à la fois.
+        Plus le lot est petit, plus le flux est fluide !
+    </p>
     <div class="round-selector" id="roundSelector">
         {
-            rounds.map((opt, idx) => (
-                <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1}>
-                    <div class="round-number">Manche {idx + 1}</div>
+            batchOptions.map((opt, idx) => (
+                <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1} data-size={opt.size}>
+                    <div class="batch-size-number">{opt.size}</div>
                     <div class="round-title">{opt.title}</div>
                     <div class="round-description">{opt.description}</div>
+                    <div class="batch-insight">
+                        {opt.size === 12 && "⏳ Beaucoup d'attente"}
+                        {opt.size === 4 && "⚖️ Équilibre attente/flux"}
+                        {opt.size === 1 && "⚡ Flux optimal"}
+                    </div>
                 </div>
             ))
         }
     </div>
 </div>
+
+<style>
+    .batch-description {
+        font-size: 0.95em;
+        color: #7f8c8d;
+        margin-bottom: 15px;
+        text-align: center;
+        font-style: italic;
+    }
+
+    .batch-size-number {
+        font-size: 2em;
+        font-weight: 900;
+        color: #3498db;
+        margin-bottom: 5px;
+    }
+
+    .batch-insight {
+        margin-top: 8px;
+        padding: 5px 10px;
+        background: rgba(52, 152, 219, 0.1);
+        border-radius: 15px;
+        font-size: 0.8em;
+        font-weight: 600;
+        color: #2980b9;
+        text-align: center;
+    }
+
+    .round-option:hover .batch-insight {
+        background: rgba(52, 152, 219, 0.2);
+    }
+
+    .round-option.active .batch-insight {
+        background: rgba(52, 152, 219, 0.3);
+        color: #1f4e79;
+    }
+</style>

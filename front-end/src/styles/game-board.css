@@ -1,48 +1,508 @@
+/* Game Board Styles for Cooperative Penny Game */
+
 .game-board {
-    background: rgb(255 255 255 / 90%);
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgb(0 0 0 / 10%);
-    margin-bottom: 30px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 20px;
     padding: 30px;
+    margin-top: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.board-container {
+.game-status {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.status-header h2 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.8em;
+    font-weight: 700;
+}
+
+.game-progress {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.progress-stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.progress-stats .stat {
+    background: rgba(52, 152, 219, 0.1);
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 2px solid rgba(52, 152, 219, 0.2);
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95em;
+}
+
+.production-line {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
+    align-items: flex-start;
+    justify-content: center;
+    margin-bottom: 30px;
 }
 
-.board-player {
-    border: 2px solid #ecf0f1;
-    border-color: #ecf0f1;
+.player-station {
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 15px;
-    border-width: 2px;
-    flex: 1 1 0;
-    min-width: fit-content;
-    padding: 5px 10px;
+    padding: 20px;
+    min-width: 250px;
+    max-width: 300px;
+    flex: 1;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border: 3px solid #ecf0f1;
+    transition: all 0.3s ease;
+}
+
+.player-station:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.station-header {
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.station-header h3 {
+    margin: 0 0 5px 0;
+    color: #2c3e50;
+    font-size: 1.3em;
+    font-weight: 700;
+}
+
+.player-status {
+    font-size: 0.9em;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.station-stats {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.station-stats .stat {
+    background: rgba(46, 204, 113, 0.1);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #27ae60;
+    text-align: center;
+    flex: 1;
+    min-width: 60px;
+}
+
+.coins-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
+    gap: 8px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: rgba(236, 240, 241, 0.3);
+    border-radius: 10px;
+    min-height: 60px;
     align-items: center;
+    justify-items: center;
 }
 
-.board-player[active] {
-    flex-basis: 100%;
-    order: 0;
+.coin {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2em;
+    transition: all 0.3s ease;
+    user-select: none;
+    position: relative;
 }
 
-.board-player:not([active]) {
-    order: 1;
+.coin.tails {
+    background: linear-gradient(135deg, #34495e, #2c3e50);
+    color: white;
+    box-shadow: 0 3px 10px rgba(44, 62, 80, 0.3);
 }
 
-.board-player > p {
+.coin.heads {
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    color: white;
+    box-shadow: 0 3px 10px rgba(243, 156, 18, 0.3);
+}
+
+.coin.interactive.clickable {
+    cursor: pointer;
+    transform: scale(1);
+}
+
+.coin.interactive.clickable:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.coin.interactive.clickable:active {
+    transform: scale(0.95);
+}
+
+.empty-station {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    color: #95a5a6;
+    font-style: italic;
+    font-size: 0.9em;
+}
+
+.station-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.station-actions .btn {
+    flex: 1;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
+
+.btn-disabled {
+    background: #bdc3c7;
+    color: #7f8c8d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+    color: white;
+    box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7f8c8d, #95a5a6);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(149, 165, 166, 0.4);
+}
+
+.flow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    color: #3498db;
+    margin: 0 10px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+.completion-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.completion-station {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    min-width: 200px;
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.3);
+}
+
+.completion-station h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.3em;
+    font-weight: 700;
+}
+
+.completed-coins {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+    line-height: 1.2;
+    word-break: break-all;
+}
+
+.completion-count {
+    font-size: 1.1em;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.rules-reminder {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.rules-reminder h4 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.2em;
+    font-weight: 700;
+}
+
+.rules-reminder ul {
     margin: 0;
+    padding-left: 20px;
+    list-style: none;
+}
+
+.rules-reminder li {
+    margin-bottom: 8px;
+    padding-left: 25px;
+    position: relative;
+    color: #34495e;
+    font-size: 0.95em;
+    line-height: 1.4;
+}
+
+.rules-reminder li::before {
+    content: "▶";
+    position: absolute;
+    left: 0;
+    color: #3498db;
     font-weight: bold;
 }
 
-.pennies-container {
-    display: grid;
-    grid-template-columns: repeat(4, auto);
-    gap: 0.5rem;
-    justify-content: center;
-    font-size: xx-large;
+.host-controls {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid rgba(236, 240, 241, 0.5);
+}
+
+.host-controls .btn {
+    padding: 12px 25px;
+    font-size: 1em;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    .game-board {
+        padding: 20px;
+        margin-top: 15px;
+    }
+
+    .production-line {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .player-station {
+        min-width: 280px;
+        max-width: 100%;
+    }
+
+    .flow-arrow {
+        transform: rotate(90deg);
+        margin: 10px 0;
+        font-size: 1.5em;
+    }
+
+    .station-stats {
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .station-stats .stat {
+        min-width: 80px;
+    }
+
+    .coins-container {
+        grid-template-columns: repeat(auto-fit, minmax(25px, 1fr));
+        gap: 6px;
+        padding: 12px;
+    }
+
+    .coin {
+        width: 25px;
+        height: 25px;
+        font-size: 1em;
+    }
+
+    .progress-stats {
+        gap: 15px;
+    }
+
+    .progress-stats .stat {
+        padding: 6px 12px;
+        font-size: 0.9em;
+    }
+
+    .rules-reminder {
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .rules-reminder h4 {
+        font-size: 1.1em;
+    }
+
+    .rules-reminder li {
+        font-size: 0.9em;
+        margin-bottom: 6px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .status-header h2 {
+        font-size: 1.5em;
+    }
+
+    .player-station {
+        min-width: 250px;
+        padding: 15px;
+    }
+
+    .station-header h3 {
+        font-size: 1.2em;
+    }
+
+    .coins-container {
+        grid-template-columns: repeat(auto-fit, minmax(22px, 1fr));
+        gap: 4px;
+        padding: 10px;
+    }
+
+    .coin {
+        width: 22px;
+        height: 22px;
+        font-size: 0.9em;
+    }
+
+    .completion-station {
+        min-width: 150px;
+        padding: 15px;
+    }
+
+    .completed-coins {
+        font-size: 1.2em;
+    }
+
+    .rules-reminder {
+        padding: 12px;
+    }
+
+    .rules-reminder h4 {
+        font-size: 1em;
+        margin-bottom: 12px;
+    }
+
+    .rules-reminder li {
+        font-size: 0.85em;
+        padding-left: 20px;
+    }
+}
+
+/* Animation for coin flips */
+@keyframes coinFlip {
+    0% {
+        transform: rotateY(0deg);
+    }
+
+    50% {
+        transform: rotateY(90deg);
+    }
+
+    100% {
+        transform: rotateY(0deg);
+    }
+}
+
+.coin.flipping {
+    animation: coinFlip 0.6s ease-in-out;
+}
+
+/* Loading state for stations */
+.player-station.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.player-station.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #3498db;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
 }
