@@ -52,6 +52,18 @@ jobs:
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_PYLINT: false
           VALIDATE_GIT_COMMITLINT: false
+
+          # Disable validators for already handled files
+          VALIDATE_CSS_PRETTIER: false
+          VALIDATE_HTML_PRETTIER: false
+          VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_JSON_PRETTIER: false
+          VALIDATE_JSONC_PRETTIER: false
+          VALIDATE_JSX_PRETTIER: false
+          VALIDATE_MARKDOWN_PRETTIER: false
+          VALIDATE_PYTHON_BLACK: false
+          VALIDATE_PYTHON_PYINK: false
+          VALIDATE_TYPESCRIPT_PRETTIER: false
           # Enable fixers for PR events
           FIX_HTML_PRETTIER: ${{ github.event_name == 'pull_request' }}
           FIX_JSON: ${{ github.event_name == 'pull_request' }}
