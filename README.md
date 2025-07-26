@@ -58,6 +58,69 @@ This repository contains both the backend API and the front-end client for the g
 2. Join a game or create a new one.
 3. Play the Penny Game with other online players in real time.
 
+## Rules
+
+The Penny Game is a Lean simulation used to visualize flow efficiency and measure lead time in a production process. It is a **cooperative, non-competitive game** focused on how batch size impacts performance.
+
+### 🎯 Objective
+
+Players work together to move and flip coins (🪙) through a production line as quickly as possible. The goal is to complete the entire process—from the first flip to the last delivery—as efficiently as possible, depending on the configured **batch size**.
+
+### 👥 Players
+
+- 2 to 5 players per game.
+- The first player to join becomes the **first in the chain**.
+- A separate **host** starts the game but does not participate as a player.
+
+### 🧩 Game Mechanics
+
+- The total number of coins is fixed (usually 12).
+- Each coin starts as **tails** and must be **flipped to heads** before being passed on.
+- Players only control the coins assigned to them, based on the **batch size rule**.
+- Players can only send coins that are **flipped to heads**.
+- Once all their coins in a batch are flipped, players **send** them to the next player in line.
+- The game ends when the **last player sends the final coin**.
+
+### 📦 Batch Sizes
+
+The core mechanic of the game is the batch size:
+
+| Batch Size | Description                                                              |
+| ---------- | ------------------------------------------------------------------------ |
+| 12/12      | One player flips all 12 coins, then sends them all at once.              |
+| 4/12       | Coins are flipped and sent in groups of 4 (3 batches total).             |
+| 1/12       | Coins are flipped and sent **one by one**, allowing for continuous flow. |
+
+Batch size influences how simultaneously players can act:
+
+- Large batches lead to **idle time** for other players.
+- Small batches enable **parallel actions** and smoother flow.
+
+### 🔄 Turn Logic
+
+- The game is **not turn-based**.
+- Depending on the batch size, players may act **simultaneously**.
+- Players flip and send coins **as soon as allowed**, making it a cooperative **speed-run** experience.
+
+### 🚫 Errors & Edge Cases
+
+- Coins must be flipped (heads up) before they can be sent.
+- There is **no penalty** for invalid actions—unflipped coins simply remain in place.
+- If a player disconnects, their turn is **skipped**.
+- Disconnected players may **rejoin** and continue playing.
+
+### ⚙️ Customization
+
+Currently configurable options include:
+
+- Number of players (2–5)
+- Batch size: 12/12, 4/12, or 1/12
+
+### 🧑‍🏫 Learning the Game
+
+- Game rules are shown to all players before the game starts.
+- No prior experience is required—just read, flip, and flow!
+
 ## Development
 
 - Backend code is in `api/app/` (see `main.py`, `game_logic.py`, etc.).
