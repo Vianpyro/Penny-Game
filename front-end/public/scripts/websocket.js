@@ -1,7 +1,8 @@
 // WebSocket logic for Penny Game
 import { renderPlayers, renderSpectators } from './dom.js'
 import { addDnDEvents } from './dnd.js'
-import { renderPlayerSections, updateGameUI } from './game-board.js'
+import { renderPlayerSections } from './game-board.js'
+import { showNotification } from './utility.js'
 
 export function handleWSMessage(data) {
     try {
@@ -228,61 +229,6 @@ function updateTurnIndicator(currentPlayer, headsRemaining) {
 function showMoveNotification(player, flipCount, headsRemaining) {
     const message = `${player} a retourné ${flipCount} pièce${flipCount > 1 ? 's' : ''} (${headsRemaining} restantes)`
     showNotification(message, 'info')
-}
-
-function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div')
-    notification.className = `notification notification-${type}`
-    notification.textContent = message
-
-    // Style the notification
-    Object.assign(notification.style, {
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        color: 'white',
-        fontWeight: '600',
-        zIndex: '9999',
-        transform: 'translateX(100%)',
-        transition: 'transform 0.3s ease',
-        maxWidth: '300px',
-        wordBreak: 'break-word',
-    })
-
-    // Set background color based on type
-    switch (type) {
-        case 'success':
-            notification.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)'
-            break
-        case 'error':
-            notification.style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)'
-            break
-        case 'info':
-        default:
-            notification.style.background = 'linear-gradient(45deg, #3498db, #2980b9)'
-            break
-    }
-
-    // Add to DOM
-    document.body.appendChild(notification)
-
-    // Animate in
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)'
-    }, 100)
-
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        notification.style.transform = 'translateX(100%)'
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification)
-            }
-        }, 300)
-    }, 3000)
 }
 
 function updateResultsDisplay(finalState) {

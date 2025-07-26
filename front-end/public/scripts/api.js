@@ -1,4 +1,5 @@
 // API-related functions for Penny Game with improved error handling
+import { showNotification } from './utility.js'
 
 export async function joinRoom(apiUrl, roomId, username, onSuccess) {
     if (!apiUrl || !roomId || !username) {
@@ -285,61 +286,5 @@ function showInfoNotification(message) {
     showNotification(message, 'info')
 }
 
-function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div')
-    notification.className = `notification notification-${type}`
-    notification.textContent = message
-
-    // Style the notification
-    Object.assign(notification.style, {
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        color: 'white',
-        fontWeight: '600',
-        zIndex: '9999',
-        transform: 'translateX(100%)',
-        transition: 'transform 0.3s ease',
-        maxWidth: '300px',
-        wordBreak: 'break-word',
-        boxShadow: '0 4px 15px rgb(0 0 0 / 20%)',
-    })
-
-    // Set background color based on type
-    switch (type) {
-        case 'success':
-            notification.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)'
-            break
-        case 'error':
-            notification.style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)'
-            break
-        case 'info':
-        default:
-            notification.style.background = 'linear-gradient(45deg, #3498db, #2980b9)'
-            break
-    }
-
-    // Add to DOM
-    document.body.appendChild(notification)
-
-    // Animate in
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)'
-    }, 100)
-
-    // Auto remove after 4 seconds
-    setTimeout(() => {
-        notification.style.transform = 'translateX(100%)'
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification)
-            }
-        }, 300)
-    }, 4000)
-}
-
 // Export notification functions for use in other modules
-export { showSuccessNotification, showErrorNotification, showInfoNotification, showNotification }
+export { showSuccessNotification, showErrorNotification, showInfoNotification }
