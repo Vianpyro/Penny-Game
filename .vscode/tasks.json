@@ -34,7 +34,7 @@
                 "runOn": "folderOpen"
             },
             "presentation": {
-                "close": true,
+                "close": true
             },
             "options": {
                 "cwd": "${workspaceFolder}/front-end"

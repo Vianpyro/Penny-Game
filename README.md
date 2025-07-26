@@ -1,12 +1,12 @@
 # Penny Game App
 
 Penny Game is a web-based multiplayer game where players compete in a strategic penny-flipping challenge.
-This repository contains both the backend API and the front-end client for the game.
+This repository contains both the backend API and the frontend client for the game.
 
 ## Project Structure
 
 - **Backend (API)**: Built with FastAPI, located in the `api/` directory. Handles game logic, player management, and real-time communication via WebSockets.
-- **Front-End**: Built with Astro, located in the `front-end/` directory. Provides an interactive user interface for joining games, playing, and viewing results. Hosted on GitHub Pages for easy access.
+- **frontend**: Built with Astro, located in the `frontend/` directory. Provides an interactive user interface for joining games, playing, and viewing results. Hosted on GitHub Pages for easy access.
 
 ## Features
 
@@ -20,7 +20,7 @@ This repository contains both the backend API and the front-end client for the g
 ### Prerequisites
 
 - [Python 3.12+](https://www.python.org/) (for backend)
-- [Node.js 18+](https://nodejs.org/) and [npm](https://www.npmjs.com/) (for front-end)
+- [Node.js 18+](https://nodejs.org/) and [npm](https://www.npmjs.com/) (for frontend)
 
 ### Backend Setup (API)
 
@@ -35,11 +35,11 @@ This repository contains both the backend API and the front-end client for the g
    ```
 3. The API will be available at `http://<your-server-ip>:8000`.
 
-### Front-End Setup
+### frontend Setup
 
 1. Install dependencies:
    ```bash
-   cd front-end
+   cd frontend
    npm install
    ```
 2. Build the static site:
@@ -54,7 +54,7 @@ This repository contains both the backend API and the front-end client for the g
 
 ## Usage
 
-1. Open the front-end site (hosted on GitHub Pages).
+1. Open the frontend site (hosted on GitHub Pages).
 2. Join a game or create a new one.
 3. Play the Penny Game with other online players in real time.
 
@@ -124,7 +124,7 @@ Currently configurable options include:
 ## Development
 
 - Backend code is in `api/app/` (see `main.py`, `game_logic.py`, etc.).
-- Front-end code is in `front-end/src/` and `front-end/public/scripts/`.
+- frontend code is in `frontend/src/` and `frontend/public/scripts/`.
 
 ## License
 
