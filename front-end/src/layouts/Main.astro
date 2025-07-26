@@ -8,9 +8,12 @@ import Footer from '../components/Footer.astro'
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
         <meta name="generator" content={Astro.generator} />
         <title>{SITE_NAME}</title>
+        <link
+            rel="icon"
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2285%22>🪙</text></svg>"
+        />
     </head>
     <body>
         <main><slot /></main>

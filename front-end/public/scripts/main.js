@@ -39,7 +39,6 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
 
             console.log('Game start request successful')
             // The websocket will handle switching to the game view
-
         } catch (error) {
             console.error('Error starting game:', error)
             alert(error.message || 'Impossible de démarrer la partie')
@@ -102,7 +101,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
                     method: 'POST',
-                    credentials: 'include'
+                    credentials: 'include',
                 })
 
                 if (!response.ok) {
@@ -112,7 +111,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 console.log('Game reset successful')
                 // The websocket will handle switching back to lobby view
-
             } catch (error) {
                 console.error('Error resetting game:', error)
                 alert(error.message || 'Impossible de réinitialiser la partie')
@@ -329,4 +327,76 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
     })
+
+    // Handle results view buttons
+    const playAgainBtn = document.getElementById('playAgainBtn')
+    const backToLobbyBtn = document.getElementById('backToLobbyBtn')
+
+    if (playAgainBtn) {
+        playAgainBtn.addEventListener('click', async () => {
+            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+
+            if (!window.isHost) {
+                alert("Seul l'hôte peut redémarrer la partie")
+                return
+            }
+
+            if (!apiUrl || !gameCode) return
+
+            try {
+                playAgainBtn.disabled = true
+                playAgainBtn.textContent = 'Redémarrage...'
+
+                // Reset the game first
+                await fetch(`${apiUrl}/game/reset/${gameCode}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                })
+
+                // Small delay to ensure reset is complete
+                setTimeout(async () => {
+                    // Then start a new game
+                    await fetch(`${apiUrl}/game/start/${gameCode}`, {
+                        method: 'POST',
+                        credentials: 'include',
+                    })
+                }, 500)
+            } catch (error) {
+                console.error('Error restarting game:', error)
+                alert('Erreur lors du redémarrage de la partie')
+            } finally {
+                playAgainBtn.disabled = false
+                playAgainBtn.textContent = 'Rejouer'
+            }
+        })
+    }
+
+    if (backToLobbyBtn) {
+        backToLobbyBtn.addEventListener('click', async () => {
+            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+
+            if (!window.isHost) {
+                alert("Seul l'hôte peut retourner au lobby")
+                return
+            }
+
+            if (!apiUrl || !gameCode) return
+
+            try {
+                backToLobbyBtn.disabled = true
+                backToLobbyBtn.textContent = 'Retour...'
+
+                await fetch(`${apiUrl}/game/reset/${gameCode}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                })
+            } catch (error) {
+                console.error('Error returning to lobby:', error)
+                alert('Erreur lors du retour au lobby')
+            } finally {
+                backToLobbyBtn.disabled = false
+                backToLobbyBtn.textContent = 'Retour au lobby'
+            }
+        })
+    }
 })

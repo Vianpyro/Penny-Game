@@ -36,12 +36,12 @@
     order: 1;
 }
 
-.board-player>p {
+.board-player > p {
     margin: 0;
     font-weight: bold;
 }
 
-.penny-container {
+.pennies-container {
     display: grid;
     grid-template-columns: repeat(4, auto);
     gap: 0.5rem;

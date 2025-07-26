@@ -2,11 +2,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
 
+from .constants import MAX_PENNIES
 from .models import GameState, PennyGame
 
-MAX_PLAYERS = 5
-MAX_CONNECTIONS = 50
-MAX_PENNIES = 12
 ROOM_INACTIVITY_THRESHOLD = timedelta(minutes=60)
 PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
 

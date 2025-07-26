@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Body, Cookie, HTTPException, Response
 
+from .constants import MAX_PLAYERS
 from .game_logic import (
-    MAX_PLAYERS,
     cleanup,
     create_new_game,
     get_current_player,

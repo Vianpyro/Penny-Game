@@ -201,7 +201,7 @@ function updateGameControls(gameState) {
     const isCurrentPlayerTurn = gameState.current_player === currentUsername
 
     const moveButtons = document.querySelectorAll('.move-btn')
-    moveButtons.forEach(btn => {
+    moveButtons.forEach((btn) => {
         btn.disabled = !isCurrentPlayerTurn
         btn.style.opacity = isCurrentPlayerTurn ? '1' : '0.5'
     })
@@ -249,7 +249,7 @@ function showNotification(message, type = 'info') {
         transform: 'translateX(100%)',
         transition: 'transform 0.3s ease',
         maxWidth: '300px',
-        wordBreak: 'break-word'
+        wordBreak: 'break-word',
     })
 
     // Set background color based on type

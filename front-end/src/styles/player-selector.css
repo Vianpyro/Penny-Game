@@ -50,7 +50,7 @@
     transition: background 0.2s border-color 0.2s;
 }
 
-.user-list>li {
+.user-list > li {
     border-color: #ecf0f1;
     border-radius: 15px;
     border-width: 2px;
@@ -59,23 +59,23 @@
     padding: 5px 10px;
 }
 
-.user-list>li.offline {
+.user-list > li.offline {
     border-style: dashed;
     color: #888;
 }
 
-.user-list>li.online,
-.spectator-list>.user-list>li {
+.user-list > li.online,
+.spectator-list > .user-list > li {
     border-style: solid;
     color: inherit;
 }
 
-.user-list>li.waiting {
+.user-list > li.waiting {
     border-style: dotted;
     color: #aaa;
 }
 
-.user-list>li[draggable] {
+.user-list > li[draggable] {
     cursor: pointer;
 }
 

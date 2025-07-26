@@ -4,6 +4,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from .constants import MAX_PENNIES
+
 
 class GameState(Enum):
     LOBBY = "lobby"
@@ -17,7 +19,7 @@ class PennyGame(BaseModel):
     spectators: List[str] = Field(default_factory=list)
     host: Optional[str] = None
     host_secret: Optional[str] = None
-    pennies: List[bool] = Field(default_factory=lambda: [True] * 20)  # True = Heads, False = Tails
+    pennies: List[bool] = Field(default_factory=lambda: [True] * MAX_PENNIES)  # True = Heads, False = Tails
     turn: int = 0  # Index of current player
     created_at: datetime
     last_active_at: datetime
@@ -35,7 +37,7 @@ class JoinRequest(BaseModel):
     class Config:
         str_strip_whitespace = True
         min_anystr_length = 1
-        max_anystr_length = 20
+        str_max_length = 20
 
 
 class MoveRequest(BaseModel):

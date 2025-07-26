@@ -1,4 +1,5 @@
 // Game board logic for Penny Game with move controls
+import { enableFlip } from './utility.js'
 
 export async function fetchBoardGameState(gameCode) {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
@@ -6,7 +7,7 @@ export async function fetchBoardGameState(gameCode) {
 
     try {
         const res = await fetch(`${apiUrl}/game/state/${gameCode}`, {
-            credentials: 'include'
+            credentials: 'include',
         })
         if (!res.ok) return null
         const data = await res.json()
@@ -28,51 +29,14 @@ export function renderPlayerSections(players, turn, pennies) {
     gameStatus.className = 'game-status'
     gameStatus.innerHTML = `
         <div class="status-header">
-            <h2>🪙 Penny Game en cours</h2>
+            <h2>🎲 Partie en cours</h2>
             <div id="turnIndicator" class="turn-indicator"></div>
-            <div class="heads-counter">
-                <span>Pièces restantes (pile): </span>
-                <span id="headsRemaining" class="heads-count">${Array.isArray(pennies) ? pennies.filter(Boolean).length : 0}</span>
-            </div>
         </div>
     `
     gameBoard.appendChild(gameStatus)
 
     // Add reset button for hosts
     addResetButton()
-
-    // Add move controls for current player
-    const currentUsername = window.currentUsername
-    const isCurrentPlayerTurn = players[turn] === currentUsername
-
-    if (isCurrentPlayerTurn) {
-        const moveControls = document.createElement('div')
-        moveControls.className = 'move-controls'
-        moveControls.innerHTML = `
-            <h3>🎯 C'est votre tour !</h3>
-            <p>Combien de pièces voulez-vous retourner ?</p>
-            <div class="move-buttons">
-                <button class="move-btn btn btn-primary" data-flip="1">
-                    Retourner 1 pièce
-                </button>
-                <button class="move-btn btn btn-primary" data-flip="2">
-                    Retourner 2 pièces
-                </button>
-                <button class="move-btn btn btn-primary" data-flip="3">
-                    Retourner 3 pièces
-                </button>
-            </div>
-        `
-        gameBoard.appendChild(moveControls)
-
-        // Add event listeners to move buttons
-        moveControls.querySelectorAll('.move-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const flipCount = parseInt(btn.dataset.flip)
-                makeMove(flipCount)
-            })
-        })
-    }
 
     // Add players sections
     const playersContainer = document.createElement('div')
@@ -84,15 +48,18 @@ export function renderPlayerSections(players, turn, pennies) {
 
         const isCurrentPlayer = idx === turn
         const statusIcon = isCurrentPlayer ? '⭐' : '⏳'
-        const statusText = isCurrentPlayer ? 'Tour actuel' : 'En attente'
+        const statusText = isCurrentPlayer ? 'Tour actuel' : 'En attente...'
 
         section.innerHTML = `
             <h3>${statusIcon} ${player}</h3>
             <div class="player-status">${statusText}</div>
-            <div class="pennies-display">
-                ${isCurrentPlayer ? renderPenniesForPlayer(pennies) : '<div class="waiting-display">En attente...</div>'}
-            </div>
         `
+        const penniesDisplay = document.createElement('div')
+        penniesDisplay.className = 'pennies-display'
+        if (isCurrentPlayer) {
+            penniesDisplay.appendChild(renderPenniesForPlayer(pennies))
+        }
+        section.appendChild(penniesDisplay)
 
         playersContainer.appendChild(section)
     })
@@ -104,32 +71,49 @@ export function renderPlayerSections(players, turn, pennies) {
 }
 
 function renderPenniesForPlayer(pennies) {
-    if (!Array.isArray(pennies)) return '<div class="no-pennies">Aucune pièce</div>'
+    if (!Array.isArray(pennies)) {
+        const noPennies = document.createElement('div')
+        noPennies.className = 'no-pennies'
+        noPennies.textContent = 'Aucune pièce'
+        return noPennies
+    }
 
     const headsCount = pennies.filter(Boolean).length
     if (headsCount === 0) {
-        return '<div class="no-pennies">Toutes les pièces ont été retournées !</div>'
+        const allFlipped = document.createElement('div')
+        allFlipped.className = 'no-pennies'
+        allFlipped.textContent = 'Toutes les pièces ont été retournées !'
+        return allFlipped
     }
 
-    return `
-        <div class="pennies-container">
-            ${pennies.map((isHeads, index) =>
-        `<div class="penny ${isHeads ? 'heads' : 'tails'}" title="${isHeads ? 'Pile' : 'Face'}">
-                    ${isHeads ? '🪙' : '⚪'}
-                </div>`
-    ).join('')}
-        </div>
-        <div class="pennies-summary">
-            <strong>${headsCount}</strong> pièce${headsCount > 1 ? 's' : ''} à retourner
-        </div>
-    `
+    // Create pennies as DOM nodes
+    const container = document.createElement('div')
+    container.className = 'pennies-container'
+    pennies.forEach((isHeads, index) => {
+        const penny = document.createElement('div')
+        penny.className = 'flip' + (isHeads ? '' : ' flipped')
+        penny.title = isHeads ? 'Pile' : 'Face'
+        penny.textContent = '🪙'
+        enableFlip(penny)
+        container.appendChild(penny)
+    })
+
+    const summary = document.createElement('div')
+    summary.className = 'pennies-summary'
+    summary.innerHTML = `<strong>${headsCount}</strong> pièce${headsCount > 1 ? 's' : ''} à retourner`
+
+    // Return combined DOM node
+    const wrapper = document.createElement('div')
+    wrapper.appendChild(container)
+    wrapper.appendChild(summary)
+    return wrapper
 }
 
 function updateTurnIndicator(currentPlayer, headsRemaining) {
     const turnIndicator = document.getElementById('turnIndicator')
     if (turnIndicator && currentPlayer) {
         turnIndicator.innerHTML = `
-            <span class="current-player">Tour de: <strong>${currentPlayer}</strong></span>
+            <span class="current-player">Tour de <strong>${currentPlayer}</strong>:</span>
             <span class="heads-remaining">${headsRemaining} pièce${headsRemaining > 1 ? 's' : ''} restante${headsRemaining > 1 ? 's' : ''}</span>
         `
     }
@@ -147,7 +131,7 @@ async function makeMove(flipCount) {
 
     // Disable move buttons during request
     const moveButtons = document.querySelectorAll('.move-btn')
-    moveButtons.forEach(btn => {
+    moveButtons.forEach((btn) => {
         btn.disabled = true
         btn.textContent = 'En cours...'
     })
@@ -160,9 +144,9 @@ async function makeMove(flipCount) {
             },
             body: JSON.stringify({
                 username: username,
-                flip: flipCount
+                flip: flipCount,
             }),
-            credentials: 'include'
+            credentials: 'include',
         })
 
         if (!response.ok) {
@@ -174,7 +158,6 @@ async function makeMove(flipCount) {
         console.log('Move successful:', result)
 
         // The websocket will handle updating the UI
-
     } catch (error) {
         console.error('Error making move:', error)
         alert(`Erreur lors du mouvement: ${error.message}`)
@@ -265,7 +248,7 @@ async function resetGame() {
     try {
         const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'include',
         })
 
         if (!response.ok) {
@@ -274,7 +257,6 @@ async function resetGame() {
         }
 
         console.log('Game reset successful')
-
     } catch (error) {
         console.error('Error resetting game:', error)
         alert(`Erreur lors de la réinitialisation: ${error.message}`)
