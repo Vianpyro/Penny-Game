@@ -1,0 +1,21 @@
+---
+import '../styles/main.css'
+import '../styles/round-selector.css'
+
+const { rounds } = Astro.props
+---
+
+<div class="round-selector-container">
+    <h3>🏁 Choix de la Manche</h3>
+    <div class="round-selector" id="roundSelector">
+        {
+            rounds.map((opt, idx) => (
+                <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1}>
+                    <div class="round-number">Manche {idx + 1}</div>
+                    <div class="round-title">{opt.title}</div>
+                    <div class="round-description">{opt.description}</div>
+                </div>
+            ))
+        }
+    </div>
+</div>

@@ -1,0 +1,25 @@
+---
+import '../styles/main.css'
+import '../styles/game-board.css'
+
+import { MAX_PLAYERS } from '../config.js'
+---
+
+<div class="game-board">
+    <h2>🎲 Partie en cours</h2>
+    <div class="board-container">
+        {
+            Array.from({ length: MAX_PLAYERS }, (_, i) => {
+                const count = i + 1
+                return (
+                    <div class="board-player" id={`player${count}`} {...(count === 1 ? { active: true } : {})}>
+                        <p>Player {count}</p>
+                        <div class="penny-container" id={`pennyContainer${count}`}>
+                            {count === 1  && Array.from({ length: 12 }).map(() => <div class="flip">🪙</div>)}
+                        </div>
+                    </div>
+                )
+            })
+        }
+    </div>
+</div>

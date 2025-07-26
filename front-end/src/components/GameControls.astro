@@ -1,0 +1,13 @@
+---
+import '../styles/main.css'
+import '../styles/game-controls.css'
+
+import { MAX_PLAYERS } from '../config.js'
+---
+
+<div class="game-controls">
+    <button class="btn btn-primary" id="startBtn">
+        Démarrer avec <span id="playerCount">{MAX_PLAYERS}</span> joueurs
+    </button>
+    <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
+</div>

@@ -1,0 +1,90 @@
+* {
+    user-select: none;
+}
+
+h1 {
+    margin-block-start: 0;
+    text-align: center;
+}
+
+p {
+    margin-block-end: 0;
+}
+
+.btn {
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 12px 30px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 8px 20px rgb(52 152 219 / 30%);
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #27ae60, #2ecc71);
+    color: #fff;
+}
+
+.btn-success:hover {
+    box-shadow: 0 8px 20px rgb(46 204 113 / 30%);
+    transform: translateY(-2px);
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+}
+
+.container {
+    backdrop-filter: blur(10px);
+    background: rgb(255 255 255 / 95%);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgb(0 0 0 / 10%);
+    margin: 0 auto;
+    max-width: 1200px;
+    padding: 30px;
+}
+
+.flip {
+    cursor: pointer;
+    display: inline-block;
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.flip.flipped {
+    transform: rotateY(180deg);
+}
+
+.flip.grayscale {
+    filter: grayscale(100%);
+}
+
+@media screen and (width<=850px) {
+    h1 {
+        margin: 0;
+    }
+
+    .container {
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .player-selector,
+    .round-selector-container {
+        border: none;
+    }
+}

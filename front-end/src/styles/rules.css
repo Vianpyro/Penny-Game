@@ -1,0 +1,5 @@
+.rules {
+    background: rgb(230 171 34 / 10%) !important;
+    border: 2px solid #f3b712 !important;
+    grid-area: rules;
+}

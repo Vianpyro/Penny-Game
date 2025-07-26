@@ -1,9 +1,8 @@
-// Main entry point for Penny Game frontend
 import { joinRoom, fetchGameState, changeRole } from './api.js'
 import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom.js'
 import { handleDragOver, addDnDEvents, draggedItem } from './dnd.js'
 import { connectWebSocket } from './websocket.js'
-import { fetchBoardGameState, renderPlayerSections } from './game-board.js'
+import { fetchBoardGameState, renderPlayerSections, updateGameUI } from './game-board.js'
 
 // --- Game Start & Board Logic ---
 const startBtn = document.getElementById('startBtn')
@@ -16,51 +15,37 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
         // Get game code from UI
         const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
         const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
-        // Fetch full game state from API (optional, for validation)
-        const state = await fetchBoardGameState(gameCode)
-        if (!state) return
-        // Only the host should trigger the game start
-        // Call the backend endpoint to trigger the state change
-        if (apiUrl && gameCode) {
-            fetch(`${apiUrl}/game/start/${gameCode}`, {
+
+        if (!apiUrl || !gameCode) {
+            alert('Informations manquantes pour démarrer la partie')
+            return
+        }
+
+        // Disable button during request
+        startBtn.disabled = true
+        startBtn.textContent = 'Démarrage...'
+
+        try {
+            const response = await fetch(`${apiUrl}/game/start/${gameCode}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
             })
-                .then((response) => {
-                    if (!response.ok) throw new Error('Erreur lors du démarrage de la partie')
-                })
-                .catch((err) => {
-                    alert(err.message || 'Impossible de démarrer la partie')
-                })
-        }
-        // Do NOT switch to the board view here; wait for the ws message
-    })
-}
 
-// Listen for ws signal to switch to game screen
-if (window.pennyGameWS) {
-    window.pennyGameWS.addEventListener('message', (event) => {
-        try {
-            const msg = JSON.parse(event.data)
-            console.debug('WS message received:', msg.type || msg)
-            if (msg.type === 'start_game') {
-                const gameSetup = document.querySelector('.game-setup')
-                const gameControls = document.querySelector('.game-controls')
-                const gameBoard = document.getElementById('gameBoard')
-                const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-                fetchBoardGameState(gameCode).then((state) => {
-                    if (!state) return
-                    if (gameSetup) gameSetup.style.display = 'none'
-                    if (gameControls) gameControls.style.display = 'none'
-                    if (gameBoard) {
-                        gameBoard.style.display = ''
-                        renderPlayerSections(state.players || [], state.turn ?? 0, state.pennies || [])
-                    }
-                })
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.detail || 'Erreur lors du démarrage de la partie')
             }
-        } catch {
-            console.error('Error parsing WS message:', event.data)
+
+            console.log('Game start request successful')
+            // The websocket will handle switching to the game view
+        } catch (error) {
+            console.error('Error starting game:', error)
+            alert(error.message || 'Impossible de démarrer la partie')
+
+            // Re-enable button on error
+            startBtn.disabled = false
+            startBtn.textContent = 'Démarrer la Partie'
         }
     })
 }
@@ -91,6 +76,47 @@ window.addEventListener('DOMContentLoaded', () => {
                             }, 1200)
                         })
                 }
+            }
+        })
+    }
+
+    // Add reset button functionality
+    const resetBtn = document.getElementById('resetBtn')
+    if (resetBtn) {
+        resetBtn.addEventListener('click', async () => {
+            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+
+            if (!apiUrl || !gameCode) {
+                alert('Informations manquantes pour réinitialiser la partie')
+                return
+            }
+
+            if (!confirm('Êtes-vous sûr de vouloir réinitialiser la partie ?')) {
+                return
+            }
+
+            try {
+                resetBtn.disabled = true
+                resetBtn.textContent = 'Réinitialisation...'
+
+                const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                })
+
+                if (!response.ok) {
+                    const errorData = await response.json()
+                    throw new Error(errorData.detail || 'Erreur lors de la réinitialisation')
+                }
+
+                console.log('Game reset successful')
+                // The websocket will handle switching back to lobby view
+            } catch (error) {
+                console.error('Error resetting game:', error)
+                alert(error.message || 'Impossible de réinitialiser la partie')
+            } finally {
+                resetBtn.disabled = false
+                resetBtn.textContent = 'Réinitialiser'
             }
         })
     }
@@ -126,6 +152,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function setupDropZones() {
         const playerList = document.getElementById('playerList')
         const spectatorList = document.getElementById('spectatorList')
+
         if (spectatorList) {
             spectatorList.addEventListener('dragover', (e) => {
                 handleDragOver(e)
@@ -139,6 +166,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 spectatorList.classList.remove('drag-over')
             })
         }
+
         if (playerList) {
             playerList.addEventListener('dragover', (e) => {
                 handleDragOver(e)
@@ -165,14 +193,15 @@ window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => coinFlip.classList.toggle('grayscale'), 400 / 2)
         })
     }
+
+    // Game setup controls
     const playerButtons = document.getElementById('playerButtons')
     const roundSelector = document.getElementById('roundSelector')
-    const gameBoard = document.getElementById('gameBoard')
     const playersSpan = document.getElementById('selected-players')
     const roundSpan = document.getElementById('selected-round')
 
     // Get initial selected player count from active button
-    let selectedPlayers = 2 // fallback
+    let selectedPlayers = 5 // default to 5 players
     if (playerButtons) {
         const activeBtn = playerButtons.querySelector('button.active')
         if (activeBtn && activeBtn.dataset.count) {
@@ -192,14 +221,19 @@ window.addEventListener('DOMContentLoaded', () => {
     // Player count selection
     if (playerButtons) {
         playerButtons.querySelectorAll('button').forEach((btn) => {
-            const btnEl = btn
-            btnEl.addEventListener('click', () => {
+            btn.addEventListener('click', () => {
                 playerButtons.querySelectorAll('button').forEach((b) => b.classList.remove('active'))
-                btnEl.classList.add('active')
-                if (btnEl.dataset.count) {
-                    selectedPlayers = parseInt(btnEl.dataset.count, 10)
+                btn.classList.add('active')
+                if (btn.dataset.count) {
+                    selectedPlayers = parseInt(btn.dataset.count, 10)
                     updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound)
                     updateBoard(gameBoard, selectedPlayers)
+
+                    // Update start button text
+                    const playerCountSpan = document.getElementById('playerCount')
+                    if (playerCountSpan) {
+                        playerCountSpan.textContent = selectedPlayers
+                    }
                 }
             })
         })
@@ -208,12 +242,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // Round selection
     if (roundSelector) {
         roundSelector.querySelectorAll('.round-option').forEach((opt) => {
-            const optEl = opt
-            optEl.addEventListener('click', () => {
+            opt.addEventListener('click', () => {
                 roundSelector.querySelectorAll('.round-option').forEach((o) => o.classList.remove('active'))
-                optEl.classList.add('active')
-                if (optEl.dataset.round) {
-                    selectedRound = parseInt(optEl.dataset.round, 10)
+                opt.classList.add('active')
+                if (opt.dataset.round) {
+                    selectedRound = parseInt(opt.dataset.round, 10)
                     updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound)
                 }
             })
@@ -223,6 +256,12 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initial config
     updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound)
     updateBoard(gameBoard, selectedPlayers)
+
+    // Update start button text with initial player count
+    const playerCountSpan = document.getElementById('playerCount')
+    if (playerCountSpan) {
+        playerCountSpan.textContent = selectedPlayers
+    }
 
     // WebSocket and API event listeners
     window.addEventListener('joinrole', (e) => {
@@ -238,7 +277,12 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         if (!gameRoomId) return
 
+        // Store username globally
+        window.currentUsername = username
+
         updateGameCode(gameRoomId)
+
+        // Join the room
         joinRoom(apiUrl, gameRoomId, username, (joinedRoomId) =>
             fetchGameState(
                 apiUrl,
@@ -247,7 +291,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
             )
         )
+
+        // Connect websocket for live updates
         connectWebSocket(apiUrl, gameRoomId, username)
+
+        // Fetch initial game state
         fetchGameState(
             apiUrl,
             gameRoomId,
@@ -255,4 +303,100 @@ window.addEventListener('DOMContentLoaded', () => {
             (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
         )
     })
+
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Only handle shortcuts when in game and it's the player's turn
+        const gameBoard = document.getElementById('gameBoard')
+        const moveButtons = document.querySelectorAll('.move-btn:not(:disabled)')
+
+        if (gameBoard && gameBoard.style.display !== 'none' && moveButtons.length > 0) {
+            switch (e.key) {
+                case '1':
+                    e.preventDefault()
+                    moveButtons[0]?.click()
+                    break
+                case '2':
+                    e.preventDefault()
+                    moveButtons[1]?.click()
+                    break
+                case '3':
+                    e.preventDefault()
+                    moveButtons[2]?.click()
+                    break
+            }
+        }
+    })
+
+    // Handle results view buttons
+    const playAgainBtn = document.getElementById('playAgainBtn')
+    const backToLobbyBtn = document.getElementById('backToLobbyBtn')
+
+    if (playAgainBtn) {
+        playAgainBtn.addEventListener('click', async () => {
+            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+
+            if (!window.isHost) {
+                alert("Seul l'hôte peut redémarrer la partie")
+                return
+            }
+
+            if (!apiUrl || !gameCode) return
+
+            try {
+                playAgainBtn.disabled = true
+                playAgainBtn.textContent = 'Redémarrage...'
+
+                // Reset the game first
+                await fetch(`${apiUrl}/game/reset/${gameCode}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                })
+
+                // Small delay to ensure reset is complete
+                setTimeout(async () => {
+                    // Then start a new game
+                    await fetch(`${apiUrl}/game/start/${gameCode}`, {
+                        method: 'POST',
+                        credentials: 'include',
+                    })
+                }, 500)
+            } catch (error) {
+                console.error('Error restarting game:', error)
+                alert('Erreur lors du redémarrage de la partie')
+            } finally {
+                playAgainBtn.disabled = false
+                playAgainBtn.textContent = 'Rejouer'
+            }
+        })
+    }
+
+    if (backToLobbyBtn) {
+        backToLobbyBtn.addEventListener('click', async () => {
+            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+
+            if (!window.isHost) {
+                alert("Seul l'hôte peut retourner au lobby")
+                return
+            }
+
+            if (!apiUrl || !gameCode) return
+
+            try {
+                backToLobbyBtn.disabled = true
+                backToLobbyBtn.textContent = 'Retour...'
+
+                await fetch(`${apiUrl}/game/reset/${gameCode}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                })
+            } catch (error) {
+                console.error('Error returning to lobby:', error)
+                alert('Erreur lors du retour au lobby')
+            } finally {
+                backToLobbyBtn.disabled = false
+                backToLobbyBtn.textContent = 'Retour au lobby'
+            }
+        })
+    }
 })

@@ -46,6 +46,7 @@
             "type": "shell",
             "command": "npx prettier --write ${file}",
             "presentation": {
+                "close": true,
                 "showReuseMessage": false
             },
             "options": {
