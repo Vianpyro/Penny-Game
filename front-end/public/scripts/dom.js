@@ -43,7 +43,7 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
         li.innerHTML = `<span class="status-indicator">👑</span> ${host}`
         spectatorList.appendChild(li)
     }
-    ; (spectators || [])
+    ;(spectators || [])
         .filter((spectator) => spectator !== host)
         .forEach((spectator) => {
             const li = document.createElement('li')

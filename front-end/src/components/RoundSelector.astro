@@ -6,26 +6,26 @@ const batchOptions = [
     {
         size: 12,
         title: 'Lot de 12',
-        description: 'Passer TOUTES les 12 pièces en une fois (production en lots)'
+        description: 'Passer TOUTES les 12 pièces en une fois (production en lots)',
     },
     {
         size: 4,
-        title: 'Lot de 4', 
-        description: 'Passer les pièces par groupes de 4 (production hybride)'
+        title: 'Lot de 4',
+        description: 'Passer les pièces par groupes de 4 (production hybride)',
     },
     {
         size: 1,
         title: 'Lot de 1',
-        description: 'Passer les pièces une par une (flux continu)'
-    }
+        description: 'Passer les pièces une par une (flux continu)',
+    },
 ]
 ---
 
 <div class="round-selector-container">
     <h3>📦 Taille des Lots</h3>
     <p class="batch-description">
-        La taille de lot détermine combien de pièces peuvent être envoyées à la fois.
-        Plus le lot est petit, plus le flux est fluide !
+        La taille de lot détermine combien de pièces peuvent être envoyées à la fois. Plus le lot est petit, plus le
+        flux est fluide !
     </p>
     <div class="round-selector" id="roundSelector">
         {
@@ -36,8 +36,8 @@ const batchOptions = [
                     <div class="round-description">{opt.description}</div>
                     <div class="batch-insight">
                         {opt.size === 12 && "⏳ Beaucoup d'attente"}
-                        {opt.size === 4 && "⚖️ Équilibre attente/flux"}
-                        {opt.size === 1 && "⚡ Flux optimal"}
+                        {opt.size === 4 && '⚖️ Équilibre attente/flux'}
+                        {opt.size === 1 && '⚡ Flux optimal'}
                     </div>
                 </div>
             ))

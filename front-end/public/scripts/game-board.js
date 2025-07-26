@@ -136,14 +136,21 @@ function createPlayerStation(player, gameState, playerIndex) {
     if (totalCoins > 0) {
         playerCoins.forEach((isHeads, index) => {
             const coin = document.createElement('div')
-            coin.className = `coin ${isHeads ? 'heads' : 'tails'}`
-            coin.textContent = isHeads ? '🪙' : '⚫'
+            // Use the same classes as the main flip animation
+            coin.className = `flip coin ${isHeads ? 'heads' : 'tails'}`
+            coin.textContent = '🪙'
             coin.title = isHeads ? 'Face - Prête à envoyer' : 'Pile - Cliquez pour retourner'
+
+            // Apply grayscale to tails coins (pile state)
+            if (!isHeads) {
+                coin.classList.add('grayscale')
+            }
 
             // CRITICAL: Only allow interaction for current player who can interact with tails coins
             if (canInteract && !isHeads) {
                 coin.classList.add('interactive', 'clickable')
-                coin.addEventListener('click', () => handleCoinFlip(index))
+                coin.style.cursor = 'pointer'
+                coin.addEventListener('click', () => handleCoinFlip(index, coin))
             } else if (isCurrentPlayer && isHeads) {
                 coin.classList.add('ready') // Visual indicator for ready coins
                 coin.title = 'Face - Prête à envoyer'
@@ -202,7 +209,7 @@ function createPlayerStation(player, gameState, playerIndex) {
     return station
 }
 
-async function handleCoinFlip(coinIndex) {
+async function handleCoinFlip(coinIndex, coinElement) {
     const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     const username = window.currentUsername
@@ -223,13 +230,33 @@ async function handleCoinFlip(coinIndex) {
         return
     }
 
+    // Immediate visual feedback using existing flip animation
+    coinElement.classList.toggle('flipped')
+    setTimeout(() => {
+        coinElement.classList.toggle('grayscale')
+        coinElement.textContent = '🪙' // Update to heads emoji
+        coinElement.classList.remove('tails')
+        coinElement.classList.add('heads')
+        coinElement.style.cursor = 'default'
+        coinElement.title = 'Face - Prête à envoyer'
+    }, 200)
+
     try {
         await flipCoin(apiUrl, gameCode, username, coinIndex)
-        // The websocket will handle updating the UI
-        showNotification('Pièce retournée !', 'success')
+        // The websocket will handle updating the full UI state
     } catch (error) {
         console.error('Error flipping coin:', error)
-        // Error notification is handled in the API function
+
+        // Revert the visual change if the API call failed
+        coinElement.classList.toggle('flipped')
+        setTimeout(() => {
+            coinElement.classList.toggle('grayscale')
+            coinElement.textContent = '🪙'
+            coinElement.classList.remove('heads')
+            coinElement.classList.add('tails')
+            coinElement.style.cursor = 'pointer'
+            coinElement.title = 'Pile - Cliquez pour retourner'
+        }, 200)
     }
 }
 
@@ -238,39 +265,32 @@ async function handleSendBatch() {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     const username = window.currentUsername
 
-    console.log('HandleSendBatch called with:', { gameCode, apiUrl, username })
-
     if (!apiUrl || !gameCode || !username) {
-        console.error('Missing required data for send batch:', { apiUrl, gameCode, username })
-        showNotification('Données manquantes pour envoyer le lot', 'error')
+        console.error('Missing required data for send batch')
         return
     }
 
     // Double-check permissions
     if (window.isHost) {
-        console.warn('Host trying to send batch')
         showNotification('Les hôtes ne peuvent pas jouer', 'error')
         return
     }
 
     if (window.userRole !== 'player') {
-        console.warn('Non-player trying to send batch, role:', window.userRole)
         showNotification('Seuls les joueurs peuvent envoyer des lots', 'error')
         return
     }
 
     // Check game state
     if (!window.gameState || window.gameState.state !== 'active') {
-        console.warn('Game not in active state:', window.gameState?.state)
-        showNotification('La partie n\'est pas active', 'error')
+        showNotification("La partie n'est pas active", 'error')
         return
     }
 
     try {
-        console.log('Attempting to send batch...')
         await sendBatch(apiUrl, gameCode, username)
         // The websocket will handle updating the UI
-        showNotification('Lot envoyé !', 'success')
+        // Removed excessive notification - only show on send batch success
     } catch (error) {
         console.error('Error sending batch:', error)
 
@@ -344,4 +364,4 @@ async function resetGame() {
 }
 
 // Export utility functions for use in other modules
-export { handleCoinFlip, handleSendBatch, resetGame }
+export { handleCoinFlip, handleSendBatch }

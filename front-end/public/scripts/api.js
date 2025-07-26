@@ -1,4 +1,4 @@
-// API-related functions for Penny Game with improved error handling
+// API-related functions for Penny Game
 import { showNotification } from './utility.js'
 
 export async function joinRoom(apiUrl, roomId, username, onSuccess) {
@@ -21,7 +21,6 @@ export async function joinRoom(apiUrl, roomId, username, onSuccess) {
         }
 
         const data = await response.json()
-        console.log('Successfully joined room:', data)
 
         // Store user role and host status
         window.isHost = data.host === username
@@ -56,7 +55,6 @@ export async function fetchGameState(apiUrl, roomId, renderPlayers, renderSpecta
         }
 
         const data = await response.json()
-        console.log('Game state fetched:', data)
 
         // Fallback: if no activity info, assume all users online
         const activity = {}
@@ -115,7 +113,6 @@ export async function changeRole(apiUrl, roomId, username, newRole, onSuccess) {
         }
 
         const data = await response.json()
-        console.log('Role changed successfully:', data)
 
         // Update global user role
         window.userRole = newRole
@@ -153,8 +150,6 @@ export async function setBatchSize(apiUrl, roomId, batchSize) {
         }
 
         const data = await response.json()
-        console.log('Batch size changed successfully:', data)
-
         showSuccessNotification(`Taille de lot changée: ${batchSize}`)
         return data
     } catch (error) {
@@ -183,8 +178,6 @@ export async function startGame(apiUrl, roomId) {
         }
 
         const data = await response.json()
-        console.log('Game started successfully:', data)
-
         showSuccessNotification('🎮 Partie démarrée !')
         return data
     } catch (error) {
@@ -217,8 +210,6 @@ export async function flipCoin(apiUrl, roomId, username, coinIndex) {
         }
 
         const data = await response.json()
-        console.log('Coin flipped successfully:', data)
-
         return data
     } catch (error) {
         console.error('Error flipping coin:', error)
@@ -234,8 +225,6 @@ export async function sendBatch(apiUrl, roomId, username) {
     }
 
     try {
-        console.log('Sending batch request:', { apiUrl, roomId, username })
-
         const response = await fetch(`${apiUrl}/game/send/${roomId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -245,17 +234,12 @@ export async function sendBatch(apiUrl, roomId, username) {
             credentials: 'include',
         })
 
-        console.log('Send batch response status:', response.status)
-
         if (!response.ok) {
             const errorData = await response.json()
-            console.error('Send batch error data:', errorData)
             throw new Error(errorData.detail || "Erreur lors de l'envoi du lot")
         }
 
         const data = await response.json()
-        console.log('Batch sent successfully:', data)
-
         return data
     } catch (error) {
         console.error('Error sending batch:', error)
@@ -282,8 +266,6 @@ export async function resetGame(apiUrl, roomId) {
         }
 
         const data = await response.json()
-        console.log('Game reset successfully:', data)
-
         showSuccessNotification('🔄 Partie réinitialisée')
         return data
     } catch (error) {
@@ -311,8 +293,6 @@ export async function createGame(apiUrl) {
         }
 
         const data = await response.json()
-        console.log('Game created successfully:', data)
-
         showSuccessNotification('🎉 Salle créée avec succès !')
         return data
     } catch (error) {

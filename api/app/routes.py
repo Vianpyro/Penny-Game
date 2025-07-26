@@ -36,6 +36,7 @@ def create_game():
         samesite="strict",
         max_age=int(timedelta(minutes=30).total_seconds()),
     )
+    logger.info(f"Game created: {room_id}")
     return response
 
 
@@ -68,8 +69,8 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
     # Handle host joining
     if game.host is None:
         game.host = username
-        # IMPORTANT: Broadcast immediately after setting host
         await broadcast_activity(room_id)
+        logger.info(f"Host {username} joined game {room_id}")
         return {
             "success": True,
             "players": game.players,
@@ -86,9 +87,7 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
     # Handle spectator joining
     if spectator:
         game.spectators.append(username)
-        # Broadcast activity update for spectator join
         await broadcast_activity(room_id)
-        # Also broadcast a join message
         await broadcast_game_update(
             room_id,
             {
@@ -99,6 +98,7 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
                 "spectators": game.spectators,
             },
         )
+        logger.info(f"Spectator {username} joined game {room_id}")
         return {
             "success": True,
             "players": game.players,
@@ -126,6 +126,7 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
                 "note": "Joined as spectator (game full)",
             },
         )
+        logger.info(f"Player {username} joined as spectator (game full) in {room_id}")
         return {
             "success": True,
             "players": game.players,
@@ -142,7 +143,6 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
     # Add player to the game
     game.players.append(username)
 
-    # Broadcast activity AND game update when player joins
     await broadcast_activity(room_id)
     await broadcast_game_update(
         room_id,
@@ -155,6 +155,7 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
         },
     )
 
+    logger.info(f"Player {username} joined game {room_id}")
     return {
         "success": True,
         "players": game.players,
@@ -188,7 +189,6 @@ async def set_game_batch_size(room_id: str, req: BatchSizeRequest, host_secret: 
     if not set_batch_size(game, req.batch_size):
         raise HTTPException(status_code=400, detail=f"Failed to set batch size to {req.batch_size}")
 
-    # Broadcast batch size update
     await broadcast_game_update(
         room_id,
         {
@@ -197,6 +197,7 @@ async def set_game_batch_size(room_id: str, req: BatchSizeRequest, host_secret: 
         },
     )
 
+    logger.info(f"Batch size changed to {game.batch_size} in game {room_id}")
     return {
         "success": True,
         "batch_size": game.batch_size,
@@ -222,10 +223,8 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
     game.last_active_at = now
     game.state = GameState.ACTIVE
 
-    # Initialize player coins
     initialize_player_coins(game)
 
-    # Broadcast game start to all clients
     await broadcast_game_state(room_id, state=GameState.ACTIVE)
     await broadcast_game_update(
         room_id,
@@ -239,6 +238,7 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
         },
     )
 
+    logger.info(f"Game started: {room_id} with {len(game.players)} players")
     return {
         "success": True,
         "state": GameState.ACTIVE.value,
@@ -256,21 +256,18 @@ async def flip_coin(room_id: str, flip: FlipRequest):
         raise HTTPException(status_code=404, detail="Game not found")
     if len(game.players) < 2:
         raise HTTPException(status_code=400, detail="Need 2 players")
-    if flip.username == game.host:  # Host cannot play
+    if flip.username == game.host:
         raise HTTPException(status_code=400, detail="Host does not play")
 
-    # Process the flip using the game logic
     result = process_flip(game, flip.username, flip.coin_index)
 
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["error"])
 
-    # Prepare game data for response (remove sensitive info)
     game_data = game.model_dump()
     if "host_secret" in game_data:
         del game_data["host_secret"]
 
-    # Broadcast the action to all clients
     action_data = {
         "type": "action_made",
         "player": flip.username,
@@ -285,10 +282,10 @@ async def flip_coin(room_id: str, flip: FlipRequest):
 
     await broadcast_game_update(room_id, action_data)
 
-    # If game is over, broadcast final state
     if result["game_over"]:
         await broadcast_game_state(room_id, state=GameState.RESULTS)
         await broadcast_game_update(room_id, {"type": "game_over", "final_state": game_data})
+        logger.info(f"Game completed: {room_id}")
 
     return game_data
 
@@ -296,48 +293,31 @@ async def flip_coin(room_id: str, flip: FlipRequest):
 @router.post("/game/send/{room_id}")
 async def send_batch_endpoint(room_id: str, send: SendRequest):
     try:
-        logger.info(f"Send batch request: room_id={room_id}, username={send.username}")
-
         game = get_game(room_id)
         if not game:
-            logger.warning(f"Game not found: {room_id}")
             raise HTTPException(status_code=404, detail="Game not found")
 
         if len(game.players) < 2:
-            logger.warning(f"Not enough players in game {room_id}: {len(game.players)}")
             raise HTTPException(status_code=400, detail="Need 2 players")
 
-        if send.username == game.host:  # Host cannot play
-            logger.warning(f"Host {send.username} trying to play in game {room_id}")
+        if send.username == game.host:
             raise HTTPException(status_code=400, detail="Host does not play")
 
-        # Validate that the user is actually a player in the game
         if send.username not in game.players:
-            logger.warning(f"User {send.username} not in players list for game {room_id}")
             raise HTTPException(status_code=400, detail="User is not a player in this game")
 
-        # Check if game is in correct state
         if game.state != GameState.ACTIVE:
-            logger.warning(f"Game {room_id} not in active state: {game.state}")
             raise HTTPException(status_code=400, detail="Game is not active")
 
-        logger.info(f"Processing send for {send.username} in game {room_id}")
-
-        # Process the send using the game logic
         result = process_send(game, send.username)
 
         if not result["success"]:
-            logger.warning(f"Send failed for {send.username}: {result['error']}")
             raise HTTPException(status_code=400, detail=result["error"])
 
-        logger.info(f"Send successful for {send.username}")
-
-        # Calculate batch count for the action
         batch_count = 0
         if send.username in game.sent_coins and game.sent_coins[send.username]:
             batch_count = game.sent_coins[send.username][-1]["count"]
 
-        # Broadcast the action to all clients
         action_data = {
             "type": "action_made",
             "player": send.username,
@@ -352,14 +332,13 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
 
         await broadcast_game_update(room_id, action_data)
 
-        # If game is over, broadcast final state
         if result["game_over"]:
             await broadcast_game_state(room_id, state=GameState.RESULTS)
             await broadcast_game_update(
                 room_id, {"type": "game_over", "final_state": game.model_dump(exclude={"host_secret"})}
             )
+            logger.info(f"Game completed: {room_id}")
 
-        # Return a simple success response instead of the full game data
         return {
             "success": True,
             "message": "Batch sent successfully",
@@ -387,7 +366,6 @@ async def reset_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
 
     reset_game(game)
 
-    # Broadcast reset to all clients
     await broadcast_game_state(room_id, state=GameState.LOBBY)
     await broadcast_game_update(
         room_id,
@@ -401,6 +379,7 @@ async def reset_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
         },
     )
 
+    logger.info(f"Game reset: {room_id}")
     return {
         "success": True,
         "state": GameState.LOBBY.value,
@@ -421,7 +400,6 @@ def get_game_state(room_id: str):
     if "host_secret" in data:
         del data["host_secret"]
 
-    # Add computed fields
     data["total_completed"] = get_total_completed_coins(game)
     data["tails_remaining"] = get_tails_count(game)
 
@@ -457,7 +435,6 @@ async def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
         if username in game.players:
             game.players.remove(username)
             game.spectators.append(username)
-            # If game is active, reinitialize coins
             if game.state == GameState.ACTIVE:
                 initialize_player_coins(game)
         else:
@@ -468,6 +445,7 @@ async def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
     game.last_active_at = datetime.now()
     await broadcast_activity(room_id)
 
+    logger.info(f"Role changed: {username} -> {new_role} in game {room_id}")
     return {
         "success": True,
         "players": game.players,

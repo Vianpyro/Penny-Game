@@ -1,7 +1,7 @@
 // WebSocket logic for Penny Game
 import { renderPlayers, renderSpectators } from './dom.js'
 import { addDnDEvents } from './dnd.js'
-import { renderGameBoard, updateGameUI } from './game-board.js'
+import { renderGameBoard } from './game-board.js'
 import { showNotification } from './utility.js'
 
 export function handleWSMessage(data) {
@@ -13,13 +13,10 @@ export function handleWSMessage(data) {
                 window.location.reload()
                 return
             }
-            // Handle as chat message
-            console.debug('Chat:', data)
             return
         }
 
         const msg = JSON.parse(data)
-        console.debug('WS message received:', msg.type, msg)
 
         switch (msg.type) {
             case 'welcome':
@@ -69,7 +66,6 @@ export function handleWSMessage(data) {
 }
 
 function handleWelcomeMessage(msg) {
-    console.log('Welcome message received:', msg)
     const gameState = msg.game_state
     if (gameState) {
         // Update global game state immediately
@@ -96,15 +92,13 @@ function handleWelcomeMessage(msg) {
 }
 
 function handleUserJoined(msg) {
-    console.log('User joined:', msg)
-
     // Update the user lists immediately
     const activity = {}
     if (msg.players) {
-        msg.players.forEach(p => activity[p] = true)
+        msg.players.forEach((p) => (activity[p] = true))
     }
     if (msg.spectators) {
-        msg.spectators.forEach(s => activity[s] = true)
+        msg.spectators.forEach((s) => (activity[s] = true))
     }
     if (msg.host) {
         activity[msg.host] = true
@@ -119,13 +113,14 @@ function handleUserJoined(msg) {
         window.gameState.spectators = msg.spectators
     }
 
-    // Show notification
-    const roleText = msg.role === 'player' ? 'Joueur' : 'Spectateur'
-    showNotification(`${msg.username} a rejoint en tant que ${roleText}`, 'info')
+    // Only show notification for new players joining, not for role changes
+    if (!msg.note) {
+        const roleText = msg.role === 'player' ? 'joueur' : 'spectateur'
+        showNotification(`${msg.username} a rejoint en tant que ${roleText}`, 'info')
+    }
 }
 
 function handleActivityUpdate(msg) {
-    console.log('Activity update:', msg)
     renderPlayers(msg.players, msg.host, msg.spectators, msg.activity, addDnDEvents)
     renderSpectators(msg.spectators, msg.host, msg.activity, addDnDEvents)
 
@@ -138,8 +133,6 @@ function handleActivityUpdate(msg) {
 }
 
 function handleGameStateChange(msg) {
-    console.log('Game state changed to:', msg.state)
-
     switch (msg.state) {
         case 'lobby':
             switchToLobbyView()
@@ -154,8 +147,6 @@ function handleGameStateChange(msg) {
 }
 
 function handleActionMade(msg) {
-    console.log('Action made:', msg)
-
     // Create a mock game state from the message data
     const gameState = {
         players: window.gameState?.players || [],
@@ -170,21 +161,17 @@ function handleActionMade(msg) {
     // Update the game board
     renderGameBoard(gameState)
 
-    // Show action notification
-    if (msg.action === 'flip') {
-        showActionNotification(msg.player, 'a retourné une pièce', 'info')
-    } else if (msg.action === 'send') {
+    // Only show notifications for send actions (batch sending), not for individual coin flips
+    if (msg.action === 'send') {
         const isCompletion = msg.player === gameState.players[gameState.players.length - 1]
         if (isCompletion) {
-            showActionNotification(
-                msg.player,
-                `a terminé ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
+            showNotification(
+                `${msg.player} a terminé ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
                 'success'
             )
         } else {
-            showActionNotification(
-                msg.player,
-                `a envoyé un lot de ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
+            showNotification(
+                `${msg.player} a envoyé un lot de ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
                 'info'
             )
         }
@@ -195,7 +182,6 @@ function handleActionMade(msg) {
 }
 
 function handleGameStarted(msg) {
-    console.log('Game started:', msg)
     switchToGameView()
 
     const gameState = {
@@ -214,27 +200,18 @@ function handleGameStarted(msg) {
 }
 
 function handleGameOver(msg) {
-    console.log('Game over:', msg)
     switchToResultsView()
-
     showNotification('🎯 Partie terminée ! Félicitations à tous !', 'success')
-
-    // Update results display
     updateResultsDisplay(msg.final_state)
 }
 
 function handleGameReset(msg) {
-    console.log('Game reset:', msg)
     switchToLobbyView()
-
-    // Update batch size display
     updateBatchSizeDisplay(msg.batch_size)
-
     showNotification('🔄 La partie a été réinitialisée', 'info')
 }
 
 function handleBatchSizeUpdate(msg) {
-    console.log('Batch size updated:', msg)
     updateBatchSizeDisplay(msg.batch_size)
 
     // Update global game state
@@ -246,19 +223,17 @@ function handleBatchSizeUpdate(msg) {
 }
 
 function handleChatMessage(msg) {
-    console.log('Chat message:', msg)
     // You can implement a chat UI here if needed
 }
 
 function handleUserStatusChange(msg) {
-    console.log('User status change:', msg)
-    if (msg.message) {
+    // Only show notifications for disconnections, not connections to reduce noise
+    if (msg.type === 'user_disconnected' && msg.message) {
         showNotification(msg.message, 'info')
     }
 }
 
 function handleHostDisconnected(msg) {
-    console.log('Host disconnected:', msg)
     alert("La salle a été fermée car l'hôte a quitté.")
     window.location.reload()
 }
@@ -321,11 +296,6 @@ function calculateTailsRemaining(playerCoins) {
         total += coins.filter((coin) => !coin).length
     })
     return total
-}
-
-function showActionNotification(player, action, type) {
-    const message = `${player} ${action}`
-    showNotification(message, type)
 }
 
 function updateResultsDisplay(finalState) {
@@ -399,12 +369,10 @@ export function connectWebSocket(apiUrl, roomId, username) {
     window.currentUsername = username
 
     const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}`
-    console.log('Connecting to WebSocket:', wsUrl)
 
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => {
-        console.log('WebSocket connected:', wsUrl)
         showNotification('🔗 Connecté à la salle', 'success')
     }
 
@@ -413,8 +381,6 @@ export function connectWebSocket(apiUrl, roomId, username) {
     }
 
     ws.onclose = (event) => {
-        console.log('WebSocket disconnected', event.code, event.reason)
-
         if (event.code === 4002) {
             // Host left, room closed
             return // Don't reload, handleHostDisconnected will handle this
