@@ -51,9 +51,6 @@ export function handleWSMessage(data) {
             case 'user_disconnected':
                 handleUserStatusChange(msg)
                 break
-            case 'chat':
-                handleChatMessage(msg)
-                break
             case 'host_disconnected':
                 handleHostDisconnected(msg)
                 break
@@ -220,10 +217,6 @@ function handleBatchSizeUpdate(msg) {
     }
 
     showNotification(`📦 Taille de lot changée: ${msg.batch_size}`, 'info')
-}
-
-function handleChatMessage(msg) {
-    // You can implement a chat UI here if needed
 }
 
 function handleUserStatusChange(msg) {

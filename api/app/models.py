@@ -119,18 +119,6 @@ class WebSocketMessage(BaseModel):
         use_enum_values = True
 
 
-class ChatMessage(WebSocketMessage):
-    """Chat message via websocket"""
-
-    type: str = "chat"
-    username: str
-    message: str
-    timestamp: Optional[datetime] = None
-
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
-
-
 class GameUpdateMessage(WebSocketMessage):
     """Game update message via websocket"""
 
