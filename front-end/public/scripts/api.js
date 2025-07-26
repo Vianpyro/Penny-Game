@@ -305,7 +305,7 @@ function showNotification(message, type = 'info') {
         transition: 'transform 0.3s ease',
         maxWidth: '300px',
         wordBreak: 'break-word',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+        boxShadow: '0 4px 15px rgb(0 0 0 / 20%)',
     })
 
     // Set background color based on type

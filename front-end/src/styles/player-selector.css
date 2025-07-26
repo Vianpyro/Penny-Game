@@ -47,7 +47,7 @@
     min-height: 35px;
     padding: 0;
     place-items: stretch;
-    transition: background 0.2s border-color 0.2s;
+    transition: background 0.2s;
 }
 
 .user-list > li {
