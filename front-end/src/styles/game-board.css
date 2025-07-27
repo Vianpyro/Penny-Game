@@ -5,7 +5,7 @@
     border-radius: 20px;
     padding: 30px;
     margin-top: 20px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 15px 35px rgb(0 0 0 / 0.1);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -13,9 +13,9 @@
     text-align: center;
     margin-bottom: 30px;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 0.9);
     border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgb(0 0 0 / 0.1);
 }
 
 .status-header h2 {
@@ -41,10 +41,10 @@
 }
 
 .progress-stats .stat {
-    background: rgba(52, 152, 219, 0.1);
+    background: rgb(52 152 219 / 0.1);
     padding: 8px 15px;
     border-radius: 20px;
-    border: 2px solid rgba(52, 152, 219, 0.2);
+    border: 2px solid rgb(52 152 219 / 0.2);
     font-weight: 600;
     color: #2c3e50;
     font-size: 0.95em;
@@ -60,20 +60,20 @@
 }
 
 .player-station {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgb(255 255 255 / 0.95);
     border-radius: 15px;
     padding: 20px;
-    min-width: 250px;
+    min-width: 175px;
     max-width: 300px;
     flex: 1;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgb(0 0 0 / 0.1);
     border: 3px solid #ecf0f1;
     transition: all 0.3s ease;
 }
 
 .player-station:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 30px rgb(0 0 0 / 0.15);
 }
 
 .station-header {
@@ -105,7 +105,7 @@
 }
 
 .station-stats .stat {
-    background: rgba(46, 204, 113, 0.1);
+    background: rgb(46 204 113 / 0.1);
     padding: 4px 8px;
     border-radius: 12px;
     font-size: 0.8em;
@@ -122,7 +122,7 @@
     gap: 8px;
     margin-bottom: 15px;
     padding: 15px;
-    background: rgba(236, 240, 241, 0.3);
+    background: rgb(236 240 241 / 0.3);
     border-radius: 10px;
     min-height: 60px;
     align-items: center;
@@ -136,22 +136,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2em;
+    font-size: 2em;
     transition: all 0.3s ease;
     user-select: none;
     position: relative;
 }
 
 .coin.tails {
-    background: linear-gradient(135deg, #34495e, #2c3e50);
-    color: white;
-    box-shadow: 0 3px 10px rgba(44, 62, 80, 0.3);
+    box-shadow: 0 3px 10px rgb(44 62 80 / 0.3);
 }
 
 .coin.heads {
-    background: linear-gradient(135deg, #f1c40f, #f39c12);
-    color: white;
-    box-shadow: 0 3px 10px rgba(243, 156, 18, 0.3);
+    box-shadow: 0 3px 10px rgb(243 156 18 / 0.3);
 }
 
 .coin.interactive.clickable {
@@ -161,7 +157,7 @@
 
 .coin.interactive.clickable:hover {
     transform: scale(1.1);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 15px rgb(0 0 0 / 0.3);
 }
 
 .coin.interactive.clickable:active {
@@ -199,13 +195,13 @@
 .btn-primary {
     background: linear-gradient(135deg, #3498db, #2980b9);
     color: white;
-    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    box-shadow: 0 4px 15px rgb(52 152 219 / 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
     background: linear-gradient(135deg, #2980b9, #3498db);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    box-shadow: 0 6px 20px rgb(52 152 219 / 0.4);
 }
 
 .btn-disabled {
@@ -218,13 +214,13 @@
 .btn-secondary {
     background: linear-gradient(135deg, #95a5a6, #7f8c8d);
     color: white;
-    box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
+    box-shadow: 0 4px 15px rgb(149 165 166 / 0.3);
 }
 
 .btn-secondary:hover:not(:disabled) {
     background: linear-gradient(135deg, #7f8c8d, #95a5a6);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(149, 165, 166, 0.4);
+    box-shadow: 0 6px 20px rgb(149 165 166 / 0.4);
 }
 
 .flow-arrow {
@@ -263,7 +259,7 @@
     padding: 20px;
     text-align: center;
     min-width: 200px;
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.3);
+    box-shadow: 0 8px 25px rgb(39 174 96 / 0.3);
 }
 
 .completion-station h3 {
@@ -282,18 +278,18 @@
 .completion-count {
     font-size: 1.1em;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgb(255 255 255 / 0.2);
     padding: 5px 10px;
     border-radius: 20px;
     display: inline-block;
 }
 
 .rules-reminder {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 0.9);
     border-radius: 15px;
     padding: 20px;
     margin-top: 20px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgb(0 0 0 / 0.1);
 }
 
 .rules-reminder h4 {
@@ -330,7 +326,7 @@
     text-align: center;
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 2px solid rgba(236, 240, 241, 0.5);
+    border-top: 2px solid rgb(236 240 241 / 0.5);
 }
 
 .host-controls .btn {
