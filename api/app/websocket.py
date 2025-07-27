@@ -1,11 +1,20 @@
 import json
 import logging
+from datetime import datetime
 
 from fastapi import WebSocket, WebSocketDisconnect
 
 from .game_logic import get_game, online_users, remove_game, rooms
 
 logger = logging.getLogger(__name__)
+
+
+# Custom JSON encoder for datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 async def broadcast_game_state(room_id: str, state):
@@ -24,7 +33,8 @@ async def broadcast_to_room(room_id: str, message: dict):
     if room_id not in rooms:
         return
 
-    message_str = json.dumps(message)
+    # Use custom encoder to handle datetime objects
+    message_str = json.dumps(message, cls=DateTimeEncoder)
     disconnected_clients = []
 
     for client in rooms[room_id]:
@@ -66,10 +76,12 @@ async def broadcast_activity(room_id: str):
     if not game:
         return
 
+    # Get all users (players + spectators + host)
     users = set(game.players + game.spectators)
     if game.host:
         users.add(game.host)
 
+    # Get online status
     online = online_users.get(room_id, set())
     activity = {user: (user in online) for user in users}
 
@@ -82,6 +94,9 @@ async def broadcast_activity(room_id: str):
     }
 
     await broadcast_to_room(room_id, msg)
+    logger.debug(
+        f"Activity broadcast for room {room_id}: players={game.players}, spectators={game.spectators}, host={game.host}"
+    )
 
 
 async def send_welcome_message(websocket: WebSocket, room_id: str, username: str):
@@ -90,8 +105,9 @@ async def send_welcome_message(websocket: WebSocket, room_id: str, username: str
     if not game:
         return
 
-    from .game_logic import get_current_player, get_heads_count
+    from .game_logic import get_tails_count, get_total_completed_coins
 
+    # Create comprehensive welcome message with all necessary data
     welcome_msg = {
         "type": "welcome",
         "room_id": room_id,
@@ -100,16 +116,20 @@ async def send_welcome_message(websocket: WebSocket, room_id: str, username: str
             "players": game.players,
             "spectators": game.spectators,
             "host": game.host,
-            "pennies": game.pennies,
             "state": game.state.value,
-            "current_player": get_current_player(game),
-            "heads_remaining": get_heads_count(game),
-            "turn": game.turn,
+            "batch_size": game.batch_size,
+            "player_coins": game.player_coins,
+            "sent_coins": game.sent_coins,
+            "total_completed": get_total_completed_coins(game),
+            "tails_remaining": get_tails_count(game),
         },
     }
 
     try:
-        await websocket.send_text(json.dumps(welcome_msg))
+        # Use custom encoder for datetime serialization
+        welcome_str = json.dumps(welcome_msg, cls=DateTimeEncoder)
+        await websocket.send_text(welcome_str)
+        logger.info(f"Welcome message sent to {username} in room {room_id}")
     except Exception as e:
         logger.warning(f"Failed to send welcome message to {username} in room {room_id}: {e}")
 
@@ -174,12 +194,28 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str):
         # Send welcome message with current game state
         await send_welcome_message(websocket, room_id, username)
 
-        # Broadcast that user is now online
+        # CRITICAL: Broadcast activity update immediately after connection
         await broadcast_activity(room_id)
 
-        # Notify room that user connected
-        connect_msg = {"type": "user_connected", "username": username, "message": f"🟢 {username} joined the room"}
-        await broadcast_to_room(room_id, connect_msg)
+        # Get the game to check if user is already part of it
+        game = get_game(room_id)
+        if game:
+            # If this is a reconnection, broadcast that they're back online
+            if username in game.players or username in game.spectators or username == game.host:
+                connect_msg = {
+                    "type": "user_reconnected",
+                    "username": username,
+                    "message": f"🟢 {username} reconnected",
+                }
+            else:
+                # New user connecting for the first time
+                connect_msg = {
+                    "type": "user_connected",
+                    "username": username,
+                    "message": f"🟢 {username} connected to the room",
+                }
+
+            await broadcast_to_room(room_id, connect_msg)
 
         # Handle incoming messages
         while True:

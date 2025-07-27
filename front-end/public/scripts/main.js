@@ -1,8 +1,8 @@
-import { joinRoom, fetchGameState, changeRole } from './api.js'
-import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updateBoard } from './dom.js'
+import { joinRoom, fetchGameState, changeRole, setBatchSize } from './api.js'
+import { updateGameCode, renderPlayers, renderSpectators, updateConfig } from './dom.js'
 import { handleDragOver, addDnDEvents, draggedItem } from './dnd.js'
 import { connectWebSocket } from './websocket.js'
-import { fetchBoardGameState, renderPlayerSections, updateGameUI } from './game-board.js'
+import { fetchBoardGameState, renderGameBoard, updateGameUI } from './game-board.js'
 
 // --- Game Start & Board Logic ---
 const startBtn = document.getElementById('startBtn')
@@ -209,12 +209,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Get initial selected round from active option
-    let selectedRound = 1 // fallback
+    // Get initial selected batch size from active option
+    let selectedBatchSize = 12 // default to batch of 12
     if (roundSelector) {
         const activeRound = roundSelector.querySelector('.round-option.active')
         if (activeRound && activeRound.dataset.round) {
-            selectedRound = parseInt(activeRound.dataset.round, 10)
+            const roundIndex = parseInt(activeRound.dataset.round, 10) - 1
+            selectedBatchSize = [12, 4, 1][roundIndex] || 12
         }
     }
 
@@ -226,8 +227,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 btn.classList.add('active')
                 if (btn.dataset.count) {
                     selectedPlayers = parseInt(btn.dataset.count, 10)
-                    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound)
-                    updateBoard(gameBoard, selectedPlayers)
+                    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedBatchSize)
 
                     // Update start button text
                     const playerCountSpan = document.getElementById('playerCount')
@@ -239,23 +239,40 @@ window.addEventListener('DOMContentLoaded', () => {
         })
     }
 
-    // Round selection
+    // Batch size selection (formerly round selection)
     if (roundSelector) {
         roundSelector.querySelectorAll('.round-option').forEach((opt) => {
-            opt.addEventListener('click', () => {
-                roundSelector.querySelectorAll('.round-option').forEach((o) => o.classList.remove('active'))
-                opt.classList.add('active')
-                if (opt.dataset.round) {
-                    selectedRound = parseInt(opt.dataset.round, 10)
-                    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound)
+            opt.addEventListener('click', async () => {
+                const roundIndex = parseInt(opt.dataset.round, 10) - 1
+                const newBatchSize = [12, 4, 1][roundIndex]
+
+                if (!newBatchSize) return
+
+                // Only host can change batch size
+                if (!window.isHost) {
+                    alert("Seul l'hôte peut changer la taille de lot")
+                    return
+                }
+
+                const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+                if (!apiUrl || !gameCode) return
+
+                try {
+                    await setBatchSize(apiUrl, gameCode, newBatchSize)
+
+                    // Update UI will be handled by websocket message
+                    selectedBatchSize = newBatchSize
+                    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedBatchSize)
+                } catch (error) {
+                    console.error('Error setting batch size:', error)
+                    // Error notification is handled in the API function
                 }
             })
         })
     }
 
     // Initial config
-    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRound)
-    updateBoard(gameBoard, selectedPlayers)
+    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedBatchSize)
 
     // Update start button text with initial player count
     const playerCountSpan = document.getElementById('playerCount')
@@ -302,30 +319,6 @@ window.addEventListener('DOMContentLoaded', () => {
             (players, host, spectators, actions) => renderPlayers(players, host, spectators, actions, addDnDEvents),
             (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
         )
-    })
-
-    // Add keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        // Only handle shortcuts when in game and it's the player's turn
-        const gameBoard = document.getElementById('gameBoard')
-        const moveButtons = document.querySelectorAll('.move-btn:not(:disabled)')
-
-        if (gameBoard && gameBoard.style.display !== 'none' && moveButtons.length > 0) {
-            switch (e.key) {
-                case '1':
-                    e.preventDefault()
-                    moveButtons[0]?.click()
-                    break
-                case '2':
-                    e.preventDefault()
-                    moveButtons[1]?.click()
-                    break
-                case '3':
-                    e.preventDefault()
-                    moveButtons[2]?.click()
-                    break
-            }
-        }
     })
 
     // Handle results view buttons

@@ -62,8 +62,3 @@ export function updateConfig(playersSpan, roundSpan, selectedPlayers, selectedRo
     if (playersSpan) playersSpan.textContent = selectedPlayers.toString()
     if (roundSpan) roundSpan.textContent = selectedRound.toString()
 }
-
-export function updateBoard(gameBoard, selectedPlayers) {
-    if (!gameBoard) return
-    gameBoard.className = `game-board players-${selectedPlayers}`
-}

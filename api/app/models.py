@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,16 +19,19 @@ class PennyGame(BaseModel):
     spectators: List[str] = Field(default_factory=list)
     host: Optional[str] = None
     host_secret: Optional[str] = None
-    pennies: List[bool] = Field(default_factory=lambda: [True] * MAX_PENNIES)  # True = Heads, False = Tails
-    turn: int = 0  # Index of current player
+    pennies: List[bool] = Field(default_factory=lambda: [False] * MAX_PENNIES)  # False = Tails, True = Heads
     created_at: datetime
     last_active_at: datetime
     started_at: Optional[datetime] = None
     turn_timestamps: List[datetime] = Field(default_factory=list)
     state: GameState = GameState.LOBBY
+    batch_size: int = MAX_PENNIES  # Default batch size
+    player_coins: Dict[str, List[bool]] = Field(default_factory=dict)  # Coins each player has
+    sent_coins: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)  # Tracking sent batches
 
     class Config:
         use_enum_values = True
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class JoinRequest(BaseModel):
@@ -36,13 +39,27 @@ class JoinRequest(BaseModel):
 
     class Config:
         str_strip_whitespace = True
-        min_anystr_length = 1
+        str_min_length = 1
         str_max_length = 20
 
 
-class MoveRequest(BaseModel):
+class FlipRequest(BaseModel):
     username: str
-    flip: int = Field(ge=1, le=3, description="Number of pennies to flip (1-3)")
+    coin_index: int = Field(ge=0, le=MAX_PENNIES - 1, description="Index of coin to flip (0-based)")
+
+    class Config:
+        str_strip_whitespace = True
+
+
+class SendRequest(BaseModel):
+    username: str
+
+    class Config:
+        str_strip_whitespace = True
+
+
+class BatchSizeRequest(BaseModel):
+    batch_size: int = Field(description="Batch size (1, 4, or 12)")
 
     class Config:
         str_strip_whitespace = True
@@ -64,27 +81,33 @@ class GameStateResponse(BaseModel):
     spectators: List[str]
     host: Optional[str]
     pennies: List[bool]
-    turn: int
     created_at: datetime
     last_active_at: datetime
     started_at: Optional[datetime]
     turn_timestamps: List[datetime]
     state: str
-    current_player: Optional[str]
-    heads_remaining: int
+    batch_size: int
+    player_coins: Dict[str, List[bool]]
+    sent_coins: Dict[str, List[Dict[str, Any]]]
+    total_completed: int
+    tails_remaining: int
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
-class MoveResponse(BaseModel):
-    """Response model for successful move"""
+class ActionResponse(BaseModel):
+    """Response model for flip/send actions"""
 
     success: bool
     game_over: bool
-    winner: Optional[str]
-    current_player: Optional[str]
-    heads_remaining: int
-    pennies: List[bool]
-    turn: int
+    player_coins: Dict[str, List[bool]]
+    sent_coins: Dict[str, List[Dict[str, Any]]]
+    total_completed: int
     state: str
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class WebSocketMessage(BaseModel):
@@ -96,15 +119,6 @@ class WebSocketMessage(BaseModel):
         use_enum_values = True
 
 
-class ChatMessage(WebSocketMessage):
-    """Chat message via websocket"""
-
-    type: str = "chat"
-    username: str
-    message: str
-    timestamp: Optional[datetime] = None
-
-
 class GameUpdateMessage(WebSocketMessage):
     """Game update message via websocket"""
 
@@ -112,19 +126,22 @@ class GameUpdateMessage(WebSocketMessage):
     data: dict
 
 
-class MoveMessage(WebSocketMessage):
-    """Move made message via websocket"""
+class ActionMessage(WebSocketMessage):
+    """Action made message via websocket"""
 
-    type: str = "move_made"
+    type: str = "action_made"
     player: str
-    flip_count: int
-    pennies: List[bool]
-    current_player: Optional[str]
-    heads_remaining: int
-    turn: int
+    action: str  # "flip" or "send"
+    coin_index: Optional[int] = None  # For flip actions
+    batch_count: Optional[int] = None  # For send actions
+    player_coins: Dict[str, List[bool]]
+    sent_coins: Dict[str, List[Dict[str, Any]]]
+    total_completed: int
     game_over: bool
-    winner: Optional[str]
     state: str
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class ActivityMessage(WebSocketMessage):
@@ -144,6 +161,13 @@ class WelcomeMessage(WebSocketMessage):
     room_id: str
     username: str
     game_state: dict
+
+
+class BatchSizeUpdateMessage(WebSocketMessage):
+    """Batch size update message via websocket"""
+
+    type: str = "batch_size_update"
+    batch_size: int
 
 
 class ErrorResponse(BaseModel):
