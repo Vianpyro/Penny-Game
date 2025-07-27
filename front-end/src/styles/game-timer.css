@@ -1,0 +1,708 @@
+/* Timer-specific styles for the Penny Game - Add to game-board.css */
+
+.game-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 8px 16px;
+    background: rgb(52 152 219 / 10%);
+    border-radius: 20px;
+    border: 2px solid rgb(52 152 219 / 20%);
+}
+
+.timer-label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95em;
+}
+
+.timer-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 1.1em;
+    color: #3498db;
+    background: rgb(255 255 255 / 80%);
+    padding: 4px 8px;
+    border-radius: 8px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.player-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    transition: all 0.3s ease;
+}
+
+.player-timer.waiting {
+    background: rgb(149 165 166 / 10%);
+    border: 1px solid rgb(149 165 166 / 20%);
+    color: #7f8c8d;
+}
+
+.player-timer.running {
+    background: rgb(241 196 15 / 10%);
+    border: 1px solid rgb(241 196 15 / 30%);
+    color: #f39c12;
+    animation: pulse-timer 2s infinite;
+}
+
+.player-timer.completed {
+    background: rgb(46 204 113 / 10%);
+    border: 1px solid rgb(46 204 113 / 30%);
+    color: #27ae60;
+}
+
+@keyframes pulse-timer {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgb(241 196 15 / 40%);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgb(241 196 15 / 0%);
+    }
+}
+
+.timer-icon {
+    font-size: 1em;
+}
+
+.timer-time {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 0.9em;
+    min-width: 45px;
+    text-align: center;
+}
+
+.timer-status {
+    font-weight: 600;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+.timers-summary {
+    background: rgb(255 255 255 / 90%);
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 5px 15px rgb(0 0 0 / 10%);
+}
+
+.timers-summary h3 {
+    margin: 0 0 15px;
+    color: #2c3e50;
+    font-size: 1.2em;
+    font-weight: 700;
+    text-align: center;
+}
+
+.timers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+}
+
+.timer-card {
+    background: rgb(255 255 255 / 90%);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    border: 2px solid #ecf0f1;
+    transition: all 0.3s ease;
+}
+
+.timer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 10%);
+}
+
+.timer-card.waiting {
+    border-color: rgb(149 165 166 / 30%);
+    background: rgb(149 165 166 / 5%);
+}
+
+.timer-card.running {
+    border-color: rgb(241 196 15 / 40%);
+    background: rgb(241 196 15 / 5%);
+    box-shadow: 0 4px 15px rgb(241 196 15 / 20%);
+}
+
+.timer-card.completed {
+    border-color: rgb(46 204 113 / 40%);
+    background: rgb(46 204 113 / 5%);
+    box-shadow: 0 4px 15px rgb(46 204 113 / 20%);
+}
+
+.timer-player {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+
+.timer-card .timer-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 1.3em;
+    color: #3498db;
+    background: rgb(255 255 255 / 80%);
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: block;
+    margin: 8px 0;
+    min-width: 70px;
+}
+
+.timer-card.waiting .timer-value {
+    color: #95a5a6;
+}
+
+.timer-card.running .timer-value {
+    color: #f39c12;
+}
+
+.timer-card.completed .timer-value {
+    color: #27ae60;
+}
+
+.timer-card .timer-status {
+    font-size: 0.8em;
+    font-weight: 600;
+    opacity: 0.8;
+    color: #7f8c8d;
+}
+
+.timer-card.waiting .timer-status {
+    color: #95a5a6;
+}
+
+.timer-card.running .timer-status {
+    color: #f39c12;
+}
+
+.timer-card.completed .timer-status {
+    color: #27ae60;
+}
+
+/* Results page timer displays */
+.results .timer-summary {
+    background: rgb(52 152 219 / 10%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    border-left: 4px solid #3498db;
+}
+
+.results .timer-summary h4 {
+    margin: 0 0 15px;
+    color: #2c3e50;
+    font-size: 1.1em;
+    font-weight: 700;
+}
+
+.results .game-time-stat {
+    text-align: center;
+    padding: 15px;
+    background: rgb(155 89 182 / 10%);
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.results .game-time-value {
+    font-family: 'Courier New', monospace;
+    font-size: 2em;
+    font-weight: 700;
+    color: #9b59b6;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.results .game-time-label {
+    font-size: 0.9em;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.results-actions {
+    margin-top: 30px;
+    text-align: center;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.results-actions .btn {
+    min-width: 140px;
+}
+
+/* Responsive design for timers */
+@media screen and (max-width: 768px) {
+    .game-timer {
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px 12px;
+    }
+
+    .timer-label {
+        font-size: 0.9em;
+    }
+
+    .timer-value {
+        font-size: 1em;
+        min-width: 50px;
+    }
+
+    .player-timer {
+        flex-direction: column;
+        gap: 3px;
+        padding: 5px 10px;
+    }
+
+    .player-timer .timer-time {
+        font-size: 0.85em;
+        min-width: 40px;
+    }
+
+    .timers-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+    }
+
+    .timer-card {
+        padding: 12px;
+    }
+
+    .timer-card .timer-value {
+        font-size: 1.1em;
+        min-width: 60px;
+    }
+
+    .results .game-time-value {
+        font-size: 1.5em;
+    }
+
+    .results-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .results-actions .btn {
+        width: 100%;
+        max-width: 200px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .game-timer {
+        padding: 4px 8px;
+    }
+
+    .timer-label {
+        font-size: 0.85em;
+    }
+
+    .timer-value {
+        font-size: 0.95em;
+        min-width: 45px;
+        padding: 3px 6px;
+    }
+
+    .player-timer {
+        padding: 4px 8px;
+    }
+
+    .player-timer .timer-time {
+        font-size: 0.8em;
+        min-width: 35px;
+    }
+
+    .timers-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .timer-card {
+        padding: 10px;
+    }
+
+    .timer-card .timer-value {
+        font-size: 1em;
+        min-width: 55px;
+        padding: 4px 8px;
+    }
+
+    .timer-player {
+        font-size: 0.9em;
+    }
+
+    .timer-card .timer-status {
+        font-size: 0.75em;
+    }
+
+    .results .game-time-value {
+        font-size: 1.3em;
+    }
+
+    .timers-summary {
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .timers-summary h3 {
+        font-size: 1.1em;
+        margin-bottom: 12px;
+    }
+}
+
+.game-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 8px 16px;
+    background: rgb(52 152 219 / 10%);
+    border-radius: 20px;
+    border: 2px solid rgb(52 152 219 / 20%);
+}
+
+.timer-label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95em;
+}
+
+.timer-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 1.1em;
+    color: #3498db;
+    background: rgb(255 255 255 / 80%);
+    padding: 4px 8px;
+    border-radius: 8px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.player-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    transition: all 0.3s ease;
+}
+
+.player-timer.waiting {
+    background: rgb(149 165 166 / 10%);
+    border: 1px solid rgb(149 165 166 / 20%);
+    color: #7f8c8d;
+}
+
+.player-timer.running {
+    background: rgb(241 196 15 / 10%);
+    border: 1px solid rgb(241 196 15 / 30%);
+    color: #f39c12;
+    animation: pulse-timer 2s infinite;
+}
+
+.player-timer.completed {
+    background: rgb(46 204 113 / 10%);
+    border: 1px solid rgb(46 204 113 / 30%);
+    color: #27ae60;
+}
+
+@keyframes pulse-timer {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgb(241 196 15 / 40%);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgb(241 196 15 / 0%);
+    }
+}
+
+.timer-icon {
+    font-size: 1em;
+}
+
+.timer-time {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 0.9em;
+    min-width: 45px;
+    text-align: center;
+}
+
+.timer-status {
+    font-weight: 600;
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+.timers-summary {
+    background: rgb(255 255 255 / 90%);
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 5px 15px rgb(0 0 0 / 10%);
+}
+
+.timers-summary h3 {
+    margin: 0 0 15px;
+    color: #2c3e50;
+    font-size: 1.2em;
+    font-weight: 700;
+    text-align: center;
+}
+
+.timers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+}
+
+.timer-card {
+    background: rgb(255 255 255 / 90%);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    border: 2px solid #ecf0f1;
+    transition: all 0.3s ease;
+}
+
+.timer-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 10%);
+}
+
+.timer-card.waiting {
+    border-color: rgb(149 165 166 / 30%);
+    background: rgb(149 165 166 / 5%);
+}
+
+.timer-card.running {
+    border-color: rgb(241 196 15 / 40%);
+    background: rgb(241 196 15 / 5%);
+    box-shadow: 0 4px 15px rgb(241 196 15 / 20%);
+}
+
+.timer-card.completed {
+    border-color: rgb(46 204 113 / 40%);
+    background: rgb(46 204 113 / 5%);
+    box-shadow: 0 4px 15px rgb(46 204 113 / 20%);
+}
+
+.timer-player {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+
+.timer-card .timer-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 1.3em;
+    color: #3498db;
+    background: rgb(255 255 255 / 80%);
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: block;
+    margin: 8px 0;
+    min-width: 70px;
+}
+
+.timer-card.waiting .timer-value {
+    color: #95a5a6;
+}
+
+.timer-card.running .timer-value {
+    color: #f39c12;
+}
+
+.timer-card.completed .timer-value {
+    color: #27ae60;
+}
+
+.timer-card .timer-status {
+    font-size: 0.8em;
+    font-weight: 600;
+    opacity: 0.8;
+    color: #7f8c8d;
+}
+
+.timer-card.waiting .timer-status {
+    color: #95a5a6;
+}
+
+.timer-card.running .timer-status {
+    color: #f39c12;
+}
+
+.timer-card.completed .timer-status {
+    color: #27ae60;
+}
+
+/* Results page timer displays */
+.results .timer-summary {
+    background: rgb(52 152 219 / 10%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    border-left: 4px solid #3498db;
+}
+
+.results .timer-summary h4 {
+    margin: 0 0 15px;
+    color: #2c3e50;
+    font-size: 1.1em;
+    font-weight: 700;
+}
+
+.results .game-time-stat {
+    text-align: center;
+    padding: 15px;
+    background: rgb(155 89 182 / 10%);
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.results .game-time-value {
+    font-family: 'Courier New', monospace;
+    font-size: 2em;
+    font-weight: 700;
+    color: #9b59b6;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.results .game-time-label {
+    font-size: 0.9em;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+/* Responsive design for timers */
+@media screen and (max-width: 768px) {
+    .game-timer {
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px 12px;
+    }
+
+    .timer-label {
+        font-size: 0.9em;
+    }
+
+    .timer-value {
+        font-size: 1em;
+        min-width: 50px;
+    }
+
+    .player-timer {
+        flex-direction: column;
+        gap: 3px;
+        padding: 5px 10px;
+    }
+
+    .player-timer .timer-time {
+        font-size: 0.85em;
+        min-width: 40px;
+    }
+
+    .timers-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+    }
+
+    .timer-card {
+        padding: 12px;
+    }
+
+    .timer-card .timer-value {
+        font-size: 1.1em;
+        min-width: 60px;
+    }
+
+    .results .game-time-value {
+        font-size: 1.5em;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .game-timer {
+        padding: 4px 8px;
+    }
+
+    .timer-label {
+        font-size: 0.85em;
+    }
+
+    .timer-value {
+        font-size: 0.95em;
+        min-width: 45px;
+        padding: 3px 6px;
+    }
+
+    .player-timer {
+        padding: 4px 8px;
+    }
+
+    .player-timer .timer-time {
+        font-size: 0.8em;
+        min-width: 35px;
+    }
+
+    .timers-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .timer-card {
+        padding: 10px;
+    }
+
+    .timer-card .timer-value {
+        font-size: 1em;
+        min-width: 55px;
+        padding: 4px 8px;
+    }
+
+    .timer-player {
+        font-size: 0.9em;
+    }
+
+    .timer-card .timer-status {
+        font-size: 0.75em;
+    }
+
+    .results .game-time-value {
+        font-size: 1.3em;
+    }
+
+    .timers-summary {
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .timers-summary h3 {
+        font-size: 1.1em;
+        margin-bottom: 12px;
+    }
+}
