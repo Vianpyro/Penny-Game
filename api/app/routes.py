@@ -33,8 +33,10 @@ def create_game():
         key="host_secret",
         value=host_secret,
         httponly=True,
-        samesite="strict",
+        samesite="none",
+        secure=True,
         max_age=int(timedelta(minutes=30).total_seconds()),
+        path="/",
     )
     logger.info(f"Game created: {room_id}")
     return response
