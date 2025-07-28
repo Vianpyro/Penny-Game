@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 from uuid import uuid4
 
 from .constants import MAX_PENNIES
-from .models import GameState, PennyGame
+from .models import GameState, PennyGame, PlayerTimer
 
 ROOM_INACTIVITY_THRESHOLD = timedelta(minutes=60)
 PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
@@ -27,6 +27,7 @@ def create_new_game():
         batch_size=MAX_PENNIES,  # Default batch size
         player_coins={},  # Track coins per player
         sent_coins={},  # Track sent coins between players
+        player_timers={},  # Track player timers
     )
     rooms[room_id] = []
     return room_id, host_secret
@@ -77,6 +78,44 @@ def initialize_player_coins(game: PennyGame):
     # Give all coins (as tails) to first player
     game.player_coins[first_player] = [False] * MAX_PENNIES
 
+    # Initialize player timers - ensure we have a clean dict
+    if not hasattr(game, "player_timers") or game.player_timers is None:
+        game.player_timers = {}
+
+    for player in game.players:
+        game.player_timers[player] = PlayerTimer(player=player)
+
+
+def start_player_timer(game: PennyGame, player: str):
+    """Start timer for a player when they flip their first coin"""
+    if not hasattr(game, "player_timers") or game.player_timers is None:
+        game.player_timers = {}
+
+    if player not in game.player_timers:
+        game.player_timers[player] = PlayerTimer(player=player)
+
+    if game.player_timers[player].started_at is None:
+        game.player_timers[player].started_at = datetime.now()
+
+
+def end_player_timer(game: PennyGame, player: str):
+    """End timer for a player when they send their last coin"""
+    if not hasattr(game, "player_timers") or game.player_timers is None:
+        return
+
+    if player not in game.player_timers:
+        return
+
+    timer = game.player_timers[player]
+    if timer.started_at and timer.ended_at is None:
+        timer.ended_at = datetime.now()
+        timer.duration_seconds = (timer.ended_at - timer.started_at).total_seconds()
+
+
+def has_player_finished(game: PennyGame, player: str) -> bool:
+    """Check if a player has no more coins to process"""
+    return player in game.player_coins and len(game.player_coins[player]) == 0
+
 
 def flip_coin(game: PennyGame, player: str, coin_index: int) -> bool:
     """
@@ -94,6 +133,9 @@ def flip_coin(game: PennyGame, player: str, coin_index: int) -> bool:
     # Can only flip tails to heads
     if player_coins[coin_index]:  # Already heads
         return False
+
+    # Start player timer on first coin flip
+    start_player_timer(game, player)
 
     # Flip the coin from tails to heads
     player_coins[coin_index] = True
@@ -154,6 +196,10 @@ def send_batch(game: PennyGame, player: str) -> bool:
         game.sent_coins[player] = []
     game.sent_coins[player].append({"count": len(coins_to_send), "timestamp": datetime.now(), "to_player": next_player})
 
+    # End player timer if they have no more coins
+    if has_player_finished(game, player):
+        end_player_timer(game, player)
+
     return True
 
 
@@ -187,6 +233,10 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
         {"count": len(completed_coins), "timestamp": datetime.now(), "to_player": "COMPLETED"}
     )
 
+    # End player timer if they have no more coins
+    if has_player_finished(game, player):
+        end_player_timer(game, player)
+
     return True
 
 
@@ -197,7 +247,18 @@ def is_game_over(game: PennyGame) -> bool:
 
     # Game is over when all coins have been processed through the entire chain
     total_completed = get_total_completed_coins(game)
-    return total_completed >= MAX_PENNIES
+
+    # Also check if all players have no coins left (alternative end condition)
+    all_players_empty = all(len(game.player_coins.get(player, [])) == 0 for player in game.players)
+
+    return total_completed >= MAX_PENNIES or all_players_empty
+
+
+def end_game_timer(game: PennyGame):
+    """End the game timer and calculate duration"""
+    if game.started_at and game.ended_at is None:
+        game.ended_at = datetime.now()
+        game.game_duration_seconds = (game.ended_at - game.started_at).total_seconds()
 
 
 def get_total_completed_coins(game: PennyGame) -> int:
@@ -245,6 +306,11 @@ def process_flip(game: PennyGame, player: str, coin_index: int) -> dict:
 
     if game_over:
         game.state = GameState.RESULTS
+        end_game_timer(game)
+
+    # Ensure we have player_timers in the response
+    if not hasattr(game, "player_timers") or game.player_timers is None:
+        game.player_timers = {}
 
     return {
         "success": True,
@@ -253,6 +319,8 @@ def process_flip(game: PennyGame, player: str, coin_index: int) -> dict:
         "sent_coins": game.sent_coins.copy(),
         "total_completed": get_total_completed_coins(game),
         "state": game.state.value,
+        "player_timers": {k: v.to_dict() for k, v in game.player_timers.items()} if game.player_timers else {},
+        "game_duration_seconds": game.game_duration_seconds,
     }
 
 
@@ -284,6 +352,11 @@ def process_send(game: PennyGame, player: str) -> dict:
 
     if game_over:
         game.state = GameState.RESULTS
+        end_game_timer(game)
+
+    # Ensure we have player_timers in the response
+    if not hasattr(game, "player_timers") or game.player_timers is None:
+        game.player_timers = {}
 
     return {
         "success": True,
@@ -292,6 +365,8 @@ def process_send(game: PennyGame, player: str) -> dict:
         "sent_coins": game.sent_coins.copy(),
         "total_completed": get_total_completed_coins(game),
         "state": game.state.value,
+        "player_timers": {k: v.to_dict() for k, v in game.player_timers.items()} if game.player_timers else {},
+        "game_duration_seconds": game.game_duration_seconds,
     }
 
 
@@ -300,10 +375,13 @@ def reset_game(game: PennyGame):
     game.pennies = [False] * MAX_PENNIES  # All tails
     game.state = GameState.LOBBY
     game.started_at = None
+    game.ended_at = None
     game.turn_timestamps = []
     game.batch_size = MAX_PENNIES  # Reset to default
     game.player_coins = {}
     game.sent_coins = {}
+    game.player_timers = {}
+    game.game_duration_seconds = None
     game.last_active_at = datetime.now()
 
 

@@ -26,22 +26,51 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
         startBtn.textContent = 'Démarrage...'
 
         try {
+            console.log('Starting game with:', { apiUrl, gameCode })
+
             const response = await fetch(`${apiUrl}/game/start/${gameCode}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
                 credentials: 'include',
             })
 
+            console.log('Start game response status:', response.status)
+            console.log('Start game response headers:', [...response.headers.entries()])
+
             if (!response.ok) {
-                const errorData = await response.json()
+                const errorText = await response.text()
+                console.error('Start game error response:', errorText)
+
+                let errorData
+                try {
+                    errorData = JSON.parse(errorText)
+                } catch (e) {
+                    errorData = { detail: `Server error: ${response.status}` }
+                }
                 throw new Error(errorData.detail || 'Erreur lors du démarrage de la partie')
             }
 
-            console.log('Game start request successful')
+            const data = await response.json()
+            console.log('Game start successful:', data)
             // The websocket will handle switching to the game view
         } catch (error) {
             console.error('Error starting game:', error)
-            alert(error.message || 'Impossible de démarrer la partie')
+
+            // Provide more specific error messages
+            let errorMessage = error.message || 'Impossible de démarrer la partie'
+
+            if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                errorMessage = 'Erreur de connexion au serveur. Vérifiez que le serveur est démarré.'
+            } else if (error.message.includes('500')) {
+                errorMessage = 'Erreur interne du serveur. Vérifiez les logs du serveur.'
+            } else if (error.message.includes('CORS')) {
+                errorMessage = 'Erreur CORS. Vérifiez la configuration du serveur.'
+            }
+
+            alert(errorMessage)
 
             // Re-enable button on error
             startBtn.disabled = false

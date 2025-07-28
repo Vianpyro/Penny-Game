@@ -5,23 +5,265 @@ import '../styles/results.css'
 
 <div class="results" id="results" style="display: none;">
     <h2>📊 Résultats de la Simulation</h2>
-    <div class="total-time" id="totalTime"></div>
-    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Game Timer Section -->
+    <div class="game-time-section" id="gameTimeSection">
+        <div class="game-time-card">
+            <div class="game-time-icon">⏱️</div>
+            <div class="game-time-value" id="gameTimeValue">--:--</div>
+            <div class="game-time-label">Temps total de la partie</div>
+        </div>
+    </div>
+
+    <!-- Player Timers Section -->
+    <div class="player-timers-section" id="playerTimersSection">
+        <h3>👥 Performance des Joueurs</h3>
+        <div class="player-timers-grid" id="playerTimersGrid">
+            <!-- Player timer cards will be dynamically generated -->
+        </div>
+    </div>
+
+    <!-- Statistics Grid -->
+    <div class="stats-section">
+        <h3>📈 Statistiques de la Partie</h3>
+        <div class="stats-grid" id="statsGrid">
+            <!-- Stats will be dynamically generated -->
+        </div>
+    </div>
+
+    <!-- Insights Section -->
     <div class="insights">
         <h3>💡 Enseignements Lean</h3>
         <ul id="insightsList">
-            {
-                [
-                    "Batch Size: Observer l'impact de la taille des lots sur le temps de cycle",
-                    "Flow: Analyser les goulots d'étranglement et les temps d'attente",
-                    'Lead Time: Comparer le temps individuel vs. temps total du processus',
-                    'Amélioration Continue: Discuter des optimisations possibles',
-                ].map((insight) => (
-                    <li>
-                        <strong>{insight.split(':')[0]}:</strong> {insight.split(':')[1]}
-                    </li>
-                ))
-            }
+            <li>
+                <strong>Batch Size:</strong> Observer l'impact de la taille des lots sur le temps de cycle
+            </li>
+            <li>
+                <strong>Flow:</strong> Analyser les goulots d'étranglement et les temps d'attente
+            </li>
+            <li>
+                <strong>Lead Time:</strong> Comparer le temps individuel vs. temps total du processus
+            </li>
+            <li>
+                <strong>Amélioration Continue:</strong> Discuter des optimisations possibles
+            </li>
         </ul>
     </div>
+
+    <!-- Action Buttons (will be shown for hosts) -->
+    <div class="results-actions" id="resultsActions" style="display: none;">
+        <button class="btn btn-primary" id="playAgainBtn">🔄 Rejouer</button>
+        <button class="btn btn-secondary" id="backToLobbyBtn">🏠 Retour au lobby</button>
+    </div>
+
+    <!-- Manual End Game Button (for testing) -->
+    <div class="debug-actions" id="debugActions" style="display: none;">
+        <button class="btn btn-warning" id="endGameBtn">⏹️ Terminer la partie (Test)</button>
+    </div>
 </div>
+
+<style>
+    .game-time-section {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .game-time-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 30px;
+        display: inline-block;
+        min-width: 250px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .game-time-icon {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+    }
+
+    .game-time-value {
+        font-family: 'Courier New', monospace;
+        font-size: 3em;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .game-time-label {
+        font-size: 1.1em;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+
+    .player-timers-section {
+        margin-bottom: 30px;
+    }
+
+    .player-timers-section h3 {
+        color: #2c3e50;
+        font-size: 1.4em;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .player-timers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .player-timer-result {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border: 3px solid #ecf0f1;
+        transition: all 0.3s ease;
+    }
+
+    .player-timer-result:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .player-timer-result.completed {
+        border-color: #27ae60;
+        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        color: white;
+    }
+
+    .player-timer-result.not-started {
+        border-color: #95a5a6;
+        background: #ecf0f1;
+        color: #7f8c8d;
+    }
+
+    .player-name {
+        font-size: 1.2em;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .player-time {
+        font-family: 'Courier New', monospace;
+        font-size: 2em;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .player-status {
+        font-size: 0.9em;
+        font-weight: 600;
+        opacity: 0.8;
+    }
+
+    .stats-section {
+        margin-bottom: 30px;
+    }
+
+    .stats-section h3 {
+        color: #2c3e50;
+        font-size: 1.4em;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 2px solid #ecf0f1;
+    }
+
+    .stat-value {
+        font-size: 2em;
+        font-weight: 700;
+        color: #3498db;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.9em;
+        color: #7f8c8d;
+        font-weight: 600;
+    }
+
+    .debug-actions {
+        text-align: center;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 2px dashed #bdc3c7;
+    }
+
+    .btn-warning {
+        background: linear-gradient(45deg, #f39c12, #e67e22);
+        color: white;
+    }
+
+    .btn-warning:hover {
+        box-shadow: 0 8px 20px rgba(243, 156, 18, 0.3);
+        transform: translateY(-2px);
+    }
+
+    /* Responsive design */
+    @media screen and (max-width: 768px) {
+        .game-time-card {
+            min-width: 200px;
+            padding: 20px;
+        }
+
+        .game-time-value {
+            font-size: 2.5em;
+        }
+
+        .player-timers-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .game-time-card {
+            min-width: 180px;
+            padding: 15px;
+        }
+
+        .game-time-value {
+            font-size: 2em;
+        }
+
+        .player-timer-result {
+            padding: 15px;
+        }
+
+        .player-time {
+            font-size: 1.5em;
+        }
+
+        .stat-card {
+            padding: 15px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+        }
+    }
+</style>

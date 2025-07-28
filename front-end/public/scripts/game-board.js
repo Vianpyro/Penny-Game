@@ -1,4 +1,4 @@
-// Game board logic for Penny Game with cooperative mechanics
+// Game board logic for Penny Game with cooperative mechanics and timers
 import { flipCoin, sendBatch } from './api.js'
 import { showNotification } from './utility.js'
 
@@ -19,18 +19,80 @@ export async function fetchBoardGameState(gameCode) {
     }
 }
 
+function formatTime(seconds) {
+    if (!seconds && seconds !== 0) return '--:--'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+function formatPlayerTimer(timer) {
+    if (!timer) return { status: 'waiting', time: '--:--', statusText: 'En attente' }
+
+    if (!timer.started_at) {
+        return { status: 'waiting', time: '--:--', statusText: 'En attente' }
+    }
+
+    if (timer.ended_at && timer.duration_seconds !== null && timer.duration_seconds !== undefined) {
+        return {
+            status: 'completed',
+            time: formatTime(timer.duration_seconds),
+            statusText: 'Terminé',
+        }
+    }
+
+    // Timer is running - calculate current duration
+    try {
+        const startTime = new Date(timer.started_at)
+        const currentTime = new Date()
+
+        // Check if the date is valid
+        if (isNaN(startTime.getTime())) {
+            console.warn('Invalid start time:', timer.started_at)
+            return { status: 'waiting', time: '--:--', statusText: 'Erreur' }
+        }
+
+        const currentDuration = Math.max(0, (currentTime - startTime) / 1000)
+
+        return {
+            status: 'running',
+            time: formatTime(currentDuration),
+            statusText: 'En cours',
+        }
+    } catch (error) {
+        console.error('Error calculating timer duration:', error)
+        return { status: 'waiting', time: '--:--', statusText: 'Erreur' }
+    }
+}
+
 export function renderGameBoard(gameState) {
     const gameBoard = document.getElementById('gameBoard')
     if (!gameBoard || !gameState) return
 
     gameBoard.innerHTML = ''
 
-    // Add game status header
+    // Add game status header with game timer
     const gameStatus = document.createElement('div')
     gameStatus.className = 'game-status'
+
+    let gameTimer = '--:--'
+    if (gameState.game_duration_seconds !== null && gameState.game_duration_seconds !== undefined) {
+        gameTimer = formatTime(gameState.game_duration_seconds)
+    } else if (gameState.started_at) {
+        // Game is running - calculate current duration
+        const startTime = new Date(gameState.started_at)
+        const currentTime = new Date()
+        const currentDuration = (currentTime - startTime) / 1000
+        gameTimer = formatTime(currentDuration)
+    }
+
     gameStatus.innerHTML = `
         <div class="status-header">
             <h2>🎲 Partie en cours - Lot de ${gameState.batch_size}</h2>
+            <div class="game-timer">
+                <span class="timer-label">⏱️ Temps de jeu:</span>
+                <span class="timer-value" id="gameTimerDisplay">${gameTimer}</span>
+            </div>
             <div class="game-progress">
                 <div class="progress-stats">
                     <span class="stat">🪙 Total: ${gameState.total_completed}/12 terminées</span>
@@ -40,6 +102,11 @@ export function renderGameBoard(gameState) {
         </div>
     `
     gameBoard.appendChild(gameStatus)
+
+    // Start real-time timer updates if game is active
+    if (gameState.state === 'active' && gameState.started_at && !gameState.ended_at) {
+        startRealTimeTimers(gameState)
+    }
 
     // Add reset button for hosts
     if (window.isHost) {
@@ -79,6 +146,11 @@ export function renderGameBoard(gameState) {
 
     gameBoard.appendChild(productionLine)
 
+    // Add player timers summary if any timers exist
+    if (gameState.player_timers && Object.keys(gameState.player_timers).length > 0) {
+        addTimersSummary(gameState)
+    }
+
     // Add game rules reminder
     const rulesReminder = document.createElement('div')
     rulesReminder.className = 'rules-reminder'
@@ -102,6 +174,7 @@ function createPlayerStation(player, gameState, playerIndex) {
     const isCurrentPlayer = player === currentUsername
     const isHost = window.isHost
     const playerCoins = gameState.player_coins[player] || []
+    const playerTimer = gameState.player_timers ? gameState.player_timers[player] : null
 
     // Count coins by state
     const tailsCount = playerCoins.filter((coin) => !coin).length
@@ -114,12 +187,20 @@ function createPlayerStation(player, gameState, playerIndex) {
     // Determine if player can interact (only current player, not host, and not spectator)
     const canInteract = isCurrentPlayer && !isHost && window.userRole === 'player'
 
+    // Format player timer
+    const timerInfo = formatPlayerTimer(playerTimer)
+
     station.innerHTML = `
         <div class="station-header">
             <h3>${isCurrentPlayer ? '⭐' : '👤'} ${player}</h3>
             <div class="player-status">
                 ${isCurrentPlayer ? 'Votre station' : 'Station partenaire'}
                 ${!canInteract && isCurrentPlayer ? ' (Hôte - observation seulement)' : ''}
+            </div>
+            <div class="player-timer ${timerInfo.status}">
+                <span class="timer-icon">⏱️</span>
+                <span class="timer-time" data-player="${player}">${timerInfo.time}</span>
+                <span class="timer-status">${timerInfo.statusText}</span>
             </div>
         </div>
         <div class="station-stats">
@@ -207,6 +288,89 @@ function createPlayerStation(player, gameState, playerIndex) {
     }
 
     return station
+}
+
+function addTimersSummary(gameState) {
+    const gameBoard = document.getElementById('gameBoard')
+    if (!gameBoard) return
+
+    const timersSummary = document.createElement('div')
+    timersSummary.className = 'timers-summary'
+    timersSummary.innerHTML = '<h3>📊 Temps par Joueur</h3>'
+
+    const timersGrid = document.createElement('div')
+    timersGrid.className = 'timers-grid'
+
+    gameState.players.forEach((player) => {
+        const timer = gameState.player_timers[player]
+        const timerInfo = formatPlayerTimer(timer)
+
+        const timerCard = document.createElement('div')
+        timerCard.className = `timer-card ${timerInfo.status}`
+        timerCard.innerHTML = `
+            <div class="timer-player">${player}</div>
+            <div class="timer-value" data-player="${player}">${timerInfo.time}</div>
+            <div class="timer-status">${timerInfo.statusText}</div>
+        `
+        timersGrid.appendChild(timerCard)
+    })
+
+    timersSummary.appendChild(timersGrid)
+    gameBoard.appendChild(timersSummary)
+}
+
+function startRealTimeTimers(gameState) {
+    // Clear any existing timer interval
+    if (window.pennyGameTimerInterval) {
+        clearInterval(window.pennyGameTimerInterval)
+    }
+
+    window.pennyGameTimerInterval = setInterval(() => {
+        const now = new Date()
+
+        // Update game timer
+        if (gameState.started_at && !gameState.ended_at) {
+            try {
+                const startTime = new Date(gameState.started_at)
+                if (!isNaN(startTime.getTime())) {
+                    const currentDuration = Math.max(0, (now - startTime) / 1000)
+                    const gameTimerDisplay = document.getElementById('gameTimerDisplay')
+                    if (gameTimerDisplay) {
+                        gameTimerDisplay.textContent = formatTime(currentDuration)
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating game timer:', error)
+            }
+        }
+
+        // Update player timers
+        if (gameState.player_timers) {
+            Object.values(gameState.player_timers).forEach((timer) => {
+                if (timer.started_at && !timer.ended_at) {
+                    try {
+                        const startTime = new Date(timer.started_at)
+                        if (!isNaN(startTime.getTime())) {
+                            const currentDuration = Math.max(0, (now - startTime) / 1000)
+                            const timerElements = document.querySelectorAll(`[data-player="${timer.player}"]`)
+                            timerElements.forEach((element) => {
+                                element.textContent = formatTime(currentDuration)
+                            })
+                        }
+                    } catch (error) {
+                        console.error('Error updating player timer for', timer.player, error)
+                    }
+                }
+            })
+        }
+    }, 1000) // Update every second
+}
+
+function stopRealTimeTimers() {
+    if (window.pennyGameTimerInterval) {
+        clearInterval(window.pennyGameTimerInterval)
+        window.pennyGameTimerInterval = null
+    }
 }
 
 async function handleCoinFlip(coinIndex, coinElement) {
@@ -315,6 +479,11 @@ export function updateGameUI(gameState) {
         const size = parseInt(option.dataset.size)
         option.classList.toggle('active', size === gameState.batch_size)
     })
+
+    // If game ended, stop real-time timers
+    if (gameState.state === 'results') {
+        stopRealTimeTimers()
+    }
 }
 
 // Add reset functionality for hosts
@@ -356,6 +525,8 @@ async function resetGame() {
             throw new Error(errorData.detail || 'Échec de la réinitialisation')
         }
 
+        // Stop timers when game is reset
+        stopRealTimeTimers()
         console.log('Game reset successful')
     } catch (error) {
         console.error('Error resetting game:', error)
@@ -364,4 +535,4 @@ async function resetGame() {
 }
 
 // Export utility functions for use in other modules
-export { handleCoinFlip, handleSendBatch }
+export { handleCoinFlip, handleSendBatch, stopRealTimeTimers }

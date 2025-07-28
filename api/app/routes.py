@@ -83,6 +83,12 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
             "player_coins": game.player_coins,
             "total_completed": get_total_completed_coins(game),
             "tails_remaining": get_tails_count(game),
+            "player_timers": (
+                {k: v.to_dict() for k, v in game.player_timers.items()}
+                if hasattr(game, "player_timers") and game.player_timers
+                else {}
+            ),
+            "game_duration_seconds": game.game_duration_seconds,
             "note": "Host created the room and does not play.",
         }
 
@@ -111,6 +117,8 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
             "player_coins": game.player_coins,
             "total_completed": get_total_completed_coins(game),
             "tails_remaining": get_tails_count(game),
+            "player_timers": game.player_timers,
+            "game_duration_seconds": game.game_duration_seconds,
         }
 
     # Handle player joining (or spectator if game is full)
@@ -140,6 +148,8 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
             "player_coins": game.player_coins,
             "total_completed": get_total_completed_coins(game),
             "tails_remaining": get_tails_count(game),
+            "player_timers": game.player_timers,
+            "game_duration_seconds": game.game_duration_seconds,
         }
 
     # Add player to the game
@@ -168,6 +178,8 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
         "player_coins": game.player_coins,
         "total_completed": get_total_completed_coins(game),
         "tails_remaining": get_tails_count(game),
+        "player_timers": game.player_timers,
+        "game_duration_seconds": game.game_duration_seconds,
     }
 
 
@@ -237,6 +249,12 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
             "player_coins": game.player_coins,
             "total_completed": get_total_completed_coins(game),
             "tails_remaining": get_tails_count(game),
+            "player_timers": (
+                {k: v.to_dict() for k, v in game.player_timers.items()}
+                if hasattr(game, "player_timers") and game.player_timers
+                else {}
+            ),
+            "game_duration_seconds": game.game_duration_seconds,
         },
     )
 
@@ -248,6 +266,8 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
         "player_coins": game.player_coins,
         "total_completed": get_total_completed_coins(game),
         "tails_remaining": get_tails_count(game),
+        "player_timers": dict(game.player_timers) if hasattr(game, "player_timers") and game.player_timers else {},
+        "game_duration_seconds": game.game_duration_seconds,
     }
 
 
@@ -280,6 +300,8 @@ async def flip_coin(room_id: str, flip: FlipRequest):
         "total_completed": result["total_completed"],
         "game_over": result["game_over"],
         "state": result["state"],
+        "player_timers": result["player_timers"],
+        "game_duration_seconds": result["game_duration_seconds"],
     }
 
     await broadcast_game_update(room_id, action_data)
@@ -330,6 +352,8 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
             "total_completed": result["total_completed"],
             "game_over": result["game_over"],
             "state": result["state"],
+            "player_timers": result["player_timers"],
+            "game_duration_seconds": result["game_duration_seconds"],
         }
 
         await broadcast_game_update(room_id, action_data)
@@ -347,6 +371,8 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
             "batch_count": batch_count,
             "game_over": result["game_over"],
             "total_completed": result["total_completed"],
+            "player_timers": result["player_timers"],
+            "game_duration_seconds": result["game_duration_seconds"],
         }
 
     except HTTPException:
@@ -378,6 +404,8 @@ async def reset_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
             "player_coins": game.player_coins,
             "total_completed": get_total_completed_coins(game),
             "tails_remaining": get_tails_count(game),
+            "player_timers": game.player_timers,
+            "game_duration_seconds": game.game_duration_seconds,
         },
     )
 
@@ -389,6 +417,8 @@ async def reset_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
         "player_coins": game.player_coins,
         "total_completed": get_total_completed_coins(game),
         "tails_remaining": get_tails_count(game),
+        "player_timers": game.player_timers,
+        "game_duration_seconds": game.game_duration_seconds,
     }
 
 
@@ -405,12 +435,54 @@ def get_game_state(room_id: str):
     data["total_completed"] = get_total_completed_coins(game)
     data["tails_remaining"] = get_tails_count(game)
 
+    # Properly serialize player timers
+    if hasattr(game, "player_timers") and game.player_timers:
+        data["player_timers"] = {k: v.to_dict() for k, v in game.player_timers.items()}
+    else:
+        data["player_timers"] = {}
+
     return data
 
 
 @router.post("/cleanup")
 def cleanup_inactive_games():
     return cleanup()
+
+
+@router.post("/game/end/{room_id}")
+async def end_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
+    """Manually end the game (host only, for testing)"""
+    game = get_game(room_id)
+
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    if not host_secret or host_secret != game.host_secret:
+        raise HTTPException(status_code=403, detail="Invalid host secret")
+    if game.state != GameState.ACTIVE:
+        raise HTTPException(status_code=400, detail="Game is not active")
+
+    # Force end the game
+    game.state = GameState.RESULTS
+    from .game_logic import end_game_timer
+
+    end_game_timer(game)
+
+    # End all player timers that are still running
+    for player, timer in game.player_timers.items():
+        if timer.started_at and not timer.ended_at:
+            timer.ended_at = datetime.now()
+            timer.duration_seconds = (timer.ended_at - timer.started_at).total_seconds()
+
+    await broadcast_game_state(room_id, state=GameState.RESULTS)
+    await broadcast_game_update(room_id, {"type": "game_over", "final_state": game.model_dump(exclude={"host_secret"})})
+
+    logger.info(f"Game manually ended: {room_id}")
+    return {
+        "success": True,
+        "state": GameState.RESULTS.value,
+        "player_timers": {k: v.to_dict() for k, v in game.player_timers.items()} if game.player_timers else {},
+        "game_duration_seconds": game.game_duration_seconds,
+    }
 
 
 @router.post("/game/change_role/{room_id}")
@@ -457,4 +529,6 @@ async def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
         "player_coins": game.player_coins,
         "total_completed": get_total_completed_coins(game),
         "tails_remaining": get_tails_count(game),
+        "player_timers": game.player_timers,
+        "game_duration_seconds": game.game_duration_seconds,
     }

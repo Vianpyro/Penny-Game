@@ -13,6 +13,27 @@ class GameState(Enum):
     RESULTS = "results"
 
 
+class PlayerTimer(BaseModel):
+    """Timer tracking for individual players"""
+
+    player: str
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+    duration_seconds: Optional[float] = None
+
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            "player": self.player,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "ended_at": self.ended_at.isoformat() if self.ended_at else None,
+            "duration_seconds": self.duration_seconds,
+        }
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
+
+
 class PennyGame(BaseModel):
     room_id: str
     players: List[str] = Field(default_factory=list)
@@ -23,11 +44,14 @@ class PennyGame(BaseModel):
     created_at: datetime
     last_active_at: datetime
     started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None  # New: Game end time
     turn_timestamps: List[datetime] = Field(default_factory=list)
     state: GameState = GameState.LOBBY
     batch_size: int = MAX_PENNIES  # Default batch size
     player_coins: Dict[str, List[bool]] = Field(default_factory=dict)  # Coins each player has
     sent_coins: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)  # Tracking sent batches
+    player_timers: Dict[str, PlayerTimer] = Field(default_factory=dict)  # New: Player timers
+    game_duration_seconds: Optional[float] = None  # New: Total game duration
 
     class Config:
         use_enum_values = True
@@ -84,6 +108,7 @@ class GameStateResponse(BaseModel):
     created_at: datetime
     last_active_at: datetime
     started_at: Optional[datetime]
+    ended_at: Optional[datetime]
     turn_timestamps: List[datetime]
     state: str
     batch_size: int
@@ -91,6 +116,8 @@ class GameStateResponse(BaseModel):
     sent_coins: Dict[str, List[Dict[str, Any]]]
     total_completed: int
     tails_remaining: int
+    player_timers: Dict[str, PlayerTimer]
+    game_duration_seconds: Optional[float]
 
     class Config:
         json_encoders = {datetime: lambda v: v.isoformat() if v else None}
@@ -105,6 +132,8 @@ class ActionResponse(BaseModel):
     sent_coins: Dict[str, List[Dict[str, Any]]]
     total_completed: int
     state: str
+    player_timers: Dict[str, PlayerTimer]  # New: Include timer data
+    game_duration_seconds: Optional[float]  # New: Include game duration
 
     class Config:
         json_encoders = {datetime: lambda v: v.isoformat() if v else None}
@@ -139,6 +168,8 @@ class ActionMessage(WebSocketMessage):
     total_completed: int
     game_over: bool
     state: str
+    player_timers: Dict[str, PlayerTimer]  # New: Include timer data
+    game_duration_seconds: Optional[float]  # New: Include game duration
 
     class Config:
         json_encoders = {datetime: lambda v: v.isoformat() if v else None}
