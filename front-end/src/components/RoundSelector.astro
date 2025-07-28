@@ -34,11 +34,6 @@ const batchOptions = [
                     <div class="batch-size-number">{opt.size}</div>
                     <div class="round-title">{opt.title}</div>
                     <div class="round-description">{opt.description}</div>
-                    <div class="batch-insight">
-                        {opt.size === 12 && "⏳ Beaucoup d'attente"}
-                        {opt.size === 4 && '⚖️ Équilibre attente/flux'}
-                        {opt.size === 1 && '⚡ Flux optimal'}
-                    </div>
                 </div>
             ))
         }
@@ -59,25 +54,5 @@ const batchOptions = [
         font-weight: 900;
         color: #3498db;
         margin-bottom: 5px;
-    }
-
-    .batch-insight {
-        margin-top: 8px;
-        padding: 5px 10px;
-        background: rgb(52 152 219 / 10%);
-        border-radius: 15px;
-        font-size: 0.8em;
-        font-weight: 600;
-        color: #2980b9;
-        text-align: center;
-    }
-
-    .round-option:hover .batch-insight {
-        background: rgb(52 152 219 / 20%);
-    }
-
-    .round-option.active .batch-insight {
-        background: rgb(52 152 219 / 30%);
-        color: #1f4e79;
     }
 </style>
