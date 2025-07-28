@@ -511,6 +511,40 @@ function setupResultsButtons() {
     }
 }
 
+function setupDebugButtons() {
+    const endGameBtn = document.getElementById('endGameBtn')
+
+    if (endGameBtn) {
+        endGameBtn.addEventListener('click', async () => {
+            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+            const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+
+            if (!window.isHost) {
+                alert("Seul l'hôte peut terminer la partie")
+                return
+            }
+
+            if (!apiUrl || !gameCode) return
+
+            try {
+                endGameBtn.disabled = true
+                endGameBtn.textContent = 'Arrêt...'
+
+                await fetch(`${apiUrl}/game/end/${gameCode}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                })
+            } catch (error) {
+                console.error('Error ending game:', error)
+                alert('Erreur lors de l\'arrêt de la partie')
+            } finally {
+                endGameBtn.disabled = false
+                endGameBtn.textContent = '⏹️ Terminer la partie (Test)'
+            }
+        })
+    }
+}
+
 export function connectWebSocket(apiUrl, roomId, username) {
     if (!apiUrl || !roomId || !username) {
         console.error('Missing parameters for WebSocket connection')
