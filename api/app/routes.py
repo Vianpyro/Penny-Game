@@ -62,9 +62,6 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
     now = datetime.now()
     game.last_active_at = now
 
-    # Determine current game state
-    current_state = _determine_game_state(game)
-
     # Handle host joining
     if game.host is None:
         game.host = username
@@ -442,13 +439,3 @@ async def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
 
     logger.info(f"Role changed: {username} -> {new_role} in game {room_id}")
     return GameResponseBuilder.build_game_state_response(game)
-
-
-def _determine_game_state(game) -> GameState:
-    """Determine the current state of a game based on its data"""
-    if game.started_at is None:
-        return GameState.LOBBY
-    elif len(game.player_coins) == 0 or not any(game.player_coins.values()):
-        return GameState.RESULTS
-    else:
-        return GameState.ACTIVE
