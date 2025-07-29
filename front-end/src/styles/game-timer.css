@@ -62,7 +62,6 @@
 }
 
 @keyframes pulse-timer {
-
     0%,
     100% {
         box-shadow: 0 0 0 0 rgb(241 196 15 / 40%);

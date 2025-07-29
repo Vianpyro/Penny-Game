@@ -536,7 +536,7 @@ function setupDebugButtons() {
                 })
             } catch (error) {
                 console.error('Error ending game:', error)
-                alert('Erreur lors de l\'arrêt de la partie')
+                alert("Erreur lors de l'arrêt de la partie")
             } finally {
                 endGameBtn.disabled = false
                 endGameBtn.textContent = '⏹️ Terminer la partie (Test)'
