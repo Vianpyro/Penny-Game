@@ -1,7 +1,7 @@
 // front-end/public/scripts/websocket.js
-// WebSocket logic for Penny Game with timer support - REFACTORED VERSION
+// WebSocket logic for Penny Game with timer support and better host handling
 
-import { renderPlayers, renderSpectators } from './dom.js'
+import { renderPlayers, renderSpectators, updateRoundConfiguration, updatePlayerCountDisplay } from './dom.js'
 import { addDnDEvents } from './dnd.js'
 import { renderGameBoard, stopRealTimeTimers } from './game-board.js'
 import { showNotification } from './utility.js'
@@ -36,14 +36,20 @@ export function handleWSMessage(data) {
             case 'game_started':
                 handleGameStarted(msg)
                 break
+            case 'round_started':
+                handleRoundStarted(msg)
+                break
+            case 'round_complete':
+                handleRoundComplete(msg)
+                break
             case 'game_over':
                 handleGameOver(msg)
                 break
             case 'game_reset':
                 handleGameReset(msg)
                 break
-            case 'batch_size_update':
-                handleBatchSizeUpdate(msg)
+            case 'round_config_update':
+                handleRoundConfigUpdate(msg)
                 break
             case 'activity':
                 handleActivityUpdate(msg)
@@ -73,22 +79,47 @@ function handleWelcomeMessage(msg) {
         // Update global game state immediately
         window.gameState = gameState
 
-        // Set user role and host status
-        window.isHost = gameState.host === window.currentUsername
-        window.userRole = gameState.players.includes(window.currentUsername) ? 'player' : 'spectator'
+        // CRITICAL: Set user role and host status properly
+        const currentUsername = window.currentUsername
+        window.isHost = gameState.host === currentUsername
+        window.userRole = gameState.players.includes(currentUsername) ? 'player' : 'spectator'
+
+        console.log('Welcome message - Host status:', {
+            currentUsername,
+            gameHost: gameState.host,
+            isHost: window.isHost,
+            userRole: window.userRole,
+        })
+
+        // Trigger role update event
+        window.dispatchEvent(new CustomEvent('userrolechange'))
 
         // Update user lists with empty activity (will be updated by activity message)
         const emptyActivity = {}
         renderPlayers(gameState.players, gameState.host, gameState.spectators, emptyActivity, addDnDEvents)
         renderSpectators(gameState.spectators, gameState.host, emptyActivity, addDnDEvents)
 
-        // Update batch size display
-        updateBatchSizeDisplay(gameState.batch_size)
+        // Update round configuration display
+        if (gameState.round_type && gameState.required_players) {
+            updateRoundConfiguration(
+                gameState.round_type,
+                gameState.required_players,
+                gameState.selected_batch_size,
+                getTotalRounds(gameState.round_type)
+            )
+        }
+
+        // Update player count display
+        updatePlayerCountDisplay()
 
         // Update game board if in active state
         if (gameState.state === 'active') {
             ViewManager.switchToGameView()
             renderGameBoard(gameState)
+        } else if (gameState.state === 'round_complete') {
+            ViewManager.switchToRoundCompleteView()
+        } else if (gameState.state === 'results') {
+            ViewManager.switchToResultsView()
         }
     }
 }
@@ -115,6 +146,9 @@ function handleUserJoined(msg) {
         window.gameState.spectators = msg.spectators
     }
 
+    // Update player count display
+    updatePlayerCountDisplay()
+
     // Only show notification for new players joining, not for role changes
     if (!msg.note) {
         const roleText = msg.role === 'player' ? 'joueur' : 'spectateur'
@@ -126,12 +160,51 @@ function handleActivityUpdate(msg) {
     renderPlayers(msg.players, msg.host, msg.spectators, msg.activity, addDnDEvents)
     renderSpectators(msg.spectators, msg.host, msg.activity, addDnDEvents)
 
-    // Update global state
+    // Update global state and host status
     if (window.gameState) {
         window.gameState.players = msg.players
         window.gameState.spectators = msg.spectators
         window.gameState.host = msg.host
     }
+
+    // Update host status if needed
+    const wasHost = window.isHost
+    window.isHost = msg.host === window.currentUsername
+
+    if (wasHost !== window.isHost) {
+        console.log('Host status changed:', { wasHost, isHost: window.isHost })
+        window.dispatchEvent(new CustomEvent('userrolechange'))
+    }
+
+    // Update player count display
+    updatePlayerCountDisplay()
+}
+
+function handleRoundConfigUpdate(msg) {
+    console.log('Round config update received:', msg)
+
+    // Update global game state
+    if (window.gameState) {
+        window.gameState.round_type = msg.round_type
+        window.gameState.required_players = msg.required_players
+        window.gameState.selected_batch_size = msg.selected_batch_size
+    }
+
+    // Update UI
+    updateRoundConfiguration(msg.round_type, msg.required_players, msg.selected_batch_size, msg.total_rounds)
+
+    // Update player count display
+    updatePlayerCountDisplay()
+
+    // Show notification
+    const roundTypeText =
+        {
+            single: '1 manche',
+            two_rounds: '2 manches',
+            three_rounds: '3 manches',
+        }[msg.round_type] || msg.round_type
+
+    showNotification(`⚙️ Configuration: ${roundTypeText}, ${msg.required_players} joueurs`, 'info')
 }
 
 function handleGameStateChange(msg) {
@@ -142,6 +215,10 @@ function handleGameStateChange(msg) {
             break
         case 'active':
             ViewManager.switchToGameView()
+            break
+        case 'round_complete':
+            ViewManager.switchToRoundCompleteView()
+            stopRealTimeTimers() // Stop timers when round ends
             break
         case 'results':
             ViewManager.switchToResultsView()
@@ -160,6 +237,7 @@ function handleActionMade(msg) {
         total_completed: msg.total_completed,
         tails_remaining: calculateTailsRemaining(msg.player_coins),
         state: msg.state,
+        current_round: msg.current_round,
         player_timers: msg.player_timers || {},
         game_duration_seconds: msg.game_duration_seconds,
         started_at: window.gameState?.started_at,
@@ -195,6 +273,9 @@ function handleGameStarted(msg) {
     const gameState = {
         players: msg.players,
         batch_size: msg.batch_size,
+        current_round: msg.current_round,
+        total_rounds: msg.total_rounds,
+        round_type: msg.round_type,
         player_coins: msg.player_coins,
         sent_coins: msg.sent_coins || {},
         total_completed: msg.total_completed,
@@ -202,26 +283,74 @@ function handleGameStarted(msg) {
         state: 'active',
         player_timers: msg.player_timers || {},
         game_duration_seconds: null,
-        started_at: new Date().toISOString(), // Set start time for real-time timer
+        started_at: new Date().toISOString(),
+        ended_at: null,
+    }
+
+    renderGameBoard(gameState)
+    window.gameState = { ...window.gameState, ...gameState }
+
+    const roundText = msg.total_rounds > 1 ? ` (Manche ${msg.current_round}/${msg.total_rounds})` : ''
+    showNotification(`🎮 Partie démarrée${roundText} ! Travaillez ensemble !`, 'success')
+}
+
+function handleRoundStarted(msg) {
+    ViewManager.switchToGameView()
+
+    const gameState = {
+        ...window.gameState,
+        batch_size: msg.batch_size,
+        current_round: msg.current_round,
+        total_rounds: msg.total_rounds,
+        player_coins: msg.player_coins,
+        sent_coins: msg.sent_coins || {},
+        total_completed: msg.total_completed,
+        tails_remaining: msg.tails_remaining,
+        state: 'active',
+        player_timers: msg.player_timers || {},
+        game_duration_seconds: null,
+        started_at: new Date().toISOString(),
         ended_at: null,
     }
 
     renderGameBoard(gameState)
     window.gameState = gameState
-    showNotification('🎮 La partie a commencé ! Travaillez ensemble !', 'success')
+    showNotification(`🚀 Manche ${msg.current_round}/${msg.total_rounds} démarrée !`, 'success')
+}
+
+function handleRoundComplete(msg) {
+    ViewManager.switchToRoundCompleteView()
+    stopRealTimeTimers()
+
+    // Update round complete screen
+    updateRoundCompleteDisplay(msg)
+
+    const nextText = msg.next_round ? ` Manche ${msg.next_round} disponible !` : ' Toutes les manches terminées !'
+    showNotification(`✅ Manche ${msg.round_number} terminée !${nextText}`, 'success')
 }
 
 function handleGameOver(msg) {
     ViewManager.switchToResultsView()
-    stopRealTimeTimers() // Stop all timers when game ends
+    stopRealTimeTimers()
     showNotification('🎯 Partie terminée ! Félicitations à tous !', 'success')
     updateResultsDisplay(msg.final_state)
 }
 
 function handleGameReset(msg) {
     ViewManager.switchToLobbyView()
-    stopRealTimeTimers() // Stop all timers when game resets
-    updateBatchSizeDisplay(msg.batch_size)
+    stopRealTimeTimers()
+
+    // Update round configuration if provided
+    if (msg.round_type && msg.required_players !== undefined) {
+        updateRoundConfiguration(
+            msg.round_type,
+            msg.required_players,
+            msg.selected_batch_size,
+            getTotalRounds(msg.round_type)
+        )
+    }
+
+    updatePlayerCountDisplay()
     showNotification('🔄 La partie a été réinitialisée', 'info')
 
     // Clear timer data from global state
@@ -230,18 +359,8 @@ function handleGameReset(msg) {
         window.gameState.game_duration_seconds = null
         window.gameState.started_at = null
         window.gameState.ended_at = null
+        window.gameState.current_round = 0
     }
-}
-
-function handleBatchSizeUpdate(msg) {
-    updateBatchSizeDisplay(msg.batch_size)
-
-    // Update global game state
-    if (window.gameState) {
-        window.gameState.batch_size = msg.batch_size
-    }
-
-    showNotification(`📦 Taille de lot changée: ${msg.batch_size}`, 'info')
 }
 
 function handleUserStatusChange(msg) {
@@ -252,24 +371,51 @@ function handleUserStatusChange(msg) {
 }
 
 function handleHostDisconnected(msg) {
-    stopRealTimeTimers() // Stop timers if host disconnects
+    stopRealTimeTimers()
     alert("La salle a été fermée car l'hôte a quitté.")
     window.location.reload()
 }
 
-function updateBatchSizeDisplay(batchSize) {
-    // Update batch size in round selector
-    const roundOptions = document.querySelectorAll('.round-option')
-    roundOptions.forEach((option, index) => {
-        const expectedSize = [12, 4, 1][index]
-        option.classList.toggle('active', expectedSize === batchSize)
-    })
+function updateRoundCompleteDisplay(msg) {
+    // Update round complete screen with round results
+    const roundCompleteSection = document.getElementById('roundComplete')
+    if (!roundCompleteSection) return
 
-    // Update any batch size displays
-    const batchDisplays = document.querySelectorAll('.batch-size-display')
-    batchDisplays.forEach((display) => {
-        display.textContent = batchSize
-    })
+    const completedRoundNumber = document.getElementById('completedRoundNumber')
+    const completedBatchSize = document.getElementById('completedBatchSize')
+    const completedRoundTime = document.getElementById('completedRoundTime')
+    const nextRoundSection = document.getElementById('nextRoundSection')
+    const gameCompleteSection = document.getElementById('gameCompleteSection')
+    const nextRoundNumber = document.getElementById('nextRoundNumber')
+    const nextBatchSize = document.getElementById('nextBatchSize')
+    const nextRoundBtn = document.getElementById('nextRoundBtn')
+
+    if (completedRoundNumber) completedRoundNumber.textContent = msg.round_number
+    if (completedBatchSize) completedBatchSize.textContent = msg.round_result?.batch_size || 'N/A'
+    if (completedRoundTime && msg.round_result?.game_duration_seconds) {
+        completedRoundTime.textContent = TimeUtils.formatTime(msg.round_result.game_duration_seconds)
+    }
+
+    if (msg.next_round && msg.batch_size) {
+        // Show next round section
+        if (nextRoundSection) nextRoundSection.style.display = 'block'
+        if (gameCompleteSection) gameCompleteSection.style.display = 'none'
+
+        if (nextRoundNumber) nextRoundNumber.textContent = msg.next_round
+        if (nextBatchSize) nextBatchSize.textContent = msg.batch_size
+        if (nextRoundBtn) {
+            nextRoundBtn.disabled = !window.isHost
+            const nextRoundButtonNumber = nextRoundBtn.querySelector('#nextRoundButtonNumber')
+            if (nextRoundButtonNumber) nextRoundButtonNumber.textContent = msg.next_round
+        }
+    } else {
+        // Show game complete section
+        if (nextRoundSection) nextRoundSection.style.display = 'none'
+        if (gameCompleteSection) gameCompleteSection.style.display = 'block'
+    }
+
+    // Show round complete screen
+    roundCompleteSection.style.display = 'block'
 }
 
 function calculateTailsRemaining(playerCoins) {
@@ -278,6 +424,19 @@ function calculateTailsRemaining(playerCoins) {
         total += coins.filter((coin) => !coin).length
     })
     return total
+}
+
+function getTotalRounds(roundType) {
+    switch (roundType) {
+        case 'single':
+            return 1
+        case 'two_rounds':
+            return 2
+        case 'three_rounds':
+            return 3
+        default:
+            return 1
+    }
 }
 
 function updateResultsDisplay(finalState) {
@@ -312,85 +471,16 @@ function updateResultsDisplay(finalState) {
         })
     }
 
-    // Update statistics
-    const statsGrid = document.getElementById('statsGrid')
-    if (statsGrid && finalState.players) {
-        statsGrid.innerHTML = ''
-
-        // Add batch size info
-        const batchCard = document.createElement('div')
-        batchCard.className = 'stat-card'
-        batchCard.innerHTML = `
-            <div class="stat-value">${finalState.batch_size}</div>
-            <div class="stat-label">Taille de lot</div>
-        `
-        statsGrid.appendChild(batchCard)
-
-        // Add total completed
-        const completedCard = document.createElement('div')
-        completedCard.className = 'stat-card'
-        completedCard.innerHTML = `
-            <div class="stat-value">${finalState.total_completed || 0}/12</div>
-            <div class="stat-label">Pièces terminées</div>
-        `
-        statsGrid.appendChild(completedCard)
-
-        // Add player count
-        const playersCard = document.createElement('div')
-        playersCard.className = 'stat-card'
-        playersCard.innerHTML = `
-            <div class="stat-value">${finalState.players.length}</div>
-            <div class="stat-label">Joueurs</div>
-        `
-        statsGrid.appendChild(playersCard)
-
-        // Add efficiency insight
-        if (finalState.game_duration_seconds && finalState.game_duration_seconds > 0) {
-            const completedCoins = finalState.total_completed || 0
-            const efficiency = Math.round((completedCoins / finalState.game_duration_seconds) * 60) // coins per minute
-
-            const efficiencyCard = document.createElement('div')
-            efficiencyCard.className = 'stat-card'
-            efficiencyCard.innerHTML = `
-                <div class="stat-value">${efficiency}</div>
-                <div class="stat-label">Pièces/min</div>
-            `
-            statsGrid.appendChild(efficiencyCard)
-        }
-
-        // Add average player time using TimeUtils
-        if (finalState.player_timers) {
-            const validTimes = Object.values(finalState.player_timers)
-                .filter((timer) => timer.duration_seconds !== null && timer.duration_seconds !== undefined)
-                .map((timer) => timer.duration_seconds)
-
-            if (validTimes.length > 0) {
-                const avgTime = validTimes.reduce((sum, time) => sum + time, 0) / validTimes.length
-
-                const avgCard = document.createElement('div')
-                avgCard.className = 'stat-card'
-                avgCard.innerHTML = `
-                    <div class="stat-value">${TimeUtils.formatTime(avgTime)}</div>
-                    <div class="stat-label">Temps moyen</div>
-                `
-                statsGrid.appendChild(avgCard)
-            }
-        }
-    }
-
-    // Show action buttons for hosts
+    // Update statistics and show action buttons for hosts
     const resultsActions = document.getElementById('resultsActions')
     if (resultsActions && window.isHost) {
         resultsActions.style.display = ''
-        // Use GameActions to setup buttons instead of duplicate code
         GameActions.setupStandardButtons()
     }
 
-    // Show debug actions for hosts during development
     const debugActions = document.getElementById('debugActions')
     if (debugActions && window.isHost) {
         debugActions.style.display = ''
-        // GameActions.setupStandardButtons() already handles the debug button
     }
 }
 
@@ -421,7 +511,7 @@ export function connectWebSocket(apiUrl, roomId, username) {
             return // Don't reload, handleHostDisconnected will handle this
         }
 
-        stopRealTimeTimers() // Stop timers on connection loss
+        stopRealTimeTimers()
         showNotification('❌ Connexion perdue', 'error')
 
         // Try to reconnect after a delay

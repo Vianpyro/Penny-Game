@@ -2,57 +2,337 @@
 import '../styles/main.css'
 import '../styles/round-selector.css'
 
-const batchOptions = [
+const roundOptions = [
     {
-        size: 12,
-        title: 'Lot de 12',
-        description: 'Passer TOUTES les 12 pièces en une fois (production en lots)',
+        number: 1,
+        title: '1 Manche',
+        description: "L'hôte choisit quelle manche jouer (12, 4, ou 1)",
+        type: 'single',
     },
     {
-        size: 4,
-        title: 'Lot de 4',
-        description: 'Passer les pièces par groupes de 4 (production hybride)',
+        number: 2,
+        title: '2 Manches',
+        description: 'Jouer les manches extrêmes : Lot de 12 puis Lot de 1',
+        type: 'two_rounds',
     },
     {
-        size: 1,
-        title: 'Lot de 1',
-        description: 'Passer les pièces une par une (flux continu)',
+        number: 3,
+        title: '3 Manches',
+        description: 'Jouer toutes les manches : 12, puis 4, puis 1 (par défaut)',
+        type: 'three_rounds',
     },
 ]
 ---
 
 <div class="round-selector-container">
-    <h3>📦 Taille des Lots</h3>
-    <p class="batch-description">
-        La taille de lot détermine combien de pièces peuvent être envoyées à la fois. Plus le lot est petit, plus le
-        flux est fluide !
+    <h3>🎯 Configuration des Manches</h3>
+    <p class="round-description">
+        Choisissez combien de manches jouer pour comparer l'impact des différentes tailles de lot.
     </p>
-    <div class="round-selector" id="roundSelector">
+
+    <!-- Round count selection -->
+    <div class="round-count-selector" id="roundCountSelector">
         {
-            batchOptions.map((opt, idx) => (
-                <div class={`round-option${idx === 0 ? ' active' : ''}`} data-round={idx + 1} data-size={opt.size}>
-                    <div class="batch-size-number">{opt.size}</div>
+            roundOptions.map((opt, idx) => (
+                <div
+                    class={`round-count-option${idx === 2 ? ' active' : ''}`}
+                    data-type={opt.type}
+                    data-rounds={opt.number}
+                >
+                    <div class="round-number">{opt.number}</div>
                     <div class="round-title">{opt.title}</div>
                     <div class="round-description">{opt.description}</div>
                 </div>
             ))
         }
     </div>
+
+    <!-- Single round batch size selection (hidden by default) -->
+    <div class="single-batch-selector" id="singleBatchSelector" style="display: none;">
+        <h4>📦 Choisir la Taille de Lot</h4>
+        <div class="batch-size-options">
+            <div class="batch-option active" data-size="12">
+                <div class="batch-size-number">12</div>
+                <div class="batch-title">Lot de 12</div>
+                <div class="batch-description">Toutes les pièces d'un coup</div>
+            </div>
+            <div class="batch-option" data-size="4">
+                <div class="batch-size-number">4</div>
+                <div class="batch-title">Lot de 4</div>
+                <div class="batch-description">Par groupes de 4</div>
+            </div>
+            <div class="batch-option" data-size="1">
+                <div class="batch-size-number">1</div>
+                <div class="batch-title">Lot de 1</div>
+                <div class="batch-description">Une pièce à la fois</div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
-    .batch-description {
-        font-size: 0.95em;
-        color: #7f8c8d;
-        margin-bottom: 15px;
-        text-align: center;
-        font-style: italic;
+    .round-count-selector {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
     }
 
-    .batch-size-number {
-        font-size: 2em;
+    .round-count-option {
+        background: rgb(255 255 255 / 90%);
+        border: 2px solid #ecf0f1;
+        border-radius: 12px;
+        cursor: pointer;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .round-count-option:hover {
+        border-color: #3498db;
+        box-shadow: 0 8px 20px rgb(52 152 219 / 20%);
+        transform: translateY(-2px);
+    }
+
+    .round-count-option.active {
+        background: rgb(52 152 219 / 10%);
+        border-color: #3498db;
+        box-shadow: 0 8px 20px rgb(52 152 219 / 30%);
+        transform: translateY(-2px);
+    }
+
+    .round-count-option.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .round-number {
+        font-size: 2.5em;
         font-weight: 900;
         color: #3498db;
         margin-bottom: 5px;
+    }
+
+    .round-title {
+        color: #2c3e50;
+        font-size: 1.3em;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .round-description {
+        color: #7f8c8d;
+        font-size: 0.9em;
+        line-height: 1.4;
+    }
+
+    .single-batch-selector {
+        background: rgb(241 196 15 / 10%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #f1c40f;
+    }
+
+    .single-batch-selector h4 {
+        margin: 0 0 15px;
+        color: #2c3e50;
+        font-size: 1.1em;
+        font-weight: 700;
+    }
+
+    .batch-size-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+
+    .batch-option {
+        background: rgb(255 255 255 / 80%);
+        border: 2px solid rgb(241 196 15 / 30%);
+        border-radius: 10px;
+        cursor: pointer;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .batch-option:hover {
+        border-color: #f39c12;
+        box-shadow: 0 4px 12px rgb(243 156 18 / 20%);
+        transform: translateY(-1px);
+    }
+
+    .batch-option.active {
+        background: rgb(243 156 18 / 10%);
+        border-color: #f39c12;
+        box-shadow: 0 4px 12px rgb(243 156 18 / 30%);
+        transform: translateY(-1px);
+    }
+
+    .batch-size-number {
+        font-size: 1.8em;
+        font-weight: 900;
+        color: #f39c12;
+        margin-bottom: 5px;
+    }
+
+    .batch-title {
+        color: #2c3e50;
+        font-size: 1em;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .batch-option .batch-description {
+        color: #7f8c8d;
+        font-size: 0.85em;
+        line-height: 1.3;
+    }
+
+    .player-count-section {
+        background: rgb(46 204 113 / 10%);
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 4px solid #27ae60;
+    }
+
+    .player-count-section h4 {
+        margin: 0 0 15px;
+        color: #2c3e50;
+        font-size: 1.1em;
+        font-weight: 700;
+    }
+
+    .player-count-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .player-count-btn {
+        background: #fff;
+        border: 2px solid #27ae60;
+        border-radius: 8px;
+        color: #27ae60;
+        cursor: pointer;
+        flex: 1;
+        font-weight: 600;
+        min-width: fit-content;
+        padding: 10px 15px;
+        transition: all 0.3s ease;
+    }
+
+    .player-count-btn:hover,
+    .player-count-btn.active {
+        background: #27ae60;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgb(39 174 96 / 30%);
+    }
+
+    .player-count-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .player-count-note {
+        margin: 0;
+        color: #27ae60;
+        font-size: 0.9em;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .host-only-indicator {
+        background: rgb(155 89 182 / 10%);
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 15px;
+        border-left: 3px solid #9b59b6;
+        font-size: 0.9em;
+        color: #7f8c8d;
+        text-align: center;
+    }
+
+    .spectator-view {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+
+    @media screen and (max-width: 768px) {
+        .round-count-selector {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .round-count-option {
+            padding: 15px;
+        }
+
+        .round-number {
+            font-size: 2em;
+        }
+
+        .round-title {
+            font-size: 1.2em;
+        }
+
+        .batch-size-options {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .batch-option {
+            padding: 12px;
+        }
+
+        .batch-size-number {
+            font-size: 1.5em;
+        }
+
+        .player-count-buttons {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .player-count-btn {
+            width: 100%;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .round-count-option {
+            padding: 12px;
+        }
+
+        .round-number {
+            font-size: 1.8em;
+        }
+
+        .round-title {
+            font-size: 1.1em;
+        }
+
+        .round-description,
+        .batch-description {
+            font-size: 0.85em;
+        }
+
+        .single-batch-selector,
+        .player-count-section {
+            padding: 15px;
+        }
+
+        .batch-option {
+            padding: 10px;
+        }
+
+        .batch-size-number {
+            font-size: 1.3em;
+        }
     }
 </style>

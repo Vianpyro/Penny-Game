@@ -1,30 +1,31 @@
 ---
 import '../styles/main.css'
 import '../styles/player-selector.css'
-
-import { MAX_PLAYERS } from '../config.js'
 ---
 
 <div class="player-selector">
-    <h3>👥 Nombre de Joueurs</h3>
-    <div class="player-buttons" id="playerButtons">
-        {
-            Array.from({ length: MAX_PLAYERS - 1 }, (_, i) => {
-                const count = i + 2
-                return (
-                    <button
-                        class={`player-count-btn${count === MAX_PLAYERS ? ' active' : ''}`}
-                        data-count={count}
-                        disabled
-                    >
-                        {count} Joueurs
-                    </button>
-                )
-            })
-        }
-    </div>
     <div class="player-list">
         <h3>👋 Liste des Joueurs</h3>
+        
+        <!-- Player count selection (host only) -->
+        <div class="player-count-section" id="playerCountSection">
+            <h4>👥 Nombre de Joueurs Requis</h4>
+            <div class="player-count-buttons" id="playerCountButtons">
+                <button class="player-count-btn" data-count="2">2</button>
+                <button class="player-count-btn" data-count="3">3</button>
+                <button class="player-count-btn" data-count="4">4</button>
+                <button class="player-count-btn active" data-count="5">5</button>
+            </div>
+        </div>
+
+        <div class="current-count-display" id="currentCountDisplay">
+            <span class="count-info">
+                <span id="currentPlayerCount">0</span>/<span id="requiredPlayerCount">5</span> joueurs
+            </span>
+            <div class="count-status" id="countStatus">
+                <span class="status-text">En attente de joueurs...</span>
+            </div>
+        </div>
         <ul class="user-list" id="playerList">
             <!-- Player list will be rendered by JS -->
         </ul>
@@ -36,3 +37,311 @@ import { MAX_PLAYERS } from '../config.js'
         </ul>
     </div>
 </div>
+
+<style>
+    .player-count-section {
+        background: rgb(46 204 113 / 10%);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-left: 4px solid #27ae60;
+    }
+
+    .player-count-section h4 {
+        margin: 0 0 12px;
+        color: #2c3e50;
+        font-size: 1em;
+        font-weight: 700;
+    }
+
+    .player-count-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .player-count-btn {
+        background: #fff;
+        border: 2px solid #27ae60;
+        border-radius: 6px;
+        color: #27ae60;
+        cursor: pointer;
+        flex: 1;
+        font-weight: 600;
+        min-width: 35px;
+        padding: 8px 12px;
+        transition: all 0.3s ease;
+        font-size: 0.9em;
+    }
+
+    .player-count-btn:hover:not(:disabled),
+    .player-count-btn.active {
+        background: #27ae60;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgb(39 174 96 / 30%);
+    }
+
+    .player-count-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .current-count-display {
+        background: rgb(52 152 219 / 10%);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        text-align: center;
+        border: 2px solid rgb(52 152 219 / 20%);
+    }
+
+    .count-info {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: #2c3e50;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .count-info #currentPlayerCount {
+        color: #3498db;
+    }
+
+    .count-info #requiredPlayerCount {
+        color: #27ae60;
+    }
+
+    .count-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .status-text {
+        font-size: 0.9em;
+        font-weight: 600;
+        color: #7f8c8d;
+    }
+
+    .count-status.ready {
+        color: #27ae60;
+    }
+
+    .count-status.ready .status-text {
+        color: #27ae60;
+    }
+
+    .count-status.waiting {
+        color: #f39c12;
+    }
+
+    .count-status.waiting .status-text {
+        color: #f39c12;
+    }
+
+    .count-status.insufficient {
+        color: #e74c3c;
+    }
+
+    .count-status.insufficient .status-text {
+        color: #e74c3c;
+    }
+
+    .count-status.ready::before {
+        content: '✅';
+        font-size: 1.2em;
+    }
+
+    .count-status.waiting::before {
+        content: '⏳';
+        font-size: 1.2em;
+    }
+
+    .count-status.insufficient::before {
+        content: '❌';
+        font-size: 1.2em;
+    }
+
+    @media screen and (max-width: 768px) {
+        .player-count-section {
+            padding: 12px;
+        }
+
+        .player-count-section h4 {
+            font-size: 0.95em;
+            margin-bottom: 10px;
+        }
+
+        .player-count-buttons {
+            gap: 6px;
+        }
+
+        .player-count-btn {
+            padding: 6px 10px;
+            font-size: 0.85em;
+            min-width: 30px;
+        }
+
+        .current-count-display {
+            padding: 12px;
+        }
+
+        .count-info {
+            font-size: 1.1em;
+            margin-bottom: 6px;
+        }
+
+        .status-text {
+            font-size: 0.85em;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .player-count-section {
+            padding: 10px;
+        }
+
+        .player-count-buttons {
+            gap: 5px;
+        }
+
+        .player-count-btn {
+            padding: 5px 8px;
+            font-size: 0.8em;
+            min-width: 28px;
+        }
+
+        .current-count-display {
+            padding: 10px;
+        }
+
+        .count-info {
+            font-size: 1em;
+        }
+
+        .status-text {
+            font-size: 0.8em;
+        }
+
+        .count-status {
+            flex-direction: column;
+            gap: 4px;
+        }
+    }
+</style>
+
+<style>
+    .current-count-display {
+        background: rgb(52 152 219 / 10%);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        text-align: center;
+        border: 2px solid rgb(52 152 219 / 20%);
+    }
+
+    .count-info {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: #2c3e50;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .count-info #currentPlayerCount {
+        color: #3498db;
+    }
+
+    .count-info #requiredPlayerCount {
+        color: #27ae60;
+    }
+
+    .count-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .status-text {
+        font-size: 0.9em;
+        font-weight: 600;
+        color: #7f8c8d;
+    }
+
+    .count-status.ready {
+        color: #27ae60;
+    }
+
+    .count-status.ready .status-text {
+        color: #27ae60;
+    }
+
+    .count-status.waiting {
+        color: #f39c12;
+    }
+
+    .count-status.waiting .status-text {
+        color: #f39c12;
+    }
+
+    .count-status.insufficient {
+        color: #e74c3c;
+    }
+
+    .count-status.insufficient .status-text {
+        color: #e74c3c;
+    }
+
+    .count-status.ready::before {
+        content: '✅';
+        font-size: 1.2em;
+    }
+
+    .count-status.waiting::before {
+        content: '⏳';
+        font-size: 1.2em;
+    }
+
+    .count-status.insufficient::before {
+        content: '❌';
+        font-size: 1.2em;
+    }
+
+    @media screen and (max-width: 768px) {
+        .current-count-display {
+            padding: 12px;
+        }
+
+        .count-info {
+            font-size: 1.1em;
+            margin-bottom: 6px;
+        }
+
+        .status-text {
+            font-size: 0.85em;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .current-count-display {
+            padding: 10px;
+        }
+
+        .count-info {
+            font-size: 1em;
+        }
+
+        .status-text {
+            font-size: 0.8em;
+        }
+
+        .count-status {
+            flex-direction: column;
+            gap: 4px;
+        }
+    }
+</style>
