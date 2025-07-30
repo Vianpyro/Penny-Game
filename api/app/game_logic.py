@@ -99,7 +99,7 @@ def start_player_timer(game: PennyGame, player: str):
 
 
 def end_player_timer(game: PennyGame, player: str):
-    """End timer for a player when they send their last coin"""
+    """End timer for a player when they send their last coin and have no more coins left"""
     if not hasattr(game, "player_timers") or game.player_timers is None:
         return
 
@@ -107,14 +107,18 @@ def end_player_timer(game: PennyGame, player: str):
         return
 
     timer = game.player_timers[player]
-    if timer.started_at and timer.ended_at is None:
+    # Only end timer if player has no more coins and timer hasn't already ended
+    if timer.started_at and timer.ended_at is None and has_player_finished(game, player):
         timer.ended_at = datetime.now()
         timer.duration_seconds = (timer.ended_at - timer.started_at).total_seconds()
 
 
 def has_player_finished(game: PennyGame, player: str) -> bool:
-    """Check if a player has no more coins to process"""
-    return player in game.player_coins and len(game.player_coins[player]) == 0
+    return (
+        player in game.player_coins
+        and len(game.player_coins[player]) == 0
+        and all(len(game.player_coins[p]) == 0 for p in game.players[: game.players.index(player)])
+    )
 
 
 def flip_coin(game: PennyGame, player: str, coin_index: int) -> bool:
@@ -196,7 +200,7 @@ def send_batch(game: PennyGame, player: str) -> bool:
         game.sent_coins[player] = []
     game.sent_coins[player].append({"count": len(coins_to_send), "timestamp": datetime.now(), "to_player": next_player})
 
-    # End player timer if they have no more coins
+    # End player timer if they have no more coins left and all previous players are done
     if has_player_finished(game, player):
         end_player_timer(game, player)
 
@@ -233,7 +237,7 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
         {"count": len(completed_coins), "timestamp": datetime.now(), "to_player": "COMPLETED"}
     )
 
-    # End player timer if they have no more coins
+    # End player timer if they have no more coins left and all previous players are done
     if has_player_finished(game, player):
         end_player_timer(game, player)
 

@@ -1,8 +1,13 @@
-// WebSocket logic for Penny Game with timer support
+// front-end/public/scripts/websocket.js
+// WebSocket logic for Penny Game with timer support - REFACTORED VERSION
+
 import { renderPlayers, renderSpectators } from './dom.js'
 import { addDnDEvents } from './dnd.js'
 import { renderGameBoard, stopRealTimeTimers } from './game-board.js'
 import { showNotification } from './utility.js'
+import { ViewManager } from './view-manager.js'
+import { TimeUtils } from './time-utils.js'
+import { GameActions } from './game-actions.js'
 
 export function handleWSMessage(data) {
     try {
@@ -82,7 +87,7 @@ function handleWelcomeMessage(msg) {
 
         // Update game board if in active state
         if (gameState.state === 'active') {
-            switchToGameView()
+            ViewManager.switchToGameView()
             renderGameBoard(gameState)
         }
     }
@@ -132,14 +137,14 @@ function handleActivityUpdate(msg) {
 function handleGameStateChange(msg) {
     switch (msg.state) {
         case 'lobby':
-            switchToLobbyView()
+            ViewManager.switchToLobbyView()
             stopRealTimeTimers() // Stop timers when returning to lobby
             break
         case 'active':
-            switchToGameView()
+            ViewManager.switchToGameView()
             break
         case 'results':
-            switchToResultsView()
+            ViewManager.switchToResultsView()
             stopRealTimeTimers() // Stop timers when game ends
             break
     }
@@ -185,7 +190,7 @@ function handleActionMade(msg) {
 }
 
 function handleGameStarted(msg) {
-    switchToGameView()
+    ViewManager.switchToGameView()
 
     const gameState = {
         players: msg.players,
@@ -207,14 +212,14 @@ function handleGameStarted(msg) {
 }
 
 function handleGameOver(msg) {
-    switchToResultsView()
+    ViewManager.switchToResultsView()
     stopRealTimeTimers() // Stop all timers when game ends
     showNotification('🎯 Partie terminée ! Félicitations à tous !', 'success')
     updateResultsDisplay(msg.final_state)
 }
 
 function handleGameReset(msg) {
-    switchToLobbyView()
+    ViewManager.switchToLobbyView()
     stopRealTimeTimers() // Stop all timers when game resets
     updateBatchSizeDisplay(msg.batch_size)
     showNotification('🔄 La partie a été réinitialisée', 'info')
@@ -252,43 +257,6 @@ function handleHostDisconnected(msg) {
     window.location.reload()
 }
 
-// UI State Management Functions
-function switchToLobbyView() {
-    const gameSetup = document.querySelector('.game-setup')
-    const gameControls = document.querySelector('.game-controls')
-    const gameBoard = document.getElementById('gameBoard')
-    const results = document.getElementById('results')
-
-    if (gameSetup) gameSetup.style.display = ''
-    if (gameControls) gameControls.style.display = ''
-    if (gameBoard) gameBoard.style.display = 'none'
-    if (results) results.style.display = 'none'
-}
-
-function switchToGameView() {
-    const gameSetup = document.querySelector('.game-setup')
-    const gameControls = document.querySelector('.game-controls')
-    const gameBoard = document.getElementById('gameBoard')
-    const results = document.getElementById('results')
-
-    if (gameSetup) gameSetup.style.display = 'none'
-    if (gameControls) gameControls.style.display = 'none'
-    if (gameBoard) gameBoard.style.display = ''
-    if (results) results.style.display = 'none'
-}
-
-function switchToResultsView() {
-    const gameSetup = document.querySelector('.game-setup')
-    const gameControls = document.querySelector('.game-controls')
-    const gameBoard = document.getElementById('gameBoard')
-    const results = document.getElementById('results')
-
-    if (gameSetup) gameSetup.style.display = 'none'
-    if (gameControls) gameControls.style.display = 'none'
-    if (gameBoard) gameBoard.style.display = 'none'
-    if (results) results.style.display = ''
-}
-
 function updateBatchSizeDisplay(batchSize) {
     // Update batch size in round selector
     const roundOptions = document.querySelectorAll('.round-option')
@@ -312,44 +280,33 @@ function calculateTailsRemaining(playerCoins) {
     return total
 }
 
-function formatTime(seconds) {
-    if (!seconds && seconds !== 0) return '--:--'
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
 function updateResultsDisplay(finalState) {
     if (!finalState) return
 
-    // Update game timer
+    // Update game timer using TimeUtils
     const gameTimeSection = document.getElementById('gameTimeSection')
     const gameTimeValue = document.getElementById('gameTimeValue')
 
     if (gameTimeValue && finalState.game_duration_seconds !== null && finalState.game_duration_seconds !== undefined) {
-        gameTimeValue.textContent = formatTime(finalState.game_duration_seconds)
+        gameTimeValue.textContent = TimeUtils.formatTime(finalState.game_duration_seconds)
     } else if (gameTimeValue) {
         gameTimeValue.textContent = '--:--'
     }
 
-    // Update player timers
+    // Update player timers using TimeUtils
     const playerTimersGrid = document.getElementById('playerTimersGrid')
     if (playerTimersGrid && finalState.player_timers) {
         playerTimersGrid.innerHTML = ''
 
         Object.values(finalState.player_timers).forEach((timer) => {
             const timerCard = document.createElement('div')
+            const timerInfo = TimeUtils.formatPlayerTimer(timer)
 
-            const hasValidTime = timer.duration_seconds !== null && timer.duration_seconds !== undefined
-            const timeDisplay = hasValidTime ? formatTime(timer.duration_seconds) : '--:--'
-            const status = hasValidTime ? 'completed' : 'not-started'
-            const statusText = hasValidTime ? 'Terminé' : 'Non démarré'
-
-            timerCard.className = `player-timer-result ${status}`
+            timerCard.className = `player-timer-result ${timerInfo.status}`
             timerCard.innerHTML = `
                 <div class="player-name">${timer.player}</div>
-                <div class="player-time">${timeDisplay}</div>
-                <div class="player-status">${statusText}</div>
+                <div class="player-time">${timerInfo.time}</div>
+                <div class="player-status">${timerInfo.statusText}</div>
             `
             playerTimersGrid.appendChild(timerCard)
         })
@@ -401,7 +358,7 @@ function updateResultsDisplay(finalState) {
             statsGrid.appendChild(efficiencyCard)
         }
 
-        // Add average player time
+        // Add average player time using TimeUtils
         if (finalState.player_timers) {
             const validTimes = Object.values(finalState.player_timers)
                 .filter((timer) => timer.duration_seconds !== null && timer.duration_seconds !== undefined)
@@ -413,7 +370,7 @@ function updateResultsDisplay(finalState) {
                 const avgCard = document.createElement('div')
                 avgCard.className = 'stat-card'
                 avgCard.innerHTML = `
-                    <div class="stat-value">${formatTime(avgTime)}</div>
+                    <div class="stat-value">${TimeUtils.formatTime(avgTime)}</div>
                     <div class="stat-label">Temps moyen</div>
                 `
                 statsGrid.appendChild(avgCard)
@@ -425,89 +382,15 @@ function updateResultsDisplay(finalState) {
     const resultsActions = document.getElementById('resultsActions')
     if (resultsActions && window.isHost) {
         resultsActions.style.display = ''
-        setupResultsButtons()
+        // Use GameActions to setup buttons instead of duplicate code
+        GameActions.setupStandardButtons()
     }
 
     // Show debug actions for hosts during development
     const debugActions = document.getElementById('debugActions')
     if (debugActions && window.isHost) {
         debugActions.style.display = ''
-        setupDebugButtons()
-    }
-}
-
-function setupResultsButtons() {
-    const playAgainBtn = document.getElementById('playAgainBtn')
-    const backToLobbyBtn = document.getElementById('backToLobbyBtn')
-
-    if (playAgainBtn) {
-        playAgainBtn.addEventListener('click', async () => {
-            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-            const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
-
-            if (!window.isHost) {
-                alert("Seul l'hôte peut redémarrer la partie")
-                return
-            }
-
-            if (!apiUrl || !gameCode) return
-
-            try {
-                playAgainBtn.disabled = true
-                playAgainBtn.textContent = 'Redémarrage...'
-
-                // Reset the game first
-                await fetch(`${apiUrl}/game/reset/${gameCode}`, {
-                    method: 'POST',
-                    credentials: 'include',
-                })
-
-                // Small delay to ensure reset is complete
-                setTimeout(async () => {
-                    // Then start a new game
-                    await fetch(`${apiUrl}/game/start/${gameCode}`, {
-                        method: 'POST',
-                        credentials: 'include',
-                    })
-                }, 500)
-            } catch (error) {
-                console.error('Error restarting game:', error)
-                alert('Erreur lors du redémarrage de la partie')
-            } finally {
-                playAgainBtn.disabled = false
-                playAgainBtn.textContent = 'Rejouer'
-            }
-        })
-    }
-
-    if (backToLobbyBtn) {
-        backToLobbyBtn.addEventListener('click', async () => {
-            const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-            const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
-
-            if (!window.isHost) {
-                alert("Seul l'hôte peut retourner au lobby")
-                return
-            }
-
-            if (!apiUrl || !gameCode) return
-
-            try {
-                backToLobbyBtn.disabled = true
-                backToLobbyBtn.textContent = 'Retour...'
-
-                await fetch(`${apiUrl}/game/reset/${gameCode}`, {
-                    method: 'POST',
-                    credentials: 'include',
-                })
-            } catch (error) {
-                console.error('Error returning to lobby:', error)
-                alert('Erreur lors du retour au lobby')
-            } finally {
-                backToLobbyBtn.disabled = false
-                backToLobbyBtn.textContent = 'Retour au lobby'
-            }
-        })
+        // GameActions.setupStandardButtons() already handles the debug button
     }
 }
 

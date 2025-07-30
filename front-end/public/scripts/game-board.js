@@ -41,28 +41,32 @@ function formatPlayerTimer(timer) {
         }
     }
 
-    // Timer is running - calculate current duration
-    try {
-        const startTime = new Date(timer.started_at)
-        const currentTime = new Date()
+    // Timer is running - calculate current duration from the actual timer data
+    if (timer.started_at && !timer.ended_at) {
+        try {
+            const startTime = new Date(timer.started_at)
+            const currentTime = new Date()
 
-        // Check if the date is valid
-        if (isNaN(startTime.getTime())) {
-            console.warn('Invalid start time:', timer.started_at)
+            // Check if the date is valid
+            if (isNaN(startTime.getTime())) {
+                console.warn('Invalid start time:', timer.started_at)
+                return { status: 'waiting', time: '--:--', statusText: 'Erreur' }
+            }
+
+            const currentDuration = Math.max(0, (currentTime - startTime) / 1000)
+
+            return {
+                status: 'running',
+                time: formatTime(currentDuration),
+                statusText: 'En cours',
+            }
+        } catch (error) {
+            console.error('Error calculating timer duration:', error)
             return { status: 'waiting', time: '--:--', statusText: 'Erreur' }
         }
-
-        const currentDuration = Math.max(0, (currentTime - startTime) / 1000)
-
-        return {
-            status: 'running',
-            time: formatTime(currentDuration),
-            statusText: 'En cours',
-        }
-    } catch (error) {
-        console.error('Error calculating timer duration:', error)
-        return { status: 'waiting', time: '--:--', statusText: 'Erreur' }
     }
+
+    return { status: 'waiting', time: '--:--', statusText: 'En attente' }
 }
 
 export function renderGameBoard(gameState) {
@@ -82,8 +86,10 @@ export function renderGameBoard(gameState) {
         // Game is running - calculate current duration
         const startTime = new Date(gameState.started_at)
         const currentTime = new Date()
-        const currentDuration = (currentTime - startTime) / 1000
-        gameTimer = formatTime(currentDuration)
+        if (!isNaN(startTime.getTime())) {
+            const currentDuration = (currentTime - startTime) / 1000
+            gameTimer = formatTime(currentDuration)
+        }
     }
 
     gameStatus.innerHTML = `
@@ -344,7 +350,7 @@ function startRealTimeTimers(gameState) {
             }
         }
 
-        // Update player timers
+        // Update player timers - only for players who have started but not finished
         if (gameState.player_timers) {
             Object.values(gameState.player_timers).forEach((timer) => {
                 if (timer.started_at && !timer.ended_at) {
