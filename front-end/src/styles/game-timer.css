@@ -247,7 +247,7 @@
 }
 
 /* Responsive design for timers */
-@media screen and (max-width: 768px) {
+@media screen and (width<=768px) {
     .game-timer {
         flex-direction: column;
         gap: 4px;
@@ -303,7 +303,7 @@
     }
 }
 
-@media screen and (max-width: 480px) {
+@media screen and (width<=480px) {
     .game-timer {
         padding: 4px 8px;
     }
