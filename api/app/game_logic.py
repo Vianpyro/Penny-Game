@@ -220,7 +220,7 @@ def start_player_timer(game: PennyGame, player: str):
 
 
 def end_player_timer(game: PennyGame, player: str):
-    """End timer for a player when they send their last coin and have no more coins left"""
+    """End timer for a player when they have completely finished their work"""
     if not hasattr(game, "player_timers") or game.player_timers is None:
         return
 
@@ -228,10 +228,23 @@ def end_player_timer(game: PennyGame, player: str):
         return
 
     timer = game.player_timers[player]
-    # Only end timer if player has no more coins and timer hasn't already ended
+
+    # Only end timer if:
+    # 1. Timer has started and hasn't already ended
+    # 2. Player has completely finished their work
     if timer.started_at and timer.ended_at is None and has_player_finished(game, player):
         timer.ended_at = datetime.now()
         timer.duration_seconds = (timer.ended_at - timer.started_at).total_seconds()
+
+
+def check_and_end_all_finished_timers(game: PennyGame):
+    """Check all players and end timers for those who have finished"""
+    if not hasattr(game, "player_timers") or game.player_timers is None:
+        return
+
+    for player in game.players:
+        if has_player_finished(game, player):
+            end_player_timer(game, player)
 
 
 def has_player_finished(game: PennyGame, player: str) -> bool:
@@ -239,8 +252,26 @@ def has_player_finished(game: PennyGame, player: str) -> bool:
     if player not in game.player_coins:
         return False
 
-    # Player is finished if they have no coins left
-    return len(game.player_coins[player]) == 0
+    # Player is finished if they have no coins left AND all previous players are finished
+    player_index = game.players.index(player)
+
+    # Check if this player has no coins left
+    if len(game.player_coins[player]) > 0:
+        return False
+
+    # For the first player, they're finished when they have no coins
+    if player_index == 0:
+        return True
+
+    # For other players, they're finished when:
+    # 1. They have no coins left
+    # 2. All previous players in the chain are also finished
+    for i in range(player_index):
+        previous_player = game.players[i]
+        if len(game.player_coins.get(previous_player, [])) > 0:
+            return False
+
+    return True
 
 
 def flip_coin(game: PennyGame, player: str, coin_index: int) -> bool:
@@ -286,7 +317,11 @@ def send_batch(game: PennyGame, player: str) -> bool:
 
     # Last player case - send to completion
     if player_index == len(game.players) - 1:
-        return send_to_completion(game, player)
+        success = send_to_completion(game, player)
+        if success:
+            # After sending, check if any players have finished
+            check_and_end_all_finished_timers(game)
+        return success
 
     # Regular case - send to next player
     next_player = game.players[player_index + 1]
@@ -316,9 +351,8 @@ def send_batch(game: PennyGame, player: str) -> bool:
         game.sent_coins[player] = []
     game.sent_coins[player].append({"count": len(coins_to_send), "timestamp": datetime.now(), "to_player": next_player})
 
-    # End player timer if they have finished
-    if has_player_finished(game, player):
-        end_player_timer(game, player)
+    # After sending, check if any players have finished (including this player)
+    check_and_end_all_finished_timers(game)
 
     return True
 
@@ -359,15 +393,14 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
         {"count": len(completed_coins), "timestamp": datetime.now(), "to_player": "COMPLETED"}
     )
 
-    # End player timer if they have finished
-    if has_player_finished(game, player):
-        end_player_timer(game, player)
+    # After sending, check if any players have finished
+    check_and_end_all_finished_timers(game)
 
     return True
 
 
 def is_round_over(game: PennyGame) -> bool:
-    """Check if current round is complete - FIXED VERSION"""
+    """Check if current round is complete"""
     if not game.players:
         return False
 
@@ -416,6 +449,9 @@ def process_flip(game: PennyGame, player: str, coin_index: int) -> dict:
     # Update game state
     now = datetime.now()
     game.last_active_at = now
+
+    # After flipping, check if any players have finished
+    check_and_end_all_finished_timers(game)
 
     # Check if round is over AFTER the action
     round_complete = is_round_over(game)

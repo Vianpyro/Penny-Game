@@ -84,7 +84,7 @@ function handleWelcomeMessage(msg) {
         window.isHost = gameState.host === currentUsername
         window.userRole = gameState.players.includes(currentUsername) ? 'player' : 'spectator'
 
-        console.log('Welcome message - Host status:', {
+        console.debug('Welcome message - Host status:', {
             currentUsername,
             gameHost: gameState.host,
             isHost: window.isHost,
@@ -187,7 +187,7 @@ function handleActivityUpdate(msg) {
     window.isHost = msg.host === window.currentUsername
 
     if (wasHost !== window.isHost) {
-        console.log('Host status changed:', { wasHost, isHost: window.isHost })
+        console.debug('Host status changed:', { wasHost, isHost: window.isHost })
         window.dispatchEvent(new CustomEvent('userrolechange'))
     }
 
@@ -196,7 +196,7 @@ function handleActivityUpdate(msg) {
 }
 
 function handleRoundConfigUpdate(msg) {
-    console.log('Round config update received:', msg)
+    console.debug('Round config update received:', msg)
 
     // Update global game state
     if (window.gameState) {
@@ -340,11 +340,100 @@ function handleRoundComplete(msg) {
     ViewManager.switchToRoundCompleteView()
     stopRealTimeTimers()
 
-    // Update round complete screen
+    // Update round complete screen with enhanced timer display
     updateRoundCompleteDisplay(msg)
 
     const nextText = msg.next_round ? ` Manche ${msg.next_round} disponible !` : ' Toutes les manches terminées !'
     showNotification(`✅ Manche ${msg.round_number} terminée !${nextText}`, 'success')
+}
+
+function updateProgressBar(currentRound, totalRounds) {
+    const roundProgressBar = document.getElementById('roundProgressBar')
+    const currentProgressRound = document.getElementById('currentProgressRound')
+    const totalProgressRounds = document.getElementById('totalProgressRounds')
+
+    if (roundProgressBar) {
+        roundProgressBar.innerHTML = ''
+
+        // Create progress dots
+        for (let i = 1; i <= totalRounds; i++) {
+            const dot = document.createElement('div')
+            dot.className = 'progress-dot'
+            dot.textContent = i
+
+            if (i < currentRound) {
+                dot.classList.add('completed')
+            } else if (i === currentRound) {
+                dot.classList.add('current')
+            }
+
+            roundProgressBar.appendChild(dot)
+
+            // Add arrow between dots (except after last dot)
+            if (i < totalRounds) {
+                const arrow = document.createElement('div')
+                arrow.className = 'progress-arrow'
+                arrow.textContent = '→'
+                roundProgressBar.appendChild(arrow)
+            }
+        }
+    }
+
+    if (currentProgressRound) currentProgressRound.textContent = currentRound
+    if (totalProgressRounds) totalProgressRounds.textContent = totalRounds
+}
+
+// Enhanced updateRoundCompleteDisplay function (replace the existing one)
+function updateRoundCompleteDisplay(msg) {
+    const roundCompleteSection = document.getElementById('roundComplete')
+    if (!roundCompleteSection) return
+
+    const completedRoundNumber = document.getElementById('completedRoundNumber')
+    const completedBatchSize = document.getElementById('completedBatchSize')
+    const completedRoundTime = document.getElementById('completedRoundTime')
+    const nextRoundSection = document.getElementById('nextRoundSection')
+    const gameCompleteSection = document.getElementById('gameCompleteSection')
+    const nextRoundNumber = document.getElementById('nextRoundNumber')
+    const nextBatchSize = document.getElementById('nextBatchSize')
+    const nextRoundBtn = document.getElementById('nextRoundBtn')
+
+    // Update basic round info
+    if (completedRoundNumber) completedRoundNumber.textContent = msg.round_number
+    if (completedBatchSize) completedBatchSize.textContent = msg.round_result?.batch_size || 'N/A'
+    if (completedRoundTime && msg.round_result?.game_duration_seconds) {
+        completedRoundTime.textContent = TimeUtils.formatTime(msg.round_result.game_duration_seconds)
+    }
+
+    // Update individual player timers - THIS IS THE KEY NEW FUNCTIONALITY
+    updatePlayerTimersDisplay(msg.round_result)
+
+    // Update round statistics
+    updateRoundStatistics(msg.round_result)
+
+    // Update progress bar
+    updateProgressBar(msg.round_number, getTotalRounds(window.gameState?.round_type || 'three_rounds'))
+
+    // Handle next round or game completion
+    if (msg.next_round && msg.batch_size) {
+        // Show next round section
+        if (nextRoundSection) nextRoundSection.style.display = 'block'
+        if (gameCompleteSection) gameCompleteSection.style.display = 'none'
+
+        if (nextRoundNumber) nextRoundNumber.textContent = msg.next_round
+        if (nextBatchSize) nextBatchSize.textContent = msg.batch_size
+        if (nextRoundBtn) {
+            nextRoundBtn.disabled = !window.isHost
+            const nextRoundButtonNumber = nextRoundBtn.querySelector('#nextRoundButtonNumber')
+            if (nextRoundButtonNumber) nextRoundButtonNumber.textContent = msg.next_round
+        }
+    } else {
+        // Show game complete section
+        if (nextRoundSection) nextRoundSection.style.display = 'none'
+        if (gameCompleteSection) gameCompleteSection.style.display = 'block'
+    }
+
+    // Show round complete screen
+    roundCompleteSection.style.display = 'block'
 }
 
 function handleGameOver(msg) {
@@ -397,46 +486,118 @@ function handleHostDisconnected(msg) {
     window.location.reload()
 }
 
-function updateRoundCompleteDisplay(msg) {
-    // Update round complete screen with round results
-    const roundCompleteSection = document.getElementById('roundComplete')
-    if (!roundCompleteSection) return
+function updatePlayerTimersDisplay(roundResult) {
+    const playerTimersGrid = document.getElementById('roundPlayerTimersGrid')
+    if (!playerTimersGrid || !roundResult || !roundResult.player_timers) return
 
-    const completedRoundNumber = document.getElementById('completedRoundNumber')
-    const completedBatchSize = document.getElementById('completedBatchSize')
-    const completedRoundTime = document.getElementById('completedRoundTime')
-    const nextRoundSection = document.getElementById('nextRoundSection')
-    const gameCompleteSection = document.getElementById('gameCompleteSection')
-    const nextRoundNumber = document.getElementById('nextRoundNumber')
-    const nextBatchSize = document.getElementById('nextBatchSize')
-    const nextRoundBtn = document.getElementById('nextRoundBtn')
+    playerTimersGrid.innerHTML = ''
 
-    if (completedRoundNumber) completedRoundNumber.textContent = msg.round_number
-    if (completedBatchSize) completedBatchSize.textContent = msg.round_result?.batch_size || 'N/A'
-    if (completedRoundTime && msg.round_result?.game_duration_seconds) {
-        completedRoundTime.textContent = TimeUtils.formatTime(msg.round_result.game_duration_seconds)
-    }
+    // Sort players by completion time (completed players first, then by duration)
+    const playerTimers = Object.values(roundResult.player_timers)
+    const sortedTimers = playerTimers.sort((a, b) => {
+        // Completed players first
+        const aCompleted = a.ended_at && a.duration_seconds !== null && a.duration_seconds !== undefined
+        const bCompleted = b.ended_at && b.duration_seconds !== null && b.duration_seconds !== undefined
 
-    if (msg.next_round && msg.batch_size) {
-        // Show next round section
-        if (nextRoundSection) nextRoundSection.style.display = 'block'
-        if (gameCompleteSection) gameCompleteSection.style.display = 'none'
+        if (aCompleted && !bCompleted) return -1
+        if (!aCompleted && bCompleted) return 1
 
-        if (nextRoundNumber) nextRoundNumber.textContent = msg.next_round
-        if (nextBatchSize) nextBatchSize.textContent = msg.batch_size
-        if (nextRoundBtn) {
-            nextRoundBtn.disabled = !window.isHost
-            const nextRoundButtonNumber = nextRoundBtn.querySelector('#nextRoundButtonNumber')
-            if (nextRoundButtonNumber) nextRoundButtonNumber.textContent = msg.next_round
+        // Among completed players, sort by duration (fastest first)
+        if (aCompleted && bCompleted) {
+            return (a.duration_seconds || 0) - (b.duration_seconds || 0)
         }
-    } else {
-        // Show game complete section
-        if (nextRoundSection) nextRoundSection.style.display = 'none'
-        if (gameCompleteSection) gameCompleteSection.style.display = 'block'
+
+        // Among non-completed players, maintain original order
+        return 0
+    })
+
+    sortedTimers.forEach((timer, index) => {
+        const timerInfo = TimeUtils.formatPlayerTimer(timer)
+
+        const timerCard = document.createElement('div')
+        timerCard.className = `player-timer-result ${timerInfo.status}`
+
+        // Add ranking for completed players
+        let rankingBadge = ''
+        if (timerInfo.status === 'completed') {
+            const rankEmojis = ['🥇', '🥈', '🥉', '🏅', '🏅']
+            const emoji = rankEmojis[index] || '🏅'
+            rankingBadge = `<div class="ranking-badge">${emoji} #${index + 1}</div>`
+        }
+
+        // Calculate efficiency if completed
+        let efficiencyText = '--'
+        if (timer.duration_seconds && timer.duration_seconds > 0) {
+            const coinsProcessed = getCoinsProcessedByPlayer(timer.player, roundResult)
+            const efficiency = TimeUtils.calculateEfficiency(coinsProcessed, timer.duration_seconds)
+            efficiencyText = `${efficiency} p/min`
+        }
+
+        timerCard.innerHTML = `
+            ${rankingBadge}
+            <div class="player-name">${timer.player}</div>
+            <div class="player-time">${timerInfo.time}</div>
+            <div class="player-status">${timerInfo.statusText}</div>
+            <div class="player-efficiency">${efficiencyText}</div>
+        `
+
+        playerTimersGrid.appendChild(timerCard)
+    })
+}
+
+function updateRoundStatistics(roundResult) {
+    if (!roundResult) return
+
+    // Update total coins completed
+    const totalCoinsCompleted = document.getElementById('totalCoinsCompleted')
+    if (totalCoinsCompleted) {
+        totalCoinsCompleted.textContent = roundResult.total_completed || 12
     }
 
-    // Show round complete screen
-    roundCompleteSection.style.display = 'block'
+    // Update participant count
+    const participantCount = document.getElementById('participantCount')
+    if (participantCount && roundResult.player_timers) {
+        participantCount.textContent = Object.keys(roundResult.player_timers).length
+    }
+
+    // Calculate and update round efficiency (coins per minute for the whole round)
+    const roundEfficiency = document.getElementById('roundEfficiency')
+    if (roundEfficiency && roundResult.game_duration_seconds) {
+        const totalCoins = roundResult.total_completed || 12
+        const efficiency = TimeUtils.calculateEfficiency(totalCoins, roundResult.game_duration_seconds)
+        roundEfficiency.textContent = `${efficiency}`
+    }
+
+    // Calculate and update average player time
+    const avgPlayerTime = document.getElementById('avgPlayerTime')
+    if (avgPlayerTime && roundResult.player_timers) {
+        const completedTimers = Object.values(roundResult.player_timers).filter(
+            (timer) => timer.duration_seconds !== null && timer.duration_seconds !== undefined
+        )
+
+        if (completedTimers.length > 0) {
+            const totalTime = completedTimers.reduce((sum, timer) => sum + (timer.duration_seconds || 0), 0)
+            const avgTime = totalTime / completedTimers.length
+            avgPlayerTime.textContent = TimeUtils.formatTime(avgTime)
+        } else {
+            avgPlayerTime.textContent = '--:--'
+        }
+    }
+}
+
+function getCoinsProcessedByPlayer(playerName, roundResult) {
+    // This is a simplified calculation - in a real implementation,
+    // you might track the actual number of coins each player processed
+    // For now, assume each player processed approximately the same amount
+    const totalCoins = roundResult.total_completed || 12
+    const playerCount = Object.keys(roundResult.player_timers || {}).length
+    return Math.ceil(totalCoins / playerCount)
+}
+
+// Add this to the TimeUtils class for calculating efficiency
+TimeUtils.calculateEfficiency = function (totalCoins, durationSeconds) {
+    if (!durationSeconds || durationSeconds === 0) return 0
+    return Math.round((totalCoins / durationSeconds) * 60 * 100) / 100 // Round to 2 decimal places
 }
 
 function calculateTailsRemaining(playerCoins) {

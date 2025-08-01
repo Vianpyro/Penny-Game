@@ -1,5 +1,3 @@
-// Enhanced main.js with drag and drop fixes
-
 import { joinRoom, fetchGameState, changeRole, setRoundConfig } from './api.js'
 import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updatePlayerCountDisplay } from './dom.js'
 import { handleDragOver, addDnDEvents, draggedItem } from './dnd.js'
@@ -361,7 +359,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function updateUIForRole() {
         setTimeout(() => {
             const isHost = window.isHost === true
-            console.log('🔧 Updating UI for role - isHost:', isHost, 'currentUsername:', window.currentUsername)
+            console.debug('🔧 Updating UI for role - isHost:', isHost, 'currentUsername:', window.currentUsername)
 
             // Update layout class
             const setupControls = document.querySelector('.setup-controls')

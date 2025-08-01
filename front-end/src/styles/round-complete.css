@@ -1,0 +1,477 @@
+.round-complete {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 20px;
+    padding: 30px;
+    margin-top: 20px;
+    box-shadow: 0 15px 35px rgb(0 0 0 / 10%);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.round-complete-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.round-complete h2 {
+    color: #2c3e50;
+    font-size: 2.2em;
+    font-weight: 700;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* Player Timers Section */
+.player-timers-section {
+    background: rgb(255 255 255 / 90%);
+    border-radius: 15px;
+    padding: 25px;
+    margin: 25px 0;
+    box-shadow: 0 8px 25px rgb(0 0 0 / 10%);
+    border-left: 5px solid #3498db;
+}
+
+.player-timers-section h3 {
+    margin: 0 0 20px;
+    color: #2c3e50;
+    font-size: 1.4em;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.player-timers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.player-timer-result {
+    background: rgb(255 255 255 / 95%);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    border: 3px solid #ecf0f1;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.player-timer-result:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgb(0 0 0 / 15%);
+}
+
+.player-timer-result.completed {
+    border-color: #27ae60;
+    background: linear-gradient(135deg, rgb(39 174 96 / 5%) 0%, rgb(46 204 113 / 10%) 100%);
+}
+
+.player-timer-result.waiting {
+    border-color: #95a5a6;
+    background: rgb(149 165 166 / 5%);
+    opacity: 0.8;
+}
+
+.player-timer-result.running {
+    border-color: #f39c12;
+    background: linear-gradient(135deg, rgb(243 156 18 / 5%) 0%, rgb(241 196 15 / 10%) 100%);
+}
+
+/* Ranking Badge */
+.ranking-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(45deg, #f39c12, #e67e22);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 0 15px 0 15px;
+    font-size: 0.8em;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgb(243 156 18 / 30%);
+}
+
+.ranking-badge:first-child {
+    background: linear-gradient(45deg, #f1c40f, #f39c12);
+}
+
+.player-name {
+    font-size: 1.2em;
+    font-weight: 700;
+    margin: 10px 0;
+    color: #2c3e50;
+}
+
+.player-time {
+    font-family: 'Courier New', monospace;
+    font-size: 2em;
+    font-weight: 700;
+    margin: 15px 0;
+    padding: 10px;
+    background: rgb(255 255 255 / 80%);
+    border-radius: 10px;
+    box-shadow: inset 0 2px 5px rgb(0 0 0 / 10%);
+}
+
+.player-timer-result.completed .player-time {
+    color: #27ae60;
+}
+
+.player-timer-result.waiting .player-time {
+    color: #95a5a6;
+}
+
+.player-timer-result.running .player-time {
+    color: #f39c12;
+}
+
+.player-status {
+    font-size: 0.9em;
+    font-weight: 600;
+    margin: 8px 0;
+    opacity: 0.8;
+}
+
+.player-efficiency {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #7f8c8d;
+    background: rgb(52 152 219 / 10%);
+    padding: 4px 8px;
+    border-radius: 12px;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+/* Round Statistics */
+.round-stats {
+    background: rgb(155 89 182 / 10%);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 25px 0;
+    border-left: 5px solid #9b59b6;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-card {
+    background: rgb(255 255 255 / 80%);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    border: 2px solid rgb(155 89 182 / 20%);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgb(155 89 182 / 20%);
+}
+
+.stat-value {
+    font-size: 2em;
+    font-weight: 700;
+    color: #9b59b6;
+    margin-bottom: 8px;
+    font-family: 'Courier New', monospace;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+/* Round Summary */
+.round-summary {
+    margin-bottom: 30px;
+}
+
+.round-info-card {
+    background: rgb(46 204 113 / 10%);
+    border-radius: 15px;
+    padding: 25px;
+    border-left: 5px solid #27ae60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin: 0 auto;
+    max-width: 400px;
+}
+
+.round-number {
+    font-size: 3em;
+    font-weight: 900;
+    color: #27ae60;
+    background: rgb(255 255 255 / 80%);
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgb(39 174 96 / 30%);
+}
+
+.round-details {
+    text-align: left;
+}
+
+.batch-info {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.round-time {
+    font-size: 1.1em;
+    color: #7f8c8d;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* Progress Section */
+.progress-section {
+    background: rgb(52 152 219 / 10%);
+    border-radius: 15px;
+    padding: 25px;
+    margin: 25px 0;
+    border-left: 5px solid #3498db;
+}
+
+.progress-section h3 {
+    margin: 0 0 20px;
+    color: #2c3e50;
+    font-size: 1.3em;
+    font-weight: 700;
+}
+
+.round-progress-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.progress-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1em;
+    border: 3px solid #bdc3c7;
+    background: #ecf0f1;
+    color: #7f8c8d;
+    transition: all 0.3s ease;
+}
+
+.progress-dot.completed {
+    background: #27ae60;
+    border-color: #27ae60;
+    color: white;
+    box-shadow: 0 4px 15px rgb(39 174 96 / 30%);
+}
+
+.progress-dot.current {
+    background: #3498db;
+    border-color: #3498db;
+    color: white;
+    box-shadow: 0 4px 15px rgb(52 152 219 / 30%);
+    animation: pulse-current 2s infinite;
+}
+
+@keyframes pulse-current {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.progress-text {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Next Round Section */
+.next-round-section {
+    background: rgb(155 89 182 / 10%);
+    border-radius: 15px;
+    padding: 25px;
+    margin: 25px 0;
+    border-left: 5px solid #9b59b6;
+}
+
+.next-round-section h3 {
+    margin: 0 0 20px;
+    color: #2c3e50;
+    font-size: 1.3em;
+    font-weight: 700;
+}
+
+.next-round-card {
+    background: rgb(255 255 255 / 80%);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 25px;
+    border: 2px solid rgb(155 89 182 / 20%);
+}
+
+.next-round-number {
+    font-size: 2.5em;
+    font-weight: 900;
+    color: #9b59b6;
+    background: rgb(255 255 255 / 90%);
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgb(155 89 182 / 30%);
+}
+
+.next-round-details {
+    text-align: left;
+}
+
+.next-batch-info {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.next-round-description {
+    font-size: 0.95em;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.next-round-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    .round-complete {
+        padding: 20px;
+        margin-top: 15px;
+    }
+
+    .player-timers-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+    }
+
+    .player-timer-result {
+        padding: 15px;
+    }
+
+    .player-time {
+        font-size: 1.5em;
+        margin: 10px 0;
+        padding: 8px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+    }
+
+    .round-info-card {
+        flex-direction: column;
+        gap: 15px;
+        padding: 20px;
+    }
+
+    .round-details {
+        text-align: center;
+    }
+
+    .round-number {
+        width: 70px;
+        height: 70px;
+        font-size: 2.5em;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .round-complete {
+        padding: 15px;
+    }
+
+    .player-timers-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .player-timer-result {
+        padding: 12px;
+    }
+
+    .player-time {
+        font-size: 1.3em;
+        margin: 8px 0;
+        padding: 6px;
+    }
+
+    .player-name {
+        font-size: 1.1em;
+    }
+
+    .ranking-badge {
+        font-size: 0.7em;
+        padding: 3px 6px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-value {
+        font-size: 1.5em;
+    }
+
+    .round-complete h2 {
+        font-size: 1.8em;
+        margin-bottom: 20px;
+    }
+
+    .player-timers-section,
+    .round-stats,
+    .progress-section,
+    .next-round-section {
+        padding: 15px;
+        margin: 15px 0;
+    }
+}

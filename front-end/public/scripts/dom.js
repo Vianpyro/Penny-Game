@@ -148,7 +148,7 @@ export function updatePlayerCountDisplay(currentCount = null) {
 }
 
 export function updateRoundConfiguration(roundType, requiredPlayers, selectedBatchSize, totalRounds) {
-    console.log('Updating round configuration UI:', { roundType, requiredPlayers, selectedBatchSize })
+    console.debug('Updating round configuration UI:', { roundType, requiredPlayers, selectedBatchSize })
 
     // Update round type selection
     const roundCountOptions = document.querySelectorAll('.round-count-option')
