@@ -6,10 +6,17 @@
     padding: 30px;
 }
 
+/* Default layout for hosts */
 .setup-controls {
     display: grid;
     gap: 30px;
     grid-template-areas: 'player-selector round-selector-container' 'game-info rules';
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Layout for non-hosts - rules take up more space */
+.setup-controls.non-host-view {
+    grid-template-areas: 'player-selector rules' 'game-info rules';
     grid-template-columns: 1fr 1fr;
 }
 
@@ -24,6 +31,11 @@
     margin-block-start: 0;
 }
 
+/* Hide round selector for non-hosts */
+.setup-controls.non-host-view .round-selector-container {
+    display: none;
+}
+
 .subtitle {
     color: #7f8c8d;
     font-size: 1.2em;
@@ -35,6 +47,11 @@
     .setup-controls {
         gap: 10px;
         grid-template-areas: 'player-selector' 'round-selector-container' 'game-info' 'rules';
+        grid-template-columns: 1fr;
+    }
+
+    .setup-controls.non-host-view {
+        grid-template-areas: 'player-selector' 'game-info' 'rules';
         grid-template-columns: 1fr;
     }
 

@@ -4,6 +4,15 @@ import '../styles/rules.css'
 ---
 
 <div class="rules">
+    <!-- Configuration display for non-hosts -->
+    <div class="current-config-display" id="currentConfigDisplay" style="display: none;">
+        <h4>⚙️ Configuration Actuelle</h4>
+        <div class="config-info" id="configInfo">
+            <span class="config-badge">En attente de configuration...</span>
+        </div>
+        <p class="config-note">Configuration définie par l'hôte</p>
+    </div>
+
     <h3>📜 Règles du Jeu</h3>
     <div class="rules-content">
         <div class="rules-overview">
@@ -92,13 +101,54 @@ import '../styles/rules.css'
 </div>
 
 <style>
+    /* Configuration display styles */
+    .current-config-display {
+        background: rgb(52 152 219 / 10%);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-left: 4px solid #3498db;
+    }
+
+    .current-config-display h4 {
+        margin: 0 0 10px;
+        color: #2c3e50;
+        font-size: 1.1em;
+        font-weight: 700;
+    }
+
+    .config-info {
+        color: #2c3e50;
+        font-size: 0.95em;
+        line-height: 1.4;
+        margin-bottom: 8px;
+    }
+
+    .config-badge {
+        background: rgb(52 152 219 / 20%);
+        color: #2980b9;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
+        display: inline-block;
+        margin: 2px 4px 2px 0;
+    }
+
+    .config-note {
+        margin: 0;
+        font-size: 0.8em;
+        color: #7f8c8d;
+        font-style: italic;
+    }
+
     .rules {
         background: rgb(255 255 255 / 95%);
         border-radius: 15px;
         padding: 25px;
         box-shadow: 0 8px 25px rgb(0 0 0 / 10%);
         border-left: 5px solid #3498db;
-        max-height: 20svh;
+        max-height: 70vh;
         overflow-y: auto;
     }
 
@@ -234,6 +284,7 @@ import '../styles/rules.css'
     @media screen and (max-width: 768px) {
         .rules {
             padding: 20px;
+            max-height: 60vh;
         }
 
         .rules h3 {
@@ -264,11 +315,21 @@ import '../styles/rules.css'
         .insight-card {
             padding: 10px;
         }
+
+        .current-config-display {
+            padding: 12px;
+        }
+
+        .config-badge {
+            font-size: 0.8em;
+            padding: 3px 6px;
+        }
     }
 
     @media screen and (max-width: 480px) {
         .rules {
             padding: 15px;
+            max-height: 50vh;
         }
 
         .rules h3 {
@@ -290,6 +351,15 @@ import '../styles/rules.css'
 
         .insight-card p {
             font-size: 0.8em;
+        }
+
+        .current-config-display {
+            padding: 10px;
+        }
+
+        .config-badge {
+            font-size: 0.75em;
+            padding: 2px 5px;
         }
     }
 </style>

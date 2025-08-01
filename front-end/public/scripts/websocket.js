@@ -94,19 +94,34 @@ function handleWelcomeMessage(msg) {
         // Trigger role update event
         window.dispatchEvent(new CustomEvent('userrolechange'))
 
+        // Trigger game state update event for configuration sync
+        window.dispatchEvent(new CustomEvent('gamestateupdate'))
+
         // Update user lists with empty activity (will be updated by activity message)
         const emptyActivity = {}
         renderPlayers(gameState.players, gameState.host, gameState.spectators, emptyActivity, addDnDEvents)
         renderSpectators(gameState.spectators, gameState.host, emptyActivity, addDnDEvents)
 
-        // Update round configuration display
-        if (gameState.round_type && gameState.required_players) {
+        // Update round configuration display for all players
+        if (gameState.round_type && gameState.required_players !== undefined) {
             updateRoundConfiguration(
                 gameState.round_type,
                 gameState.required_players,
                 gameState.selected_batch_size,
                 getTotalRounds(gameState.round_type)
             )
+
+            // Show configuration info notification for joining players
+            if (!window.isHost) {
+                const roundTypeText =
+                    {
+                        single: '1 manche',
+                        two_rounds: '2 manches',
+                        three_rounds: '3 manches',
+                    }[gameState.round_type] || gameState.round_type
+
+                showNotification(`⚙️ Configuration: ${roundTypeText}, ${gameState.required_players} joueurs`, 'info')
+            }
         }
 
         // Update player count display
@@ -190,8 +205,11 @@ function handleRoundConfigUpdate(msg) {
         window.gameState.selected_batch_size = msg.selected_batch_size
     }
 
-    // Update UI
+    // Update UI for all players
     updateRoundConfiguration(msg.round_type, msg.required_players, msg.selected_batch_size, msg.total_rounds)
+
+    // Trigger game state update event for configuration sync
+    window.dispatchEvent(new CustomEvent('gamestateupdate'))
 
     // Update player count display
     updatePlayerCountDisplay()
@@ -348,6 +366,9 @@ function handleGameReset(msg) {
             msg.selected_batch_size,
             getTotalRounds(msg.round_type)
         )
+
+        // Trigger game state update event for configuration sync
+        window.dispatchEvent(new CustomEvent('gamestateupdate'))
     }
 
     updatePlayerCountDisplay()

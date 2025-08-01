@@ -187,6 +187,7 @@ export function updateRoundConfiguration(roundType, requiredPlayers, selectedBat
 
     // Update displays
     updatePlayerCountDisplay()
+    updateConfigurationDisplayForNonHosts(roundType, requiredPlayers, selectedBatchSize)
 
     // Update any round info displays
     const roundInfoElements = document.querySelectorAll('.round-info')
@@ -205,6 +206,51 @@ export function updateRoundConfiguration(roundType, requiredPlayers, selectedBat
         }
         element.textContent = infoText
     })
+}
+
+export function updateConfigurationDisplayForNonHosts(roundType, requiredPlayers, selectedBatchSize) {
+    // Only update for non-hosts
+    if (window.isHost) return
+
+    const nonHostRules = document.getElementById('nonHostRules')
+    if (!nonHostRules) return
+
+    // Remove existing config display
+    const existingConfig = nonHostRules.querySelector('.current-config-display')
+    if (existingConfig) existingConfig.remove()
+
+    // Create new config display
+    const configDisplay = document.createElement('div')
+    configDisplay.className = 'current-config-display'
+
+    const roundTypeText =
+        {
+            single: '1 manche',
+            two_rounds: '2 manches',
+            three_rounds: '3 manches',
+        }[roundType] || 'Configuration par défaut'
+
+    let batchInfo = ''
+    if (roundType === 'single' && selectedBatchSize) {
+        batchInfo = ` - Lot de ${selectedBatchSize}`
+    }
+
+    configDisplay.innerHTML = `
+        <h4>⚙️ Configuration Actuelle</h4>
+        <div class="config-info">
+            <span class="config-badge">${roundTypeText}${batchInfo}</span>
+            <span class="config-badge">${requiredPlayers || 5} joueurs requis</span>
+        </div>
+        <p style="margin: 10px 0 0; font-size: 0.85em; color: #7f8c8d; font-style: italic;">
+            Configuration définie par l'hôte
+        </p>
+    `
+
+    // Insert at the beginning of the rules container
+    const rulesContainer = nonHostRules.querySelector('.rules')
+    if (rulesContainer) {
+        rulesContainer.insertBefore(configDisplay, rulesContainer.firstChild)
+    }
 }
 
 export function updateCurrentRoundDisplay(currentRound, totalRounds, batchSize) {

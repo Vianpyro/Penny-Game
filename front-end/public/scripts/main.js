@@ -1,8 +1,13 @@
+// Enhanced main.js with drag and drop fixes
+
 import { joinRoom, fetchGameState, changeRole, setRoundConfig } from './api.js'
 import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updatePlayerCountDisplay } from './dom.js'
 import { handleDragOver, addDnDEvents, draggedItem } from './dnd.js'
 import { connectWebSocket } from './websocket.js'
 import { fetchBoardGameState, renderGameBoard, updateGameUI } from './game-board.js'
+
+// Global reference to track dragged item
+let currentDraggedItem = null
 
 // --- Game Start & Board Logic ---
 const startBtn = document.getElementById('startBtn')
@@ -179,68 +184,158 @@ window.addEventListener('DOMContentLoaded', () => {
         })
     }
 
-    // Drag & Drop players/spectators
-    let _draggedItem = draggedItem
-
+    // FIXED: Enhanced Drag & Drop with proper event handling
     function handleDrop(e, targetList) {
         e.preventDefault()
-        if (_draggedItem && targetList && _draggedItem.parentNode !== targetList) {
-            const username = (_draggedItem.textContent || '').replace(/^.*?\s/, '').trim()
+        e.stopPropagation()
+
+        if (currentDraggedItem && targetList && currentDraggedItem.parentNode !== targetList) {
+            // Extract username from the dragged item
+            const fullText = currentDraggedItem.textContent || ''
+            const username = fullText.replace(/^.*?\s/, '').trim()
+
+            // Determine target role
             let newRole = ''
             if (targetList.id === 'playerList') {
                 newRole = 'player'
             } else if (targetList.id === 'spectatorList') {
                 newRole = 'spectator'
             }
+
             const roomId = document.getElementById('game-code')?.textContent?.trim() || ''
+
             if (apiUrl && roomId && username && newRole) {
-                changeRole(apiUrl, roomId, username, newRole, (roomId) =>
+                console.log(`🔄 Moving ${username} to ${newRole}`)
+
+                changeRole(apiUrl, roomId, username, newRole, (roomId) => {
+                    // Re-fetch and re-render after successful role change
                     fetchGameState(
                         apiUrl,
                         roomId,
                         (players, host, spectators, actions) =>
-                            renderPlayers(players, host, spectators, actions, addDnDEvents),
-                        (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
+                            renderPlayers(players, host, spectators, actions, setupDragAndDrop),
+                        (spectators, host, actions) => renderSpectators(spectators, host, actions, setupDragAndDrop)
                     )
-                )
+                })
+            }
+        }
+
+        // Clean up drag over styles
+        document.querySelectorAll('.drag-over').forEach((element) => {
+            element.classList.remove('drag-over')
+        })
+
+        currentDraggedItem = null
+    }
+
+    function handleDragStart(e) {
+        currentDraggedItem = e.target
+        if (!currentDraggedItem || !e.dataTransfer) return
+
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', currentDraggedItem.textContent || '')
+
+        // Visual feedback
+        setTimeout(() => {
+            if (currentDraggedItem) {
+                currentDraggedItem.classList.add('dragging')
+            }
+        }, 0)
+
+        console.log('🎯 Started dragging:', currentDraggedItem.textContent)
+    }
+
+    function handleDragEnd(e) {
+        if (currentDraggedItem) {
+            currentDraggedItem.classList.remove('dragging')
+        }
+
+        // Clean up all drag-over effects
+        document.querySelectorAll('.drag-over').forEach((element) => {
+            element.classList.remove('drag-over')
+        })
+
+        // Don't reset currentDraggedItem here - let handleDrop do it
+        console.log('🏁 Ended dragging')
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault()
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+    }
+
+    function handleDragEnter(e) {
+        e.preventDefault()
+        const targetList = e.currentTarget
+        if (targetList && targetList.classList.contains('user-list')) {
+            targetList.classList.add('drag-over')
+        }
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault()
+        const targetList = e.currentTarget
+        if (targetList && targetList.classList.contains('user-list')) {
+            // Only remove if we're actually leaving the list, not entering a child
+            const rect = targetList.getBoundingClientRect()
+            const x = e.clientX
+            const y = e.clientY
+
+            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                targetList.classList.remove('drag-over')
             }
         }
     }
 
-    function setupDropZones() {
+    // FIXED: Setup drag and drop with proper event binding
+    function setupDragAndDrop() {
         const playerList = document.getElementById('playerList')
         const spectatorList = document.getElementById('spectatorList')
 
-        if (spectatorList) {
-            spectatorList.addEventListener('dragover', (e) => {
-                handleDragOver(e)
-                spectatorList.classList.add('drag-over')
-            })
-            spectatorList.addEventListener('dragleave', () => {
-                spectatorList.classList.remove('drag-over')
-            })
-            spectatorList.addEventListener('drop', (e) => {
-                handleDrop(e, spectatorList)
-                spectatorList.classList.remove('drag-over')
-            })
-        }
+        // Remove existing event listeners to prevent duplicates
+        document.querySelectorAll('[draggable="true"]').forEach((item) => {
+            // Clone and replace to remove all existing listeners
+            const newItem = item.cloneNode(true)
+            item.parentNode.replaceChild(newItem, item)
+        })
 
+        // Setup drag events on draggable items
+        document.querySelectorAll('[draggable="true"]').forEach((item) => {
+            item.addEventListener('dragstart', handleDragStart, { passive: false })
+            item.addEventListener('dragend', handleDragEnd, { passive: false })
+        })
+
+        // Setup drop zones
         if (playerList) {
-            playerList.addEventListener('dragover', (e) => {
-                handleDragOver(e)
-                playerList.classList.add('drag-over')
-            })
-            playerList.addEventListener('dragleave', () => {
-                playerList.classList.remove('drag-over')
-            })
-            playerList.addEventListener('drop', (e) => {
-                handleDrop(e, playerList)
-                playerList.classList.remove('drag-over')
-            })
-        }
-    }
+            // Remove existing listeners
+            playerList.removeEventListener('dragover', handleDragOver)
+            playerList.removeEventListener('dragenter', handleDragEnter)
+            playerList.removeEventListener('dragleave', handleDragLeave)
+            playerList.removeEventListener('drop', handleDrop)
 
-    setupDropZones()
+            // Add fresh listeners
+            playerList.addEventListener('dragover', handleDragOver, { passive: false })
+            playerList.addEventListener('dragenter', handleDragEnter, { passive: false })
+            playerList.addEventListener('dragleave', handleDragLeave, { passive: false })
+            playerList.addEventListener('drop', (e) => handleDrop(e, playerList), { passive: false })
+        }
+
+        if (spectatorList) {
+            // Remove existing listeners
+            spectatorList.removeEventListener('dragover', handleDragOver)
+            spectatorList.removeEventListener('dragenter', handleDragEnter)
+            spectatorList.removeEventListener('dragleave', handleDragLeave)
+            spectatorList.removeEventListener('drop', handleDrop)
+
+            // Add fresh listeners
+            spectatorList.addEventListener('dragover', handleDragOver, { passive: false })
+            spectatorList.addEventListener('dragenter', handleDragEnter, { passive: false })
+            spectatorList.addEventListener('dragleave', handleDragLeave, { passive: false })
+            spectatorList.addEventListener('drop', (e) => handleDrop(e, spectatorList), { passive: false })
+        }
+
+        console.log('🎯 Drag and drop setup complete')
+    }
 
     // Flip coin logic
     const coinFlip = document.getElementById('coinFlip')
@@ -264,70 +359,89 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Update UI based on user role - FIXED VERSION
     function updateUIForRole() {
-        // Add a delay to ensure window.isHost is properly set
         setTimeout(() => {
             const isHost = window.isHost === true
             console.log('🔧 Updating UI for role - isHost:', isHost, 'currentUsername:', window.currentUsername)
 
-            // Enable/disable round type selection
+            // Update layout class
+            const setupControls = document.querySelector('.setup-controls')
+            if (setupControls) {
+                setupControls.classList.toggle('non-host-view', !isHost)
+            }
+
+            // Hide player count section for non-hosts
+            const playerCountSection = document.getElementById('playerCountSection')
+            if (playerCountSection) {
+                playerCountSection.style.display = isHost ? 'block' : 'none'
+            }
+
+            // Enable/disable round controls for hosts only
             if (roundCountSelector) {
                 const options = roundCountSelector.querySelectorAll('.round-count-option')
                 options.forEach((option) => {
                     option.style.pointerEvents = isHost ? 'auto' : 'none'
-                    option.style.opacity = isHost ? '1' : '0.7'
+                    option.style.opacity = isHost ? '1' : '0.8'
                 })
             }
 
-            // Enable/disable batch size selection
             if (singleBatchSelector) {
                 const options = singleBatchSelector.querySelectorAll('.batch-option')
                 options.forEach((option) => {
                     option.style.pointerEvents = isHost ? 'auto' : 'none'
-                    option.style.opacity = isHost ? '1' : '0.7'
+                    option.style.opacity = isHost ? '1' : '0.8'
                 })
             }
 
-            // Enable/disable player count buttons
             if (playerCountButtons) {
                 const buttons = playerCountButtons.querySelectorAll('.player-count-btn')
                 buttons.forEach((btn) => {
                     btn.disabled = !isHost
-                    btn.style.opacity = isHost ? '1' : '0.7'
-                    btn.style.cursor = isHost ? 'pointer' : 'not-allowed'
+                    btn.style.opacity = isHost ? '1' : '0.8'
                 })
             }
 
-            // Show/hide host indicators
-            const sections = [roundCountSelector, singleBatchSelector, playerCountButtons?.parentElement]
-            sections.forEach((element) => {
-                if (!element) return
+            // Update configuration display for non-hosts
+            updateConfigurationDisplay()
 
-                // Remove existing indicators
-                const existingIndicator = element.querySelector('.host-only-indicator')
-                if (existingIndicator) {
-                    existingIndicator.remove()
-                }
-
-                // Add indicator for non-hosts
-                if (!isHost) {
-                    const indicator = document.createElement('div')
-                    indicator.className = 'host-only-indicator'
-                    indicator.textContent = "Seul l'hôte peut modifier ces paramètres"
-                    indicator.style.cssText = `
-                        background: rgb(241 196 15 / 10%);
-                        color: #f39c12;
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        font-size: 0.85em;
-                        font-weight: 600;
-                        text-align: center;
-                        margin-bottom: 10px;
-                        border: 1px solid rgb(241 196 15 / 30%);
-                    `
-                    element.insertBefore(indicator, element.firstChild)
-                }
-            })
+            // Re-setup drag and drop after UI changes
+            setTimeout(setupDragAndDrop, 100)
         }, 100)
+    }
+
+    // Function to update configuration display in rules section
+    function updateConfigurationDisplay() {
+        const configDisplay = document.getElementById('currentConfigDisplay')
+        const configInfo = document.getElementById('configInfo')
+
+        if (!configDisplay || !configInfo) return
+
+        const gameState = window.gameState
+        const isHost = window.isHost === true
+
+        if (!isHost && gameState) {
+            // Show configuration for non-hosts
+            configDisplay.style.display = 'block'
+
+            const roundTypeText =
+                {
+                    single: '1 manche',
+                    two_rounds: '2 manches',
+                    three_rounds: '3 manches',
+                }[gameState.round_type] || 'Configuration par défaut'
+
+            let batchInfo = ''
+            if (gameState.round_type === 'single' && gameState.selected_batch_size) {
+                batchInfo = ` - Lot de ${gameState.selected_batch_size}`
+            }
+
+            configInfo.innerHTML = `
+                <span class="config-badge">${roundTypeText}${batchInfo}</span>
+                <span class="config-badge">${gameState.required_players || 5} joueurs requis</span>
+            `
+        } else {
+            // Hide for hosts
+            configDisplay.style.display = 'none'
+        }
     }
 
     // Round type selection
@@ -456,8 +570,9 @@ window.addEventListener('DOMContentLoaded', () => {
             fetchGameState(
                 apiUrl,
                 joinedRoomId,
-                (players, host, spectators, actions) => renderPlayers(players, host, spectators, actions, addDnDEvents),
-                (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
+                (players, host, spectators, actions) =>
+                    renderPlayers(players, host, spectators, actions, setupDragAndDrop),
+                (spectators, host, actions) => renderSpectators(spectators, host, actions, setupDragAndDrop)
             )
         })
 
@@ -466,8 +581,8 @@ window.addEventListener('DOMContentLoaded', () => {
         fetchGameState(
             apiUrl,
             gameRoomId,
-            (players, host, spectators, actions) => renderPlayers(players, host, spectators, actions, addDnDEvents),
-            (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
+            (players, host, spectators, actions) => renderPlayers(players, host, spectators, actions, setupDragAndDrop),
+            (spectators, host, actions) => renderSpectators(spectators, host, actions, setupDragAndDrop)
         )
     })
 
@@ -547,9 +662,18 @@ window.addEventListener('DOMContentLoaded', () => {
         updatePlayerCountDisplay()
     })
 
+    // Listen for game state updates
+    window.addEventListener('gamestateupdate', () => {
+        console.log('🔄 Game state update event received')
+        updateConfigurationDisplay()
+    })
+
     // Initial UI update with multiple attempts to ensure it works
     updateUIForRole()
     setTimeout(updateUIForRole, 500)
     setTimeout(updateUIForRole, 1500)
     setTimeout(updatePlayerCountDisplay, 100)
+
+    // Initial drag and drop setup
+    setTimeout(setupDragAndDrop, 200)
 })
