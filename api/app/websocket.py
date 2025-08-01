@@ -4,7 +4,14 @@ from datetime import datetime
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from .game_logic import get_game, online_users, remove_game, rooms
+from .game_logic import (
+    get_game,
+    get_tails_count,
+    get_total_completed_coins,
+    online_users,
+    remove_game,
+    rooms,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +111,6 @@ async def send_welcome_message(websocket: WebSocket, room_id: str, username: str
     game = get_game(room_id)
     if not game:
         return
-
-    from .game_logic import get_tails_count, get_total_completed_coins
 
     # Create comprehensive welcome message with all necessary data
     welcome_msg = {
