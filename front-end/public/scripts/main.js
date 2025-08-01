@@ -1,5 +1,5 @@
-import { joinRoom, fetchGameState, changeRole, setBatchSize } from './api.js'
-import { updateGameCode, renderPlayers, renderSpectators, updateConfig } from './dom.js'
+import { joinRoom, fetchGameState, changeRole, setRoundConfig } from './api.js'
+import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updatePlayerCountDisplay } from './dom.js'
 import { handleDragOver, addDnDEvents, draggedItem } from './dnd.js'
 import { connectWebSocket } from './websocket.js'
 import { fetchBoardGameState, renderGameBoard, updateGameUI } from './game-board.js'
@@ -12,7 +12,6 @@ const gameBoard = document.getElementById('gameBoard')
 
 if (startBtn && gameSetup && gameControls && gameBoard) {
     startBtn.addEventListener('click', async () => {
-        // Get game code from UI
         const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
         const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
 
@@ -21,13 +20,10 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
             return
         }
 
-        // Disable button during request
         startBtn.disabled = true
         startBtn.textContent = 'Démarrage...'
 
         try {
-            console.log('Starting game with:', { apiUrl, gameCode })
-
             const response = await fetch(`${apiUrl}/game/start/${gameCode}`, {
                 method: 'POST',
                 headers: {
@@ -37,13 +33,8 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
                 credentials: 'include',
             })
 
-            console.log('Start game response status:', response.status)
-            console.log('Start game response headers:', [...response.headers.entries()])
-
             if (!response.ok) {
                 const errorText = await response.text()
-                console.error('Start game error response:', errorText)
-
                 let errorData
                 try {
                     errorData = JSON.parse(errorText)
@@ -55,11 +46,9 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
 
             const data = await response.json()
             console.log('Game start successful:', data)
-            // The websocket will handle switching to the game view
         } catch (error) {
             console.error('Error starting game:', error)
 
-            // Provide more specific error messages
             let errorMessage = error.message || 'Impossible de démarrer la partie'
 
             if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
@@ -71,10 +60,51 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
             }
 
             alert(errorMessage)
-
-            // Re-enable button on error
             startBtn.disabled = false
             startBtn.textContent = 'Démarrer la Partie'
+        }
+    })
+}
+
+// --- Next Round Button Logic ---
+const nextRoundBtn = document.getElementById('nextRoundBtn')
+if (nextRoundBtn) {
+    nextRoundBtn.addEventListener('click', async () => {
+        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+
+        if (!apiUrl || !gameCode) {
+            alert('Informations manquantes pour démarrer la manche suivante')
+            return
+        }
+
+        if (!window.isHost) {
+            alert("Seul l'hôte peut démarrer la manche suivante")
+            return
+        }
+
+        nextRoundBtn.disabled = true
+        nextRoundBtn.textContent = 'Démarrage...'
+
+        try {
+            const response = await fetch(`${apiUrl}/game/next_round/${gameCode}`, {
+                method: 'POST',
+                credentials: 'include',
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.detail || 'Erreur lors du démarrage de la manche suivante')
+            }
+
+            const data = await response.json()
+            console.log('Next round started:', data)
+        } catch (error) {
+            console.error('Error starting next round:', error)
+            alert(error.message || 'Impossible de démarrer la manche suivante')
+        } finally {
+            nextRoundBtn.disabled = false
+            nextRoundBtn.textContent = 'Manche Suivante'
         }
     })
 }
@@ -139,7 +169,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
 
                 console.log('Game reset successful')
-                // The websocket will handle switching back to lobby view
             } catch (error) {
                 console.error('Error resetting game:', error)
                 alert(error.message || 'Impossible de réinitialiser la partie')
@@ -150,7 +179,7 @@ window.addEventListener('DOMContentLoaded', () => {
         })
     }
 
-    // Drag & Drop joueurs/spectateurs
+    // Drag & Drop players/spectators
     let _draggedItem = draggedItem
 
     function handleDrop(e, targetList) {
@@ -223,90 +252,179 @@ window.addEventListener('DOMContentLoaded', () => {
         })
     }
 
-    // Game setup controls
-    const playerButtons = document.getElementById('playerButtons')
-    const roundSelector = document.getElementById('roundSelector')
-    const playersSpan = document.getElementById('selected-players')
-    const roundSpan = document.getElementById('selected-round')
+    // Round configuration controls
+    const roundCountSelector = document.getElementById('roundCountSelector')
+    const singleBatchSelector = document.getElementById('singleBatchSelector')
+    const playerCountButtons = document.getElementById('playerCountButtons')
 
-    // Get initial selected player count from active button
-    let selectedPlayers = 5 // default to 5 players
-    if (playerButtons) {
-        const activeBtn = playerButtons.querySelector('button.active')
-        if (activeBtn && activeBtn.dataset.count) {
-            selectedPlayers = parseInt(activeBtn.dataset.count, 10)
-        }
-    }
+    // Initialize default values
+    let selectedRoundType = 'three_rounds'
+    let selectedBatchSize = 12
+    let requiredPlayers = 5
 
-    // Get initial selected batch size from active option
-    let selectedBatchSize = 12 // default to batch of 12
-    if (roundSelector) {
-        const activeRound = roundSelector.querySelector('.round-option.active')
-        if (activeRound && activeRound.dataset.round) {
-            const roundIndex = parseInt(activeRound.dataset.round, 10) - 1
-            selectedBatchSize = [12, 4, 1][roundIndex] || 12
-        }
-    }
+    // Update UI based on user role - FIXED VERSION
+    function updateUIForRole() {
+        // Add a delay to ensure window.isHost is properly set
+        setTimeout(() => {
+            const isHost = window.isHost === true
+            console.log('🔧 Updating UI for role - isHost:', isHost, 'currentUsername:', window.currentUsername)
 
-    // Player count selection
-    if (playerButtons) {
-        playerButtons.querySelectorAll('button').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                playerButtons.querySelectorAll('button').forEach((b) => b.classList.remove('active'))
-                btn.classList.add('active')
-                if (btn.dataset.count) {
-                    selectedPlayers = parseInt(btn.dataset.count, 10)
-                    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedBatchSize)
+            // Enable/disable round type selection
+            if (roundCountSelector) {
+                const options = roundCountSelector.querySelectorAll('.round-count-option')
+                options.forEach((option) => {
+                    option.style.pointerEvents = isHost ? 'auto' : 'none'
+                    option.style.opacity = isHost ? '1' : '0.7'
+                })
+            }
 
-                    // Update start button text
-                    const playerCountSpan = document.getElementById('playerCount')
-                    if (playerCountSpan) {
-                        playerCountSpan.textContent = selectedPlayers
-                    }
+            // Enable/disable batch size selection
+            if (singleBatchSelector) {
+                const options = singleBatchSelector.querySelectorAll('.batch-option')
+                options.forEach((option) => {
+                    option.style.pointerEvents = isHost ? 'auto' : 'none'
+                    option.style.opacity = isHost ? '1' : '0.7'
+                })
+            }
+
+            // Enable/disable player count buttons
+            if (playerCountButtons) {
+                const buttons = playerCountButtons.querySelectorAll('.player-count-btn')
+                buttons.forEach((btn) => {
+                    btn.disabled = !isHost
+                    btn.style.opacity = isHost ? '1' : '0.7'
+                    btn.style.cursor = isHost ? 'pointer' : 'not-allowed'
+                })
+            }
+
+            // Show/hide host indicators
+            const sections = [roundCountSelector, singleBatchSelector, playerCountButtons?.parentElement]
+            sections.forEach((element) => {
+                if (!element) return
+
+                // Remove existing indicators
+                const existingIndicator = element.querySelector('.host-only-indicator')
+                if (existingIndicator) {
+                    existingIndicator.remove()
+                }
+
+                // Add indicator for non-hosts
+                if (!isHost) {
+                    const indicator = document.createElement('div')
+                    indicator.className = 'host-only-indicator'
+                    indicator.textContent = "Seul l'hôte peut modifier ces paramètres"
+                    indicator.style.cssText = `
+                        background: rgb(241 196 15 / 10%);
+                        color: #f39c12;
+                        padding: 8px 12px;
+                        border-radius: 6px;
+                        font-size: 0.85em;
+                        font-weight: 600;
+                        text-align: center;
+                        margin-bottom: 10px;
+                        border: 1px solid rgb(241 196 15 / 30%);
+                    `
+                    element.insertBefore(indicator, element.firstChild)
                 }
             })
-        })
+        }, 100)
     }
 
-    // Batch size selection (formerly round selection)
-    if (roundSelector) {
-        roundSelector.querySelectorAll('.round-option').forEach((opt) => {
+    // Round type selection
+    if (roundCountSelector) {
+        roundCountSelector.querySelectorAll('.round-count-option').forEach((opt) => {
             opt.addEventListener('click', async () => {
-                const roundIndex = parseInt(opt.dataset.round, 10) - 1
-                const newBatchSize = [12, 4, 1][roundIndex]
-
-                if (!newBatchSize) return
-
-                // Only host can change batch size
                 if (!window.isHost) {
-                    alert("Seul l'hôte peut changer la taille de lot")
+                    alert("Seul l'hôte peut changer la configuration des manches")
                     return
                 }
 
-                const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-                if (!apiUrl || !gameCode) return
+                const roundType = opt.dataset.type
+                if (!roundType) return
 
-                try {
-                    await setBatchSize(apiUrl, gameCode, newBatchSize)
+                // Update UI
+                roundCountSelector.querySelectorAll('.round-count-option').forEach((o) => o.classList.remove('active'))
+                opt.classList.add('active')
 
-                    // Update UI will be handled by websocket message
-                    selectedBatchSize = newBatchSize
-                    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedBatchSize)
-                } catch (error) {
-                    console.error('Error setting batch size:', error)
-                    // Error notification is handled in the API function
+                selectedRoundType = roundType
+
+                // Show/hide single batch selector
+                if (singleBatchSelector) {
+                    singleBatchSelector.style.display = roundType === 'single' ? 'block' : 'none'
                 }
+
+                // Send configuration to server
+                await updateRoundConfig()
             })
         })
     }
 
-    // Initial config
-    updateConfig(playersSpan, roundSpan, selectedPlayers, selectedBatchSize)
+    // Single batch size selection
+    if (singleBatchSelector) {
+        singleBatchSelector.querySelectorAll('.batch-option').forEach((opt) => {
+            opt.addEventListener('click', async () => {
+                if (!window.isHost) {
+                    alert("Seul l'hôte peut changer la configuration des manches")
+                    return
+                }
 
-    // Update start button text with initial player count
-    const playerCountSpan = document.getElementById('playerCount')
-    if (playerCountSpan) {
-        playerCountSpan.textContent = selectedPlayers
+                const batchSize = parseInt(opt.dataset.size, 10)
+                if (!batchSize) return
+
+                // Update UI
+                singleBatchSelector.querySelectorAll('.batch-option').forEach((o) => o.classList.remove('active'))
+                opt.classList.add('active')
+
+                selectedBatchSize = batchSize
+
+                // Send configuration to server
+                await updateRoundConfig()
+            })
+        })
+    }
+
+    // Player count selection
+    if (playerCountButtons) {
+        playerCountButtons.querySelectorAll('.player-count-btn').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                if (!window.isHost) {
+                    alert("Seul l'hôte peut changer le nombre de joueurs requis")
+                    return
+                }
+
+                const count = parseInt(btn.dataset.count, 10)
+                if (!count) return
+
+                // Update UI
+                playerCountButtons.querySelectorAll('.player-count-btn').forEach((b) => b.classList.remove('active'))
+                btn.classList.add('active')
+
+                requiredPlayers = count
+
+                // Update display
+                updatePlayerCountDisplay()
+
+                // Send configuration to server
+                await updateRoundConfig()
+            })
+        })
+    }
+
+    // Update round configuration on server
+    async function updateRoundConfig() {
+        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+        if (!apiUrl || !gameCode) return
+
+        try {
+            await setRoundConfig(apiUrl, gameCode, {
+                round_type: selectedRoundType,
+                required_players: requiredPlayers,
+                selected_batch_size: selectedRoundType === 'single' ? selectedBatchSize : null,
+            })
+            console.log('✅ Round config updated successfully')
+        } catch (error) {
+            console.error('❌ Error updating round config:', error)
+        }
     }
 
     // WebSocket and API event listeners
@@ -314,7 +432,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const { username, roomAction, roomId, roomCode } = e.detail || {}
         if (!username) return
 
-        // Determine which room identifier to use
         let gameRoomId = null
         if (roomAction === 'create' && roomId) {
             gameRoomId = roomId
@@ -323,25 +440,29 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         if (!gameRoomId) return
 
-        // Store username globally
         window.currentUsername = username
+        console.log('🎮 User joined with username:', username)
 
         updateGameCode(gameRoomId)
 
-        // Join the room
-        joinRoom(apiUrl, gameRoomId, username, (joinedRoomId) =>
+        joinRoom(apiUrl, gameRoomId, username, (joinedRoomId) => {
+            // Update UI for role after joining with a delay
+            console.log('🔄 Join room success, updating UI...')
+            setTimeout(() => {
+                updateUIForRole()
+                updatePlayerCountDisplay()
+            }, 750)
+
             fetchGameState(
                 apiUrl,
                 joinedRoomId,
                 (players, host, spectators, actions) => renderPlayers(players, host, spectators, actions, addDnDEvents),
                 (spectators, host, actions) => renderSpectators(spectators, host, actions, addDnDEvents)
             )
-        )
+        })
 
-        // Connect websocket for live updates
         connectWebSocket(apiUrl, gameRoomId, username)
 
-        // Fetch initial game state
         fetchGameState(
             apiUrl,
             gameRoomId,
@@ -369,15 +490,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 playAgainBtn.disabled = true
                 playAgainBtn.textContent = 'Redémarrage...'
 
-                // Reset the game first
                 await fetch(`${apiUrl}/game/reset/${gameCode}`, {
                     method: 'POST',
                     credentials: 'include',
                 })
 
-                // Small delay to ensure reset is complete
                 setTimeout(async () => {
-                    // Then start a new game
                     await fetch(`${apiUrl}/game/start/${gameCode}`, {
                         method: 'POST',
                         credentials: 'include',
@@ -421,4 +539,17 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         })
     }
+
+    // Listen for role changes from WebSocket
+    window.addEventListener('userrolechange', () => {
+        console.log('🔄 User role change event received')
+        updateUIForRole()
+        updatePlayerCountDisplay()
+    })
+
+    // Initial UI update with multiple attempts to ensure it works
+    updateUIForRole()
+    setTimeout(updateUIForRole, 500)
+    setTimeout(updateUIForRole, 1500)
+    setTimeout(updatePlayerCountDisplay, 100)
 })

@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 from uuid import uuid4
 
 from .constants import MAX_PENNIES
-from .models import GameState, PennyGame, PlayerTimer
+from .models import GameState, PennyGame, PlayerTimer, RoundResult, RoundType
 
 ROOM_INACTIVITY_THRESHOLD = timedelta(minutes=60)
 PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
@@ -28,6 +28,10 @@ def create_new_game():
         player_coins={},  # Track coins per player
         sent_coins={},  # Track sent coins between players
         player_timers={},  # Track player timers
+        round_type=RoundType.THREE_ROUNDS,
+        required_players=5,
+        current_round=0,
+        round_results=[],
     )
     rooms[room_id] = []
     return room_id, host_secret
@@ -65,8 +69,56 @@ def get_heads_count(game: PennyGame) -> int:
     return total_heads
 
 
+def get_total_rounds(round_type: RoundType) -> int:
+    """Get total number of rounds for the round type"""
+    if round_type == RoundType.SINGLE:
+        return 1
+    elif round_type == RoundType.TWO_ROUNDS:
+        return 2
+    elif round_type == RoundType.THREE_ROUNDS:
+        return 3
+    return 1
+
+
+def get_batch_sizes_for_round_type(round_type: RoundType, selected_batch_size: Optional[int] = None) -> List[int]:
+    """Get the batch sizes to play for a given round type"""
+    if round_type == RoundType.SINGLE:
+        return [selected_batch_size] if selected_batch_size else [12]
+    elif round_type == RoundType.TWO_ROUNDS:
+        return [12, 1]  # First and last
+    elif round_type == RoundType.THREE_ROUNDS:
+        return [12, 4, 1]  # All three
+    return [12]
+
+
+def set_round_config(
+    game: PennyGame, round_type: RoundType, required_players: int, selected_batch_size: Optional[int] = None
+) -> bool:
+    """Set the round configuration for the game (only in lobby)"""
+    if game.state != GameState.LOBBY:
+        return False
+
+    # Validate round type and batch size
+    if round_type == RoundType.SINGLE and not selected_batch_size:
+        return False
+
+    if selected_batch_size and selected_batch_size not in [1, 4, 12]:
+        return False
+
+    if required_players < 2 or required_players > 5:
+        return False
+
+    game.round_type = round_type
+    game.required_players = required_players
+    game.selected_batch_size = selected_batch_size
+    game.current_round = 0
+    game.round_results = []
+
+    return True
+
+
 def initialize_player_coins(game: PennyGame):
-    """Initialize coin distribution when game starts"""
+    """Initialize coin distribution when round starts"""
     if not game.players:
         return
 
@@ -78,12 +130,81 @@ def initialize_player_coins(game: PennyGame):
     # Give all coins (as tails) to first player
     game.player_coins[first_player] = [False] * MAX_PENNIES
 
-    # Initialize player timers - ensure we have a clean dict
+    # Initialize player timers
     if not hasattr(game, "player_timers") or game.player_timers is None:
         game.player_timers = {}
 
     for player in game.players:
         game.player_timers[player] = PlayerTimer(player=player)
+
+
+def start_next_round(game: PennyGame) -> bool:
+    """Start the next round in the sequence"""
+    if game.state not in [GameState.LOBBY, GameState.ROUND_COMPLETE]:
+        return False
+
+    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+
+    if game.current_round >= len(batch_sizes):
+        return False  # All rounds completed
+
+    game.current_round += 1
+    game.batch_size = batch_sizes[game.current_round - 1]
+
+    # Initialize round state
+    now = datetime.now()
+    game.started_at = now
+    game.ended_at = None
+    game.game_duration_seconds = None
+    game.turn_timestamps = [now]
+    game.last_active_at = now
+    game.state = GameState.ACTIVE
+
+    # Reset game mechanics for new round
+    game.pennies = [False] * MAX_PENNIES
+    initialize_player_coins(game)
+
+    return True
+
+
+def complete_current_round(game: PennyGame):
+    """Complete the current round and save results"""
+    if game.state != GameState.ACTIVE:
+        return
+
+    # End game timer
+    if game.started_at and game.ended_at is None:
+        game.ended_at = datetime.now()
+        game.game_duration_seconds = (game.ended_at - game.started_at).total_seconds()
+
+    # End all running player timers
+    for player, timer in game.player_timers.items():
+        if timer.started_at and timer.ended_at is None:
+            timer.ended_at = datetime.now()
+            timer.duration_seconds = (timer.ended_at - timer.started_at).total_seconds()
+
+    # Save round result
+    round_result = RoundResult(
+        round_number=game.current_round,
+        batch_size=game.batch_size,
+        game_duration_seconds=game.game_duration_seconds,
+        player_timers=game.player_timers.copy(),
+        total_completed=get_total_completed_coins(game),
+        started_at=game.started_at,
+        ended_at=game.ended_at,
+    )
+
+    game.round_results.append(round_result)
+
+    # Determine next state
+    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+
+    if game.current_round >= len(batch_sizes):
+        # All rounds completed
+        game.state = GameState.RESULTS
+    else:
+        # More rounds to play
+        game.state = GameState.ROUND_COMPLETE
 
 
 def start_player_timer(game: PennyGame, player: str):
@@ -114,19 +235,16 @@ def end_player_timer(game: PennyGame, player: str):
 
 
 def has_player_finished(game: PennyGame, player: str) -> bool:
-    return (
-        player in game.player_coins
-        and len(game.player_coins[player]) == 0
-        and all(len(game.player_coins[p]) == 0 for p in game.players[: game.players.index(player)])
-    )
+    """Check if a player has completely finished their work in the current round"""
+    if player not in game.player_coins:
+        return False
+
+    # Player is finished if they have no coins left
+    return len(game.player_coins[player]) == 0
 
 
 def flip_coin(game: PennyGame, player: str, coin_index: int) -> bool:
-    """
-    Flip a specific coin from tails to heads for a player.
-    Returns True if successful, False otherwise.
-    """
-    # Validate player exists and has coins
+    """Flip a specific coin from tails to heads for a player."""
     if player not in game.player_coins:
         return False
 
@@ -160,22 +278,20 @@ def can_send_batch(game: PennyGame, player: str) -> bool:
 
 
 def send_batch(game: PennyGame, player: str) -> bool:
-    """
-    Send a batch of coins to the next player in the chain.
-    Returns True if successful, False otherwise.
-    """
+    """Send a batch of coins to the next player in the chain."""
     if not can_send_batch(game, player):
         return False
 
     player_index = game.players.index(player)
+
+    # Last player case - send to completion
     if player_index == len(game.players) - 1:
-        # Last player - coins are delivered (game might end)
         return send_to_completion(game, player)
 
+    # Regular case - send to next player
     next_player = game.players[player_index + 1]
     player_coins = game.player_coins[player]
 
-    # Find coins to send (heads only, up to batch size)
     coins_to_send = []
     remaining_coins = []
 
@@ -200,7 +316,7 @@ def send_batch(game: PennyGame, player: str) -> bool:
         game.sent_coins[player] = []
     game.sent_coins[player].append({"count": len(coins_to_send), "timestamp": datetime.now(), "to_player": next_player})
 
-    # End player timer if they have no more coins left and all previous players are done
+    # End player timer if they have finished
     if has_player_finished(game, player):
         end_player_timer(game, player)
 
@@ -218,16 +334,22 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
     if heads_count == 0:
         return False
 
-    # Send all heads to completion
+    # Determine how many coins to send based on batch size
+    coins_to_complete = min(heads_count, game.batch_size)
+
+    # Send completed coins (remove them from player)
     completed_coins = []
     remaining_coins = []
 
+    heads_processed = 0
     for coin in player_coins:
-        if coin:  # Heads
+        if coin and heads_processed < coins_to_complete:  # Heads and within batch limit
             completed_coins.append(coin)
-        else:  # Tails
+            heads_processed += 1
+        else:
             remaining_coins.append(coin)
 
+    # Update player state
     game.player_coins[player] = remaining_coins
 
     # Track completion
@@ -237,32 +359,25 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
         {"count": len(completed_coins), "timestamp": datetime.now(), "to_player": "COMPLETED"}
     )
 
-    # End player timer if they have no more coins left and all previous players are done
+    # End player timer if they have finished
     if has_player_finished(game, player):
         end_player_timer(game, player)
 
     return True
 
 
-def is_game_over(game: PennyGame) -> bool:
-    """Check if all coins have been completed by the last player"""
+def is_round_over(game: PennyGame) -> bool:
+    """Check if current round is complete - FIXED VERSION"""
     if not game.players:
         return False
 
-    # Game is over when all coins have been processed through the entire chain
+    # Round is over when all coins have been completed by the last player
     total_completed = get_total_completed_coins(game)
 
-    # Also check if all players have no coins left (alternative end condition)
-    all_players_empty = all(len(game.player_coins.get(player, [])) == 0 for player in game.players)
+    # Check if all players have finished their work
+    all_players_finished = all(has_player_finished(game, player) for player in game.players)
 
-    return total_completed >= MAX_PENNIES or all_players_empty
-
-
-def end_game_timer(game: PennyGame):
-    """End the game timer and calculate duration"""
-    if game.started_at and game.ended_at is None:
-        game.ended_at = datetime.now()
-        game.game_duration_seconds = (game.ended_at - game.started_at).total_seconds()
+    return total_completed >= MAX_PENNIES or all_players_finished
 
 
 def get_total_completed_coins(game: PennyGame) -> int:
@@ -283,10 +398,7 @@ def get_total_completed_coins(game: PennyGame) -> int:
 
 
 def process_flip(game: PennyGame, player: str, coin_index: int) -> dict:
-    """
-    Process a player's action to flip a coin.
-    Returns a dict with success status and any relevant information.
-    """
+    """Process a player's action to flip a coin."""
     # Validate game state
     if game.state != GameState.ACTIVE:
         return {"success": False, "error": "Game is not active"}
@@ -305,12 +417,13 @@ def process_flip(game: PennyGame, player: str, coin_index: int) -> dict:
     now = datetime.now()
     game.last_active_at = now
 
-    # Check if game is over (all coins completed)
-    game_over = is_game_over(game)
+    # Check if round is over AFTER the action
+    round_complete = is_round_over(game)
+    game_over = False
 
-    if game_over:
-        game.state = GameState.RESULTS
-        end_game_timer(game)
+    if round_complete:
+        complete_current_round(game)
+        game_over = game.state == GameState.RESULTS
 
     # Ensure we have player_timers in the response
     if not hasattr(game, "player_timers") or game.player_timers is None:
@@ -318,21 +431,20 @@ def process_flip(game: PennyGame, player: str, coin_index: int) -> dict:
 
     return {
         "success": True,
+        "round_complete": round_complete,
         "game_over": game_over,
         "player_coins": game.player_coins.copy(),
         "sent_coins": game.sent_coins.copy(),
         "total_completed": get_total_completed_coins(game),
         "state": game.state.value,
+        "current_round": game.current_round,
         "player_timers": {k: v.to_dict() for k, v in game.player_timers.items()} if game.player_timers else {},
         "game_duration_seconds": game.game_duration_seconds,
     }
 
 
 def process_send(game: PennyGame, player: str) -> dict:
-    """
-    Process a player's action to send a batch of coins.
-    Returns a dict with success status and any relevant information.
-    """
+    """Process a player's action to send a batch of coins."""
     # Validate game state
     if game.state != GameState.ACTIVE:
         return {"success": False, "error": "Game is not active"}
@@ -351,12 +463,13 @@ def process_send(game: PennyGame, player: str) -> dict:
     now = datetime.now()
     game.last_active_at = now
 
-    # Check if game is over (all coins completed)
-    game_over = is_game_over(game)
+    # Check if round is over AFTER the action
+    round_complete = is_round_over(game)
+    game_over = False
 
-    if game_over:
-        game.state = GameState.RESULTS
-        end_game_timer(game)
+    if round_complete:
+        complete_current_round(game)
+        game_over = game.state == GameState.RESULTS
 
     # Ensure we have player_timers in the response
     if not hasattr(game, "player_timers") or game.player_timers is None:
@@ -364,11 +477,13 @@ def process_send(game: PennyGame, player: str) -> dict:
 
     return {
         "success": True,
+        "round_complete": round_complete,
         "game_over": game_over,
         "player_coins": game.player_coins.copy(),
         "sent_coins": game.sent_coins.copy(),
         "total_completed": get_total_completed_coins(game),
         "state": game.state.value,
+        "current_round": game.current_round,
         "player_timers": {k: v.to_dict() for k, v in game.player_timers.items()} if game.player_timers else {},
         "game_duration_seconds": game.game_duration_seconds,
     }
@@ -386,21 +501,9 @@ def reset_game(game: PennyGame):
     game.sent_coins = {}
     game.player_timers = {}
     game.game_duration_seconds = None
+    game.current_round = 0
+    game.round_results = []
     game.last_active_at = datetime.now()
-
-
-def set_batch_size(game: PennyGame, batch_size: int) -> bool:
-    """Set the batch size for the game (only in lobby)"""
-    if game.state != GameState.LOBBY:
-        return False
-
-    # Validate batch size - must be a divisor of MAX_PENNIES for clean batches
-    valid_batch_sizes = [1, 2, 3, 4, 6, 12]  # Divisors of 12
-    if batch_size not in valid_batch_sizes:
-        return False
-
-    game.batch_size = batch_size
-    return True
 
 
 def cleanup():

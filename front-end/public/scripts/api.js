@@ -130,31 +130,46 @@ export async function changeRole(apiUrl, roomId, username, newRole, onSuccess) {
     }
 }
 
-export async function setBatchSize(apiUrl, roomId, batchSize) {
-    if (!apiUrl || !roomId || !batchSize) {
-        console.error('Missing parameters for setBatchSize')
+export async function setRoundConfig(apiUrl, roomId, config) {
+    if (!apiUrl || !roomId || !config) {
+        console.error('Missing parameters for setRoundConfig')
         return
     }
 
     try {
-        const response = await fetch(`${apiUrl}/game/batch_size/${roomId}`, {
+        const response = await fetch(`${apiUrl}/game/round_config/${roomId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ batch_size: batchSize }),
+            body: JSON.stringify(config),
             credentials: 'include',
         })
 
         if (!response.ok) {
             const errorData = await response.json()
-            throw new Error(errorData.detail || 'Erreur lors du changement de taille de lot')
+            throw new Error(errorData.detail || 'Erreur lors de la configuration des manches')
         }
 
         const data = await response.json()
-        showSuccessNotification(`Taille de lot changée: ${batchSize}`)
+        console.log('Round config updated:', data)
         return data
     } catch (error) {
-        console.error('Error changing batch size:', error)
-        showErrorNotification(`Impossible de changer la taille de lot: ${error.message}`)
+        console.error('Error setting round config:', error)
+        showErrorNotification(`Impossible de configurer les manches: ${error.message}`)
+        throw error
+    }
+}
+
+export async function setBatchSize(apiUrl, roomId, batchSize) {
+    console.warn('setBatchSize is deprecated. Use setRoundConfig instead.')
+    // For backward compatibility, convert to new format
+    try {
+        return await setRoundConfig(apiUrl, roomId, {
+            round_type: 'single',
+            required_players: window.gameState?.required_players || 5,
+            selected_batch_size: batchSize,
+        })
+    } catch (error) {
+        console.error('Error setting batch size:', error)
         throw error
     }
 }
@@ -183,6 +198,34 @@ export async function startGame(apiUrl, roomId) {
     } catch (error) {
         console.error('Error starting game:', error)
         showErrorNotification(`Impossible de démarrer: ${error.message}`)
+        throw error
+    }
+}
+
+export async function startNextRound(apiUrl, roomId) {
+    if (!apiUrl || !roomId) {
+        console.error('Missing parameters for startNextRound')
+        return
+    }
+
+    try {
+        const response = await fetch(`${apiUrl}/game/next_round/${roomId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.detail || 'Erreur lors du démarrage de la manche suivante')
+        }
+
+        const data = await response.json()
+        showSuccessNotification(`🎮 Manche ${data.current_round} démarrée !`)
+        return data
+    } catch (error) {
+        console.error('Error starting next round:', error)
+        showErrorNotification(`Impossible de démarrer la manche suivante: ${error.message}`)
         throw error
     }
 }

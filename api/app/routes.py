@@ -7,15 +7,18 @@ from fastapi import APIRouter, Body, Cookie, HTTPException, Response
 from .game_logic import (
     cleanup,
     create_new_game,
+    get_batch_sizes_for_round_type,
     get_game,
+    get_total_rounds,
     initialize_player_coins,
     process_flip,
     process_send,
     reset_game,
     rooms,
-    set_batch_size,
+    set_round_config,
+    start_next_round,
 )
-from .models import BatchSizeRequest, ChangeRoleRequest, FlipRequest, GameState, JoinRequest, SendRequest
+from .models import ChangeRoleRequest, FlipRequest, GameState, JoinRequest, RoundConfigRequest, RoundType, SendRequest
 from .response_builder import GameResponseBuilder
 from .validators import GameValidator
 from .websocket import broadcast_activity, broadcast_game_state, broadcast_game_update
@@ -124,9 +127,9 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
     return GameResponseBuilder.build_join_response(game)
 
 
-@router.post("/game/batch_size/{room_id}")
-async def set_game_batch_size(room_id: str, req: BatchSizeRequest, host_secret: str = Cookie(None)):
-    """Set batch size for the game (host only, lobby only)"""
+@router.post("/game/round_config/{room_id}")
+async def set_round_configuration(room_id: str, req: RoundConfigRequest, host_secret: str = Cookie(None)):
+    """Set round configuration for the game (host only, lobby only)"""
     game = get_game(room_id)
 
     # Validate game exists
@@ -144,24 +147,44 @@ async def set_game_batch_size(room_id: str, req: BatchSizeRequest, host_secret: 
     if not is_valid:
         raise HTTPException(status_code=400, detail=error)
 
-    # Validate batch size
-    is_valid, error = GameValidator.validate_batch_size(req.batch_size)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=error)
+    # Convert string to enum
+    try:
+        round_type = RoundType(req.round_type)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid round type")
 
-    if not set_batch_size(game, req.batch_size):
-        raise HTTPException(status_code=400, detail=f"Failed to set batch size to {req.batch_size}")
+    # Validate single round has batch size
+    if round_type == RoundType.SINGLE and not req.selected_batch_size:
+        raise HTTPException(status_code=400, detail="Selected batch size required for single round")
+
+    # Validate batch size
+    if req.selected_batch_size and req.selected_batch_size not in [1, 4, 12]:
+        raise HTTPException(status_code=400, detail="Invalid batch size. Must be 1, 4, or 12")
+
+    if not set_round_config(game, round_type, req.required_players, req.selected_batch_size):
+        raise HTTPException(status_code=400, detail="Failed to set round configuration")
+
+    total_rounds = get_total_rounds(round_type)
 
     await broadcast_game_update(
         room_id,
         {
-            "type": "batch_size_update",
-            "batch_size": game.batch_size,
+            "type": "round_config_update",
+            "round_type": game.round_type.value,
+            "required_players": game.required_players,
+            "selected_batch_size": game.selected_batch_size,
+            "total_rounds": total_rounds,
         },
     )
 
-    logger.info(f"Batch size changed to {game.batch_size} in game {room_id}")
-    return GameResponseBuilder.build_batch_size_response(game)
+    logger.info(f"Round config updated in game {room_id}: {req.round_type}, {req.required_players} players")
+    return {
+        "success": True,
+        "round_type": game.round_type.value,
+        "required_players": game.required_players,
+        "selected_batch_size": game.selected_batch_size,
+        "total_rounds": total_rounds,
+    }
 
 
 @router.post("/game/start/{room_id}")
@@ -172,7 +195,6 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
     validations = [
         GameValidator.validate_game_exists(game),
         GameValidator.validate_game_not_started(game),
-        GameValidator.validate_player_count_for_start(game),
         GameValidator.validate_host_action(game, host_secret),
     ]
 
@@ -181,31 +203,94 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
         status_code = 404 if "not found" in error else 403 if "Invalid host" in error else 400
         raise HTTPException(status_code=status_code, detail=error)
 
-    now = datetime.now()
-    game.started_at = now
-    game.turn_timestamps.append(now)
-    game.last_active_at = now
-    game.state = GameState.ACTIVE
+    # Check if we have enough players for the required amount
+    if len(game.players) < game.required_players:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Need {game.required_players} players to start the game. Currently have {len(game.players)}.",
+        )
 
-    initialize_player_coins(game)
+    # Start the first round
+    if not start_next_round(game):
+        raise HTTPException(status_code=400, detail="Failed to start game")
+
+    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+    total_rounds = len(batch_sizes)
 
     await broadcast_game_state(room_id, state=GameState.ACTIVE)
     await broadcast_game_update(
         room_id,
         {
             "type": "game_started",
+            "round_type": game.round_type.value,
+            "current_round": game.current_round,
+            "total_rounds": total_rounds,
             "batch_size": game.batch_size,
             "players": game.players,
             "player_coins": game.player_coins,
-            "total_completed": 0,  # Will be calculated by response builder
-            "tails_remaining": 12,  # Will be calculated by response builder
+            "total_completed": 0,
+            "tails_remaining": 12,
             "player_timers": GameResponseBuilder._format_player_timers(game),
             "game_duration_seconds": game.game_duration_seconds,
         },
     )
 
-    logger.info(f"Game started: {room_id} with {len(game.players)} players")
+    logger.info(f"Game started: {room_id} with {len(game.players)} players, round {game.current_round}/{total_rounds}")
     return GameResponseBuilder.build_start_game_response(game)
+
+
+@router.post("/game/next_round/{room_id}")
+async def start_next_round_endpoint(room_id: str, host_secret: str = Cookie(None)):
+    """Start the next round (host only, round_complete state only)"""
+    game = get_game(room_id)
+
+    # Validate game exists and host permissions
+    validations = [
+        GameValidator.validate_game_exists(game),
+        GameValidator.validate_host_action(game, host_secret),
+    ]
+
+    is_valid, error = GameValidator.validate_multiple(validations)
+    if not is_valid:
+        status_code = 404 if "not found" in error else 403
+        raise HTTPException(status_code=status_code, detail=error)
+
+    # Check if we're in the right state
+    if game.state != GameState.ROUND_COMPLETE:
+        raise HTTPException(status_code=400, detail="Can only start next round when current round is complete")
+
+    # Start the next round
+    if not start_next_round(game):
+        raise HTTPException(status_code=400, detail="No more rounds to play")
+
+    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+    total_rounds = len(batch_sizes)
+
+    await broadcast_game_state(room_id, state=GameState.ACTIVE)
+    await broadcast_game_update(
+        room_id,
+        {
+            "type": "round_started",
+            "current_round": game.current_round,
+            "total_rounds": total_rounds,
+            "batch_size": game.batch_size,
+            "players": game.players,
+            "player_coins": game.player_coins,
+            "total_completed": 0,
+            "tails_remaining": 12,
+            "player_timers": GameResponseBuilder._format_player_timers(game),
+            "game_duration_seconds": None,
+        },
+    )
+
+    logger.info(f"Next round started: {room_id}, round {game.current_round}/{total_rounds}")
+    return {
+        "success": True,
+        "current_round": game.current_round,
+        "total_rounds": total_rounds,
+        "batch_size": game.batch_size,
+        "state": game.state.value,
+    }
 
 
 @router.post("/game/flip/{room_id}")
@@ -218,8 +303,8 @@ async def flip_coin(room_id: str, flip: FlipRequest):
         raise HTTPException(status_code=404, detail=error)
 
     # Validate player count (minimum requirement)
-    if len(game.players) < 2:
-        raise HTTPException(status_code=400, detail="Need 2 players")
+    if len(game.players) < game.required_players:
+        raise HTTPException(status_code=400, detail=f"Need {game.required_players} players")
 
     # Validate flip request
     is_valid, error = GameValidator.validate_flip_request(game, flip.username)
@@ -238,11 +323,32 @@ async def flip_coin(room_id: str, flip: FlipRequest):
 
     await broadcast_game_update(room_id, action_data)
 
-    if result["game_over"]:
-        await broadcast_game_state(room_id, state=GameState.RESULTS)
-        game_data = GameResponseBuilder.build_game_state_response(game)
-        await broadcast_game_update(room_id, {"type": "game_over", "final_state": game_data})
-        logger.info(f"Game completed: {room_id}")
+    # Handle round completion
+    if result["round_complete"]:
+        if result["game_over"]:
+            await broadcast_game_state(room_id, state=GameState.RESULTS)
+            game_data = GameResponseBuilder.build_game_state_response(game)
+            await broadcast_game_update(room_id, {"type": "game_over", "final_state": game_data})
+            logger.info(f"Game completed: {room_id}")
+        else:
+            await broadcast_game_state(room_id, state=GameState.ROUND_COMPLETE)
+            round_result = game.round_results[-1] if game.round_results else None
+            batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+            next_round = game.current_round + 1 if game.current_round < len(batch_sizes) else None
+            next_batch_size = batch_sizes[game.current_round] if next_round else None
+
+            await broadcast_game_update(
+                room_id,
+                {
+                    "type": "round_complete",
+                    "round_number": game.current_round,
+                    "next_round": next_round,
+                    "batch_size": next_batch_size,
+                    "round_result": round_result.dict() if round_result else None,
+                    "game_over": False,
+                },
+            )
+            logger.info(f"Round {game.current_round} completed: {room_id}")
 
     return GameResponseBuilder.build_game_state_response(game)
 
@@ -258,8 +364,8 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
             raise HTTPException(status_code=404, detail=error)
 
         # Validate player count
-        if len(game.players) < 2:
-            raise HTTPException(status_code=400, detail="Need 2 players")
+        if len(game.players) < game.required_players:
+            raise HTTPException(status_code=400, detail=f"Need {game.required_players} players")
 
         # Validate send batch request
         is_valid, error = GameValidator.validate_send_batch_request(game, send.username)
@@ -286,17 +392,40 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
 
         await broadcast_game_update(room_id, action_data)
 
-        if result["game_over"]:
-            await broadcast_game_state(room_id, state=GameState.RESULTS)
-            game_data = GameResponseBuilder.build_game_state_response(game)
-            await broadcast_game_update(room_id, {"type": "game_over", "final_state": game_data})
-            logger.info(f"Game completed: {room_id}")
+        # Handle round completion
+        if result["round_complete"]:
+            if result["game_over"]:
+                await broadcast_game_state(room_id, state=GameState.RESULTS)
+                game_data = GameResponseBuilder.build_game_state_response(game)
+                await broadcast_game_update(room_id, {"type": "game_over", "final_state": game_data})
+                logger.info(f"Game completed: {room_id}")
+            else:
+                await broadcast_game_state(room_id, state=GameState.ROUND_COMPLETE)
+                round_result = game.round_results[-1] if game.round_results else None
+                batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+                next_round = game.current_round + 1 if game.current_round < len(batch_sizes) else None
+                next_batch_size = batch_sizes[game.current_round] if next_round else None
+
+                await broadcast_game_update(
+                    room_id,
+                    {
+                        "type": "round_complete",
+                        "round_number": game.current_round,
+                        "next_round": next_round,
+                        "batch_size": next_batch_size,
+                        "round_result": round_result.dict() if round_result else None,
+                        "game_over": False,
+                    },
+                )
+                logger.info(f"Round {game.current_round} completed: {room_id}")
 
         return {
             "success": True,
             "message": "Batch sent successfully",
             "batch_count": batch_count,
+            "round_complete": result["round_complete"],
             "game_over": result["game_over"],
+            "current_round": result["current_round"],
             "total_completed": result["total_completed"],
             "player_timers": result["player_timers"],
             "game_duration_seconds": result["game_duration_seconds"],
@@ -332,7 +461,10 @@ async def reset_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
         room_id,
         {
             "type": "game_reset",
-            "batch_size": game.batch_size,
+            "round_type": game.round_type.value,
+            "required_players": game.required_players,
+            "selected_batch_size": game.selected_batch_size,
+            "current_round": game.current_round,
             "state": game.state.value,
             "player_coins": game.player_coins,
             "total_completed": 0,
@@ -360,52 +492,6 @@ def get_game_state(room_id: str):
 @router.post("/cleanup")
 def cleanup_inactive_games():
     return cleanup()
-
-
-@router.post("/game/end/{room_id}")
-async def end_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
-    """Manually end the game (host only, for testing)"""
-    game = get_game(room_id)
-
-    # Multiple validations
-    validations = [
-        GameValidator.validate_game_exists(game),
-        GameValidator.validate_host_action(game, host_secret),
-        GameValidator.validate_active_game(game, "dummy_player")[0:1] + (None,),  # Only check if active
-    ]
-
-    # Custom validation for active game state
-    if game.state != GameState.ACTIVE:
-        raise HTTPException(status_code=400, detail="Game is not active")
-
-    is_valid, error = GameValidator.validate_multiple(validations[:2])  # Skip the dummy validation
-    if not is_valid:
-        status_code = 404 if "not found" in error else 403
-        raise HTTPException(status_code=status_code, detail=error)
-
-    # Force end the game
-    game.state = GameState.RESULTS
-    from .game_logic import end_game_timer
-
-    end_game_timer(game)
-
-    # End all player timers that are still running
-    for player, timer in game.player_timers.items():
-        if timer.started_at and not timer.ended_at:
-            timer.ended_at = datetime.now()
-            timer.duration_seconds = (timer.ended_at - timer.started_at).total_seconds()
-
-    await broadcast_game_state(room_id, state=GameState.RESULTS)
-    game_data = GameResponseBuilder.build_game_state_response(game)
-    await broadcast_game_update(room_id, {"type": "game_over", "final_state": game_data})
-
-    logger.info(f"Game manually ended: {room_id}")
-    return {
-        "success": True,
-        "state": GameState.RESULTS.value,
-        "player_timers": GameResponseBuilder._format_player_timers(game),
-        "game_duration_seconds": game.game_duration_seconds,
-    }
 
 
 @router.post("/game/change_role/{room_id}")
