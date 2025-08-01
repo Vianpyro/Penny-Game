@@ -659,11 +659,6 @@ function updateResultsDisplay(finalState) {
         resultsActions.style.display = ''
         GameActions.setupStandardButtons()
     }
-
-    const debugActions = document.getElementById('debugActions')
-    if (debugActions && window.isHost) {
-        debugActions.style.display = ''
-    }
 }
 
 export function connectWebSocket(apiUrl, roomId, username) {

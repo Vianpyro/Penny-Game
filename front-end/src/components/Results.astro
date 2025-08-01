@@ -55,11 +55,6 @@ import '../styles/results.css'
         <button class="btn btn-primary" id="playAgainBtn">🔄 Rejouer</button>
         <button class="btn btn-secondary" id="backToLobbyBtn">🏠 Retour au lobby</button>
     </div>
-
-    <!-- Manual End Game Button (for testing) -->
-    <div class="debug-actions" id="debugActions" style="display: none;">
-        <button class="btn btn-warning" id="endGameBtn">⏹️ Terminer la partie (Test)</button>
-    </div>
 </div>
 
 <style>
@@ -199,23 +194,6 @@ import '../styles/results.css'
         font-size: 0.9em;
         color: #7f8c8d;
         font-weight: 600;
-    }
-
-    .debug-actions {
-        text-align: center;
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 2px dashed #bdc3c7;
-    }
-
-    .btn-warning {
-        background: linear-gradient(45deg, #f39c12, #e67e22);
-        color: white;
-    }
-
-    .btn-warning:hover {
-        box-shadow: 0 8px 20px rgba(243, 156, 18, 0.3);
-        transform: translateY(-2px);
     }
 
     /* Responsive design */
