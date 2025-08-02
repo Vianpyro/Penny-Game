@@ -380,7 +380,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             console.log('🎯 Setting up drag and drop - Host:', isHost, 'User:', currentUser, {
                 playerList: !!playerList,
-                spectatorList: !!spectatorList
+                spectatorList: !!spectatorList,
             })
 
             // Early return if user data not available yet
@@ -468,7 +468,6 @@ window.addEventListener('DOMContentLoaded', () => {
             addSelfRoleSwitchButton()
 
             console.log('✅ Drag and drop setup complete')
-
         } catch (error) {
             console.error('❌ Error in setupDragAndDrop:', error)
         }
@@ -610,7 +609,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 // Re-setup drag and drop after UI changes
                 setTimeout(setupDragAndDrop, 100)
-
             } catch (error) {
                 console.error('❌ Error in updateUIForRole:', error)
             }

@@ -395,6 +395,7 @@ function updateRoundCompleteDisplay(msg) {
     const gameCompleteSection = document.getElementById('gameCompleteSection')
     const nextRoundNumber = document.getElementById('nextRoundNumber')
     const nextBatchSize = document.getElementById('nextBatchSize')
+    const nextBatchSizeDesc = document.getElementById('nextBatchSizeDesc')
     const nextRoundBtn = document.getElementById('nextRoundBtn')
 
     // Update basic round info
@@ -421,6 +422,7 @@ function updateRoundCompleteDisplay(msg) {
 
         if (nextRoundNumber) nextRoundNumber.textContent = msg.next_round
         if (nextBatchSize) nextBatchSize.textContent = msg.batch_size
+        if (nextBatchSizeDesc) nextBatchSizeDesc.textContent = msg.batch_size
         if (nextRoundBtn) {
             nextRoundBtn.disabled = !window.isHost
             const nextRoundButtonNumber = nextRoundBtn.querySelector('#nextRoundButtonNumber')

@@ -1,4 +1,7 @@
-# Centralized module for building standardized API responses
+"""
+Centralized module for building standardized API responses.
+Provides consistent response formatting across all endpoints.
+"""
 
 from typing import Any, Dict, Optional
 
@@ -6,12 +9,12 @@ from .models import PennyGame
 
 
 class GameResponseBuilder:
-    """Utility class for building standardized API responses"""
+    """Utility class for building standardized API responses."""
 
     @staticmethod
     def build_game_state_response(game: PennyGame, include_secret: bool = False) -> Dict[str, Any]:
         """
-        Builds a standardized response for the game state
+        Build a standardized response for the game state.
 
         Args:
             game: Game instance
@@ -44,7 +47,7 @@ class GameResponseBuilder:
     @staticmethod
     def build_action_response(result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Builds a standardized response for game actions
+        Build a standardized response for game actions.
 
         Args:
             result: Result of the game action
@@ -66,7 +69,7 @@ class GameResponseBuilder:
     @staticmethod
     def build_join_response(game: PennyGame, note: Optional[str] = None) -> Dict[str, Any]:
         """
-        Builds a response for joining a game
+        Build a response for joining a game.
 
         Args:
             game: Game instance
@@ -85,7 +88,7 @@ class GameResponseBuilder:
     @staticmethod
     def build_error_response(error_message: str, status_code: int = 400) -> Dict[str, Any]:
         """
-        Builds a standardized error response
+        Build a standardized error response.
 
         Args:
             error_message: Error message
@@ -101,7 +104,7 @@ class GameResponseBuilder:
         player: str, action: str, result: Dict[str, Any], extra_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Builds data for WebSocket action messages
+        Build data for WebSocket action messages.
 
         Args:
             player: Player name
@@ -132,41 +135,29 @@ class GameResponseBuilder:
         return action_data
 
     @staticmethod
-    def _format_player_timers(game: PennyGame) -> Dict[str, Any]:
+    def build_round_config_response(game: PennyGame, total_rounds: int) -> Dict[str, Any]:
         """
-        Formats player timers for the response
+        Build a response for round configuration updates.
 
         Args:
             game: Game instance
+            total_rounds: Total number of rounds
 
         Returns:
-            Dict containing the formatted timers
-        """
-        if not hasattr(game, "player_timers") or not game.player_timers:
-            return {}
-
-        return {k: v.to_dict() for k, v in game.player_timers.items()}
-
-    @staticmethod
-    def build_batch_size_response(game: PennyGame) -> Dict[str, Any]:
-        """
-        Builds a response for batch size change
-
-        Args:
-            game: Game instance
-
-        Returns:
-            Dict containing the batch size change response
+            Dict containing the round config response
         """
         return {
             "success": True,
-            "batch_size": game.batch_size,
+            "round_type": game.round_type.value,
+            "required_players": game.required_players,
+            "selected_batch_size": game.selected_batch_size,
+            "total_rounds": total_rounds,
         }
 
     @staticmethod
     def build_start_game_response(game: PennyGame) -> Dict[str, Any]:
         """
-        Builds a response for starting the game
+        Build a response for starting the game.
 
         Args:
             game: Game instance
@@ -188,9 +179,29 @@ class GameResponseBuilder:
         }
 
     @staticmethod
+    def build_next_round_response(game: PennyGame, total_rounds: int) -> Dict[str, Any]:
+        """
+        Build a response for starting the next round.
+
+        Args:
+            game: Game instance
+            total_rounds: Total number of rounds
+
+        Returns:
+            Dict containing the next round response
+        """
+        return {
+            "success": True,
+            "current_round": game.current_round,
+            "total_rounds": total_rounds,
+            "batch_size": game.batch_size,
+            "state": game.state.value,
+        }
+
+    @staticmethod
     def build_reset_response(game: PennyGame) -> Dict[str, Any]:
         """
-        Builds a response for resetting the game
+        Build a response for resetting the game.
 
         Args:
             game: Game instance
@@ -210,3 +221,43 @@ class GameResponseBuilder:
             "player_timers": GameResponseBuilder._format_player_timers(game),
             "game_duration_seconds": game.game_duration_seconds,
         }
+
+    @staticmethod
+    def build_send_batch_response(result: Dict[str, Any], batch_count: int) -> Dict[str, Any]:
+        """
+        Build a response for send batch actions.
+
+        Args:
+            result: Result from process_send
+            batch_count: Number of coins in the batch
+
+        Returns:
+            Dict containing the send batch response
+        """
+        return {
+            "success": True,
+            "message": "Batch sent successfully",
+            "batch_count": batch_count,
+            "round_complete": result["round_complete"],
+            "game_over": result["game_over"],
+            "current_round": result["current_round"],
+            "total_completed": result["total_completed"],
+            "player_timers": result["player_timers"],
+            "game_duration_seconds": result["game_duration_seconds"],
+        }
+
+    @staticmethod
+    def _format_player_timers(game: PennyGame) -> Dict[str, Any]:
+        """
+        Format player timers for the response.
+
+        Args:
+            game: Game instance
+
+        Returns:
+            Dict containing the formatted timers
+        """
+        if not hasattr(game, "player_timers") or not game.player_timers:
+            return {}
+
+        return {k: v.to_dict() for k, v in game.player_timers.items()}
