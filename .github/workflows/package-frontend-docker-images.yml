@@ -54,6 +54,8 @@ jobs:
           context: ./front-end
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: |
+            PUBLIC_API_URL=${{ secrets.PUBLIC_API_URL }}
           tags: |
             ghcr.io/${{ steps.repo.outputs.name }}-frontend:${{ steps.version.outputs.tag }}
             ghcr.io/${{ steps.repo.outputs.name }}-frontend:latest

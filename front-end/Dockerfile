@@ -13,6 +13,10 @@ RUN npm ci --only=production
 # Copy source code
 COPY . .
 
+# Accept build argument for API URL
+ARG PUBLIC_API_URL
+ENV PUBLIC_API_URL=$PUBLIC_API_URL
+
 # Build the static site
 RUN npm run build
 
