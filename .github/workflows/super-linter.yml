@@ -65,8 +65,10 @@ jobs:
           VALIDATE_PYTHON_PYINK: false
           VALIDATE_TYPESCRIPT_PRETTIER: false
           # Enable fixers for PR events
+          FIX_CSS: ${{ github.event_name == 'pull_request' }}
           FIX_JSON: ${{ github.event_name == 'pull_request' }}
           FIX_MARKDOWN: ${{ github.event_name == 'pull_request' }}
+          FIX_NATURAL_LANGUAGE: ${{ github.event_name == 'pull_request' }}
           FIX_PYTHON_RUFF: ${{ github.event_name == 'pull_request' }}
           FIX_SQLFLUFF: ${{ github.event_name == 'pull_request' }}
           FIX_SHELL_SHFMT: ${{ github.event_name == 'pull_request' }}
