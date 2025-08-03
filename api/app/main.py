@@ -24,11 +24,7 @@ APP_CONFIG = {
 }
 
 # CORS configuration
-ALLOWED_ORIGINS = [
-    "https://vianpyro.github.io",  # Production frontend
-    "http://localhost:4321",  # Development frontend
-    "http://127.0.0.1:4321",  # Development frontend alternative
-]
+ALLOWED_ORIGINS = []
 
 # Environment configuration
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
