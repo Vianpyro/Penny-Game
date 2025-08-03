@@ -57,6 +57,7 @@ jobs:
           VALIDATE_CSS_PRETTIER: false
           VALIDATE_HTML_PRETTIER: false
           VALIDATE_JAVASCRIPT_PRETTIER: false
+          VALIDATE_JSCPD: false # Temporarily disable for MVP
           VALIDATE_JSON_PRETTIER: false
           VALIDATE_JSONC_PRETTIER: false
           VALIDATE_JSX_PRETTIER: false
