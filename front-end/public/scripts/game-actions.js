@@ -1,67 +1,94 @@
-// Game actions for Penny Game - handling user interactions and game controls
+/**
+ * Game actions for Penny Game - handling user interactions and game controls
+ * Manages all user-initiated game actions like coin flipping, batch sending, and game management
+ */
 
+// Configuration constants
+const GAME_CONFIG = {
+    API_TIMEOUT: 5000,
+    BUTTON_DISABLE_TIMEOUT: 500,
+}
+
+// Button state management
+const ButtonStates = {
+    NORMAL: 'normal',
+    LOADING: 'loading',
+    DISABLED: 'disabled',
+}
+
+/**
+ * Main Game Actions class
+ */
 export class GameActions {
+    /**
+     * Initialize all game actions
+     */
+    static initialize() {
+        console.log('🎯 Initializing game actions')
+        GameActions.setupStandardButtons()
+        GameActions.setupCoinActions()
+    }
+
     /**
      * Setup standard game action buttons (play again, back to lobby, etc.)
      */
     static setupStandardButtons() {
         console.log('🎮 Setting up standard game buttons')
 
-        // Play Again button
-        const playAgainBtn = document.getElementById('playAgainBtn')
-        if (playAgainBtn) {
-            playAgainBtn.addEventListener('click', GameActions.handlePlayAgain)
-        }
+        const buttonConfigs = [
+            { id: 'playAgainBtn', handler: GameActions.handlePlayAgain },
+            { id: 'backToLobbyBtn', handler: GameActions.handleBackToLobby },
+            { id: 'viewResultsBtn', handler: GameActions.handleViewResults },
+            { id: 'nextRoundBtn', handler: GameActions.handleNextRound },
+            { id: 'resetBtn', handler: GameActions.handleReset },
+        ]
 
-        // Back to Lobby button
-        const backToLobbyBtn = document.getElementById('backToLobbyBtn')
-        if (backToLobbyBtn) {
-            backToLobbyBtn.addEventListener('click', GameActions.handleBackToLobby)
-        }
+        buttonConfigs.forEach(({ id, handler }) => {
+            const button = document.getElementById(id)
+            if (button) {
+                button.addEventListener('click', handler)
+            }
+        })
+    }
 
-        // View Results button
-        const viewResultsBtn = document.getElementById('viewResultsBtn')
-        if (viewResultsBtn) {
-            viewResultsBtn.addEventListener('click', GameActions.handleViewResults)
-        }
+    /**
+     * Setup coin flip actions for game board
+     */
+    static setupCoinActions() {
+        console.log('🪙 Setting up coin flip actions')
 
-        // Next Round button
-        const nextRoundBtn = document.getElementById('nextRoundBtn')
-        if (nextRoundBtn) {
-            nextRoundBtn.addEventListener('click', GameActions.handleNextRound)
-        }
+        document.addEventListener('click', (event) => {
+            if (event.target.classList.contains('coin') && event.target.classList.contains('tails')) {
+                GameActions.handleCoinFlip(event.target)
+            }
 
-        // Reset button
-        const resetBtn = document.getElementById('resetBtn')
-        if (resetBtn) {
-            resetBtn.addEventListener('click', GameActions.handleReset)
-        }
+            if (event.target.classList.contains('send-batch-btn')) {
+                GameActions.handleSendBatch(event.target)
+            }
+        })
     }
 
     /**
      * Handle "Play Again" action
      */
     static async handlePlayAgain() {
-        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+        const gameCode = GameActions.getGameCode()
+        const apiUrl = GameActions.getApiUrl()
 
-        if (!window.isHost) {
-            alert("Seul l'hôte peut redémarrer la partie")
+        if (!GameActions.validateHostAction()) {
+            GameActions.showAlert("Seul l'hôte peut redémarrer la partie")
             return
         }
 
         if (!apiUrl || !gameCode) {
-            alert('Informations manquantes pour redémarrer la partie')
+            GameActions.showAlert('Informations manquantes pour redémarrer la partie')
             return
         }
 
         const playAgainBtn = document.getElementById('playAgainBtn')
 
         try {
-            if (playAgainBtn) {
-                playAgainBtn.disabled = true
-                playAgainBtn.textContent = 'Redémarrage...'
-            }
+            GameActions.setButtonState(playAgainBtn, ButtonStates.LOADING, 'Redémarrage...')
 
             // Reset the game first
             await fetch(`${apiUrl}/game/reset/${gameCode}`, {
@@ -75,17 +102,14 @@ export class GameActions {
                     method: 'POST',
                     credentials: 'include',
                 })
-            }, 500)
+            }, GAME_CONFIG.BUTTON_DISABLE_TIMEOUT)
 
             console.log('✅ Game restarted successfully')
         } catch (error) {
             console.error('❌ Error restarting game:', error)
-            alert('Erreur lors du redémarrage de la partie')
+            GameActions.showAlert('Erreur lors du redémarrage de la partie')
         } finally {
-            if (playAgainBtn) {
-                playAgainBtn.disabled = false
-                playAgainBtn.textContent = 'Rejouer'
-            }
+            GameActions.setButtonState(playAgainBtn, ButtonStates.NORMAL, 'Rejouer')
         }
     }
 
@@ -93,26 +117,23 @@ export class GameActions {
      * Handle "Back to Lobby" action
      */
     static async handleBackToLobby() {
-        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+        const gameCode = GameActions.getGameCode()
+        const apiUrl = GameActions.getApiUrl()
 
-        if (!window.isHost) {
-            alert("Seul l'hôte peut retourner au lobby")
+        if (!GameActions.validateHostAction()) {
+            GameActions.showAlert("Seul l'hôte peut retourner au lobby")
             return
         }
 
         if (!apiUrl || !gameCode) {
-            alert('Informations manquantes pour retourner au lobby')
+            GameActions.showAlert('Informations manquantes pour retourner au lobby')
             return
         }
 
         const backToLobbyBtn = document.getElementById('backToLobbyBtn')
 
         try {
-            if (backToLobbyBtn) {
-                backToLobbyBtn.disabled = true
-                backToLobbyBtn.textContent = 'Retour...'
-            }
+            GameActions.setButtonState(backToLobbyBtn, ButtonStates.LOADING, 'Retour...')
 
             await fetch(`${apiUrl}/game/reset/${gameCode}`, {
                 method: 'POST',
@@ -122,12 +143,9 @@ export class GameActions {
             console.log('✅ Returned to lobby successfully')
         } catch (error) {
             console.error('❌ Error returning to lobby:', error)
-            alert('Erreur lors du retour au lobby')
+            GameActions.showAlert('Erreur lors du retour au lobby')
         } finally {
-            if (backToLobbyBtn) {
-                backToLobbyBtn.disabled = false
-                backToLobbyBtn.textContent = 'Retour au lobby'
-            }
+            GameActions.setButtonState(backToLobbyBtn, ButtonStates.NORMAL, 'Retour au lobby')
         }
     }
 
@@ -154,26 +172,23 @@ export class GameActions {
      * Handle "Next Round" action
      */
     static async handleNextRound() {
-        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+        const gameCode = GameActions.getGameCode()
+        const apiUrl = GameActions.getApiUrl()
 
-        if (!window.isHost) {
-            alert("Seul l'hôte peut démarrer la manche suivante")
+        if (!GameActions.validateHostAction()) {
+            GameActions.showAlert("Seul l'hôte peut démarrer la manche suivante")
             return
         }
 
         if (!apiUrl || !gameCode) {
-            alert('Informations manquantes pour démarrer la manche suivante')
+            GameActions.showAlert('Informations manquantes pour démarrer la manche suivante')
             return
         }
 
         const nextRoundBtn = document.getElementById('nextRoundBtn')
 
         try {
-            if (nextRoundBtn) {
-                nextRoundBtn.disabled = true
-                nextRoundBtn.textContent = 'Démarrage...'
-            }
+            GameActions.setButtonState(nextRoundBtn, ButtonStates.LOADING, 'Démarrage...')
 
             const response = await fetch(`${apiUrl}/game/next_round/${gameCode}`, {
                 method: 'POST',
@@ -188,12 +203,9 @@ export class GameActions {
             console.log('✅ Next round started successfully')
         } catch (error) {
             console.error('❌ Error starting next round:', error)
-            alert(error.message || 'Impossible de démarrer la manche suivante')
+            GameActions.showAlert(error.message || 'Impossible de démarrer la manche suivante')
         } finally {
-            if (nextRoundBtn) {
-                nextRoundBtn.disabled = false
-                nextRoundBtn.textContent = 'Manche Suivante'
-            }
+            GameActions.setButtonState(nextRoundBtn, ButtonStates.NORMAL, 'Manche Suivante')
         }
     }
 
@@ -201,16 +213,16 @@ export class GameActions {
      * Handle "Reset" action
      */
     static async handleReset() {
-        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+        const gameCode = GameActions.getGameCode()
+        const apiUrl = GameActions.getApiUrl()
 
-        if (!window.isHost) {
-            alert("Seul l'hôte peut réinitialiser la partie")
+        if (!GameActions.validateHostAction()) {
+            GameActions.showAlert("Seul l'hôte peut réinitialiser la partie")
             return
         }
 
         if (!apiUrl || !gameCode) {
-            alert('Informations manquantes pour réinitialiser la partie')
+            GameActions.showAlert('Informations manquantes pour réinitialiser la partie')
             return
         }
 
@@ -221,10 +233,7 @@ export class GameActions {
         const resetBtn = document.getElementById('resetBtn')
 
         try {
-            if (resetBtn) {
-                resetBtn.disabled = true
-                resetBtn.textContent = 'Réinitialisation...'
-            }
+            GameActions.setButtonState(resetBtn, ButtonStates.LOADING, 'Réinitialisation...')
 
             const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
                 method: 'POST',
@@ -239,32 +248,10 @@ export class GameActions {
             console.log('✅ Game reset successfully')
         } catch (error) {
             console.error('❌ Error resetting game:', error)
-            alert(error.message || 'Impossible de réinitialiser la partie')
+            GameActions.showAlert(error.message || 'Impossible de réinitialiser la partie')
         } finally {
-            if (resetBtn) {
-                resetBtn.disabled = false
-                resetBtn.textContent = 'Réinitialiser'
-            }
+            GameActions.setButtonState(resetBtn, ButtonStates.NORMAL, 'Réinitialiser')
         }
-    }
-
-    /**
-     * Setup coin flip actions for game board
-     */
-    static setupCoinActions() {
-        console.log('🪙 Setting up coin flip actions')
-
-        document.addEventListener('click', (event) => {
-            // Handle coin clicks
-            if (event.target.classList.contains('coin') && event.target.classList.contains('tails')) {
-                GameActions.handleCoinFlip(event.target)
-            }
-
-            // Handle send batch buttons
-            if (event.target.classList.contains('send-batch-btn')) {
-                GameActions.handleSendBatch(event.target)
-            }
-        })
     }
 
     /**
@@ -274,13 +261,12 @@ export class GameActions {
         const coinIndex = parseInt(coinElement.dataset.coinIndex)
         const player = coinElement.dataset.player || window.currentUsername
 
-        if (isNaN(coinIndex) || !player) {
-            console.error('Invalid coin flip data')
+        if (!GameActions.validateCoinFlip(coinIndex, player)) {
             return
         }
 
-        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+        const gameCode = GameActions.getGameCode()
+        const apiUrl = GameActions.getApiUrl()
 
         if (!apiUrl || !gameCode) {
             console.error('Missing API configuration')
@@ -321,8 +307,8 @@ export class GameActions {
             return
         }
 
-        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+        const gameCode = GameActions.getGameCode()
+        const apiUrl = GameActions.getApiUrl()
 
         if (!apiUrl || !gameCode) {
             console.error('Missing API configuration')
@@ -330,15 +316,12 @@ export class GameActions {
         }
 
         try {
-            buttonElement.disabled = true
-            buttonElement.textContent = 'Envoi...'
+            GameActions.setButtonState(buttonElement, ButtonStates.LOADING, 'Envoi...')
 
             const response = await fetch(`${apiUrl}/game/send/${gameCode}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: player,
-                }),
+                body: JSON.stringify({ username: player }),
                 credentials: 'include',
             })
 
@@ -351,20 +334,73 @@ export class GameActions {
         } catch (error) {
             console.error('❌ Error sending batch:', error)
             // Show error for send actions as they're more deliberate
-            alert(error.message || "Impossible d'envoyer le lot")
+            GameActions.showAlert(error.message || "Impossible d'envoyer le lot")
         } finally {
-            buttonElement.disabled = false
-            buttonElement.textContent = 'Envoyer le lot'
+            GameActions.setButtonState(buttonElement, ButtonStates.NORMAL, 'Envoyer le lot')
+        }
+    }
+
+    // Utility Methods
+
+    /**
+     * Get the current game code
+     */
+    static getGameCode() {
+        return document.getElementById('game-code')?.textContent?.trim() || ''
+    }
+
+    /**
+     * Get the API URL
+     */
+    static getApiUrl() {
+        return document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+    }
+
+    /**
+     * Validate host action
+     */
+    static validateHostAction() {
+        return window.isHost === true
+    }
+
+    /**
+     * Validate coin flip parameters
+     */
+    static validateCoinFlip(coinIndex, player) {
+        if (isNaN(coinIndex) || !player) {
+            console.error('Invalid coin flip data')
+            return false
+        }
+        return true
+    }
+
+    /**
+     * Set button state (normal, loading, disabled)
+     */
+    static setButtonState(button, state, text) {
+        if (!button) return
+
+        switch (state) {
+            case ButtonStates.LOADING:
+                button.disabled = true
+                button.textContent = text
+                break
+            case ButtonStates.DISABLED:
+                button.disabled = true
+                break
+            case ButtonStates.NORMAL:
+            default:
+                button.disabled = false
+                button.textContent = text
+                break
         }
     }
 
     /**
-     * Initialize all game actions
+     * Show alert message
      */
-    static initialize() {
-        console.log('🎯 Initializing game actions')
-        GameActions.setupStandardButtons()
-        GameActions.setupCoinActions()
+    static showAlert(message) {
+        alert(message)
     }
 }
 

@@ -20,7 +20,7 @@ This repository contains both the backend API and the frontend client for the ga
 ### Prerequisites
 
 - [Python 3.12+](https://www.python.org/) (for backend)
-- [Node.js 18+](https://nodejs.org/) and [npm](https://www.npmjs.com/) (for frontend)
+- [Node.js 22+](https://nodejs.org/) and [npm](https://www.npmjs.com/) (for frontend)
 
 ### Backend Setup (API)
 
@@ -132,7 +132,7 @@ This project is licensed under the GNU Affero General Public License v3. See the
 
 ## Contributing
 
-Contributions are welcome! Please open issues or submit pull requests for improvements, bug fixes, or new features.
+Contributions are welcome! Please open issues or submit pull requests for improvements, bugfixes, or new features.
 
 ## Contact
 
