@@ -132,7 +132,7 @@ This project is licensed under the GNU Affero General Public License v3. See the
 
 ## Contributing
 
-Contributions are welcome! Please open issues or submit pull requests for improvements, bug fixes, or new features.
+Contributions are welcome! Please open issues or submit pull requests for improvements, bugfixes, or new features.
 
 ## Contact
 
