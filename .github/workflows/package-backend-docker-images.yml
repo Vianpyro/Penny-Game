@@ -1,5 +1,5 @@
 ---
-name: Package Docker Images
+name: Package Backend Docker Images
 
 permissions:
   packages: write
