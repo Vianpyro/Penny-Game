@@ -20,7 +20,7 @@ This repository contains both the backend API and the frontend client for the ga
 ### Prerequisites
 
 - [Python 3.12+](https://www.python.org/) (for backend)
-- [Node.js 18+](https://nodejs.org/) and [npm](https://www.npmjs.com/) (for frontend)
+- [Node.js 22+](https://nodejs.org/) and [npm](https://www.npmjs.com/) (for frontend)
 
 ### Backend Setup (API)
 

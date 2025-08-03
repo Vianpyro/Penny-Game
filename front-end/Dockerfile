@@ -1,5 +1,5 @@
 # Multi-stage build for minimal final image
-FROM node:18-alpine AS builder
+FROM node:24-alpine3.22 AS builder
 
 # Set working directory
 WORKDIR /app
@@ -21,7 +21,7 @@ ENV PUBLIC_API_URL=$PUBLIC_API_URL
 RUN npm run build
 
 # Production stage - ultra-lightweight nginx
-FROM nginx:alpine
+FROM nginx:stable-alpine3.21-perl
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nginx-user && \
