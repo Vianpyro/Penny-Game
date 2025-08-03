@@ -24,7 +24,10 @@ APP_CONFIG = {
 }
 
 # CORS configuration
-ALLOWED_ORIGINS = []
+ALLOWED_ORIGINS = [
+    "http://localhost:4321",  # Development frontend
+    "http://127.0.0.1:4321",  # Development frontend alternative
+]
 
 # Environment configuration
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
