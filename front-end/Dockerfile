@@ -21,14 +21,12 @@ ENV PUBLIC_API_URL=$PUBLIC_API_URL
 RUN npm run build
 
 # Production stage - ultra-lightweight nginx
-FROM nginx:stable-alpine3.21-perl
-
-# Create non-root user for security
-RUN addgroup -g 1001 -S nginx-user && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx-user -g nginx-user nginx-user
+FROM nginxinc/nginx-unprivileged:stable-alpine3.21-perl
 
 # Remove default nginx website
+USER root
 RUN rm -rf /usr/share/nginx/html/*
+USER nginx
 
 # Copy built static files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
@@ -36,23 +34,12 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy custom nginx configuration for SPA routing
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Set proper permissions for nginx user
-RUN chown -R nginx-user:nginx-user /usr/share/nginx/html && \
-    chown -R nginx-user:nginx-user /var/cache/nginx && \
-    chown -R nginx-user:nginx-user /var/log/nginx && \
-    chown -R nginx-user:nginx-user /etc/nginx/conf.d && \
-    touch /var/run/nginx.pid && \
-    chown -R nginx-user:nginx-user /var/run/nginx.pid
-
-# Switch to non-root user
-USER nginx-user
-
-# Expose port 80
-EXPOSE 80
+# Expose port 8080
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
