@@ -601,11 +601,11 @@ function handleRoundConfigUpdate(msg) {
 }
 
 function handleGameStateChange(msg) {
-    console.log('🔄 Game state change:', msg.state);
+    console.log('🔄 Game state change:', msg.state)
 
     if (window.gameState) {
-        window.gameState.state = msg.state;
-        console.log('📌 Updated window.gameState.state to:', msg.state);
+        window.gameState.state = msg.state
+        console.log('📌 Updated window.gameState.state to:', msg.state)
     }
 
     switch (msg.state) {
@@ -651,7 +651,7 @@ function handleActionMade(msg) {
     window.gameState = { ...window.gameState, ...gameState }
     window.gameStatsTracker.currentGameState = gameState
 
-    console.log('🎯 Action made, current state:', gameState.state);
+    console.log('🎯 Action made, current state:', gameState.state)
 
     // Only show notifications for send actions
     if (msg.action === 'send') {
@@ -671,11 +671,11 @@ function handleActionMade(msg) {
 
     // Check if this action completed the round
     if (msg.round_complete) {
-        console.log('🏁 Round completed via action, new state:', msg.state);
+        console.log('🏁 Round completed via action, new state:', msg.state)
 
         // Ensure state is properly updated
         if (msg.state === 'round_complete') {
-            window.gameState.state = 'round_complete';
+            window.gameState.state = 'round_complete'
             // Handle round completion
             handleRoundComplete({
                 round_number: msg.current_round,
@@ -686,21 +686,21 @@ function handleActionMade(msg) {
                     player_timers: msg.player_timers || {},
                     total_completed: msg.total_completed,
                     started_at: window.gameState?.started_at,
-                    ended_at: new Date().toISOString()
+                    ended_at: new Date().toISOString(),
                 },
-                next_round: msg.current_round < (window.gameState?.round_results?.length || 3) ? msg.current_round + 1 : null,
+                next_round:
+                    msg.current_round < (window.gameState?.round_results?.length || 3) ? msg.current_round + 1 : null,
                 batch_size: window.gameState?.batch_size || 12,
-                game_over: msg.game_over
-            });
+                game_over: msg.game_over,
+            })
         } else if (msg.state === 'results') {
-            window.gameState.state = 'results';
+            window.gameState.state = 'results'
             handleGameOver({
-                final_state: window.gameState
-            });
+                final_state: window.gameState,
+            })
         }
     }
 }
-
 
 function handleGameStarted(msg) {
     // Reset stats tracking for new game
@@ -761,65 +761,65 @@ function handleRoundStarted(msg) {
 }
 
 function handleRoundComplete(msg) {
-    console.log('🏁 Round complete message received:', msg);
+    console.log('🏁 Round complete message received:', msg)
 
     // Update the global game state FIRST
     if (window.gameState) {
-        window.gameState.state = 'round_complete';
-        window.gameState.current_round = msg.round_number;
+        window.gameState.state = 'round_complete'
+        window.gameState.current_round = msg.round_number
 
         // Update any other relevant state from the message
         if (msg.round_result) {
-            window.gameState.game_duration_seconds = msg.round_result.game_duration_seconds;
-            window.gameState.player_timers = msg.round_result.player_timers || {};
+            window.gameState.game_duration_seconds = msg.round_result.game_duration_seconds
+            window.gameState.player_timers = msg.round_result.player_timers || {}
         }
 
-        console.log('📌 Updated game state to round_complete, current round:', window.gameState.current_round);
+        console.log('📌 Updated game state to round_complete, current round:', window.gameState.current_round)
     }
 
     // Switch view
-    ViewManager.switchToRoundCompleteView();
-    stopRealTimeTimers();
+    ViewManager.switchToRoundCompleteView()
+    stopRealTimeTimers()
 
     // Save round stats
     if (msg.round_result) {
-        console.log(`💾 Saving round ${msg.round_number} stats:`, msg.round_result);
-        window.gameStatsTracker.addRoundResult(msg.round_result);
+        console.log(`💾 Saving round ${msg.round_number} stats:`, msg.round_result)
+        window.gameStatsTracker.addRoundResult(msg.round_result)
     }
 
     // Update round complete screen
-    updateRoundCompleteDisplay(msg);
+    updateRoundCompleteDisplay(msg)
 
     // Update next round button state
-    updateNextRoundButton();
+    updateNextRoundButton()
 
-    const nextText = msg.next_round ? ` Manche ${msg.next_round} disponible !` : ' Toutes les manches terminées !';
-    showNotification(`✅ Manche ${msg.round_number} terminée !${nextText}`, 'success');
+    const nextText = msg.next_round ? ` Manche ${msg.next_round} disponible !` : ' Toutes les manches terminées !'
+    showNotification(`✅ Manche ${msg.round_number} terminée !${nextText}`, 'success')
 }
 
 function updateNextRoundButton() {
-    const nextRoundBtn = document.getElementById('nextRoundBtn');
-    if (!nextRoundBtn) return;
+    const nextRoundBtn = document.getElementById('nextRoundBtn')
+    if (!nextRoundBtn) return
 
     // Enable/disable based on host status and game state
-    const isHost = window.isHost === true;
-    const isRoundComplete = window.gameState?.state === 'round_complete';
+    const isHost = window.isHost === true
+    const isRoundComplete = window.gameState?.state === 'round_complete'
 
-    nextRoundBtn.disabled = !isHost || !isRoundComplete;
+    nextRoundBtn.disabled = !isHost || !isRoundComplete
 
     if (!isHost) {
-        nextRoundBtn.title = "Seul l'hôte peut démarrer la manche suivante";
+        nextRoundBtn.title = "Seul l'hôte peut démarrer la manche suivante"
     } else if (!isRoundComplete) {
-        nextRoundBtn.title = "En attente de la fin de la manche";
+        nextRoundBtn.title = 'En attente de la fin de la manche'
     } else {
-        nextRoundBtn.title = "Cliquez pour démarrer la manche suivante";
+        nextRoundBtn.title = 'Cliquez pour démarrer la manche suivante'
     }
 
     console.log('🔘 Next round button state:', {
         disabled: nextRoundBtn.disabled,
         isHost: isHost,
-        gameState: window.gameState?.state
-    });
+        gameState: window.gameState?.state,
+    })
 }
 
 function updateProgressBar(currentRound, totalRounds) {
@@ -1376,21 +1376,22 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${hasValidRankings
-                    ? result.playerRankings
-                        .slice(0, 3)
-                        .map(
-                            (ranking, idx) => `
+                    ${
+                        hasValidRankings
+                            ? result.playerRankings
+                                  .slice(0, 3)
+                                  .map(
+                                      (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                        )
-                        .join('')
-                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                }
+                                  )
+                                  .join('')
+                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                    }
                 </div>
             `
 
