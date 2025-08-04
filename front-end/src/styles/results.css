@@ -82,7 +82,7 @@
     padding: 25px;
     margin: 25px 0;
     border-left: 5px solid #9b59b6;
-    animation: fadeInUp 0.5s ease-out;
+    animation: fade-in-up 0.5s ease-out;
 }
 
 .round-breakdown-section h3 {
@@ -121,9 +121,10 @@
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-bottom: 15px;
     padding-bottom: 12px;
     border-bottom: 2px solid rgba(236, 240, 241, 0.5);
+    justify-content: space-between;
+    margin-bottom: 20px;
 }
 
 .round-number-badge {
@@ -236,7 +237,7 @@
     padding: 25px;
     margin: 25px 0;
     border-left: 5px solid #f1c40f;
-    animation: fadeInUp 0.5s ease-out;
+    animation: fade-in-up 0.5s ease-out;
 }
 
 .batch-analysis-section h3 {
@@ -435,7 +436,7 @@
 }
 
 /* Animations */
-@keyframes fadeInUp {
+@keyframes fade-in-up {
     from {
         opacity: 0;
         transform: translateY(20px);
@@ -519,12 +520,6 @@
     background: linear-gradient(90deg, #3498db, #2980b9);
 }
 
-.round-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
 
 .round-badge {
     background: linear-gradient(135deg, #3498db, #2980b9);
@@ -679,6 +674,17 @@
     background: #ecf0f1;
 }
 
+.comparison-cell {
+    background: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .comparison-row.header {
     background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
@@ -690,17 +696,6 @@
     font-size: 0.95em;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-}
-
-.comparison-cell {
-    background: white;
-    padding: 15px;
-    text-align: center;
-    font-weight: 600;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .comparison-cell.batch-size {
@@ -1137,7 +1132,7 @@
 .comprehensive-results>* {
     opacity: 0;
     transform: translateY(20px);
-    animation: revealSection 0.6s ease forwards;
+    animation: reveal-section 0.6s ease forwards;
 }
 
 .comprehensive-results>*:nth-child(1) {
@@ -1156,7 +1151,7 @@
     animation-delay: 0.7s;
 }
 
-@keyframes revealSection {
+@keyframes reveal-section {
     to {
         opacity: 1;
         transform: translateY(0);

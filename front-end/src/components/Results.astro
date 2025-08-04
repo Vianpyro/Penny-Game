@@ -353,15 +353,6 @@ import '../styles/results.css'
         border-color: #9b59b6;
     }
 
-    .round-header {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        margin-bottom: 15px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid rgba(236, 240, 241, 0.5);
-    }
-
     .round-number-badge {
         background: linear-gradient(45deg, #9b59b6, #8e44ad);
         color: white;
@@ -881,10 +872,10 @@ import '../styles/results.css'
     /* Animation for new sections appearing */
     .round-breakdown-section,
     .batch-analysis-section {
-        animation: fadeInUp 0.5s ease-out;
+        animation: fade-in-up 0.5s ease-out;
     }
 
-    @keyframes fadeInUp {
+    @keyframes fade-in-up {
         from {
             opacity: 0;
             transform: translateY(20px);

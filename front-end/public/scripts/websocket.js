@@ -28,7 +28,7 @@ window.gameStatsTracker = {
         if (!roundResult) return
 
         // Check if this round was already saved to avoid duplicates
-        const existingRound = this.roundResults.find(r => r.round_number === roundResult.round_number)
+        const existingRound = this.roundResults.find((r) => r.round_number === roundResult.round_number)
         if (existingRound) {
             console.log(`⚠️ Round ${roundResult.round_number} already saved, skipping duplicate`)
             return
@@ -44,7 +44,7 @@ window.gameStatsTracker = {
             playerRankings: this.calculatePlayerRankings(fixedResult),
             avgPlayerTime: this.calculateAveragePlayerTime(fixedResult),
             completionRate: ((fixedResult.total_completed || 0) / 12) * 100,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         }
 
         this.roundResults.push(enhancedResult)
@@ -71,7 +71,7 @@ window.gameStatsTracker = {
 
         // If player timers have null values but the game has duration, estimate them
         if (fixed.player_timers && fixed.game_duration_seconds) {
-            Object.keys(fixed.player_timers).forEach(playerName => {
+            Object.keys(fixed.player_timers).forEach((playerName) => {
                 const timer = fixed.player_timers[playerName]
 
                 // If timer data is completely null, try to get from current game state
@@ -94,7 +94,7 @@ window.gameStatsTracker = {
                                         ...timer,
                                         started_at: currentTimer.started_at,
                                         ended_at: fixed.ended_at,
-                                        duration_seconds: duration
+                                        duration_seconds: duration,
                                     }
                                     console.log(`🔧 Calculated missing timer for ${playerName}: ${duration}s`)
                                 }
@@ -118,7 +118,7 @@ window.gameStatsTracker = {
         }
 
         const currentRound = this.currentGameState.current_round
-        const existingRound = this.roundResults.find(r => r.round_number === currentRound)
+        const existingRound = this.roundResults.find((r) => r.round_number === currentRound)
 
         if (existingRound) {
             console.log(`✅ Round ${currentRound} already saved, no emergency save needed`)
@@ -133,7 +133,7 @@ window.gameStatsTracker = {
             player_timers: this.currentGameState.player_timers || {},
             total_completed: this.currentGameState.total_completed || 12,
             started_at: this.currentGameState.started_at,
-            ended_at: this.currentGameState.ended_at || new Date().toISOString()
+            ended_at: this.currentGameState.ended_at || new Date().toISOString(),
         }
 
         // If game_duration_seconds is still null, try to calculate it
@@ -167,14 +167,16 @@ window.gameStatsTracker = {
         if (!roundResult.player_timers) return []
 
         const completedPlayers = Object.values(roundResult.player_timers)
-            .filter(timer => timer.ended_at && timer.duration_seconds !== null && timer.duration_seconds !== undefined)
+            .filter(
+                (timer) => timer.ended_at && timer.duration_seconds !== null && timer.duration_seconds !== undefined
+            )
             .sort((a, b) => (a.duration_seconds || 0) - (b.duration_seconds || 0))
 
         return completedPlayers.map((timer, index) => ({
             rank: index + 1,
             player: timer.player,
             time: timer.duration_seconds,
-            efficiency: this.calculatePlayerEfficiency(timer.duration_seconds)
+            efficiency: this.calculatePlayerEfficiency(timer.duration_seconds),
         }))
     },
 
@@ -183,8 +185,8 @@ window.gameStatsTracker = {
         if (!roundResult.player_timers) return null
 
         const completedTimes = Object.values(roundResult.player_timers)
-            .filter(timer => timer.duration_seconds !== null && timer.duration_seconds !== undefined)
-            .map(timer => timer.duration_seconds)
+            .filter((timer) => timer.duration_seconds !== null && timer.duration_seconds !== undefined)
+            .map((timer) => timer.duration_seconds)
 
         if (completedTimes.length === 0) return null
 
@@ -208,15 +210,15 @@ window.gameStatsTracker = {
         this.ensureAllRoundsAreSaved()
 
         const totalRounds = this.roundResults.length
-        const validRounds = this.roundResults.filter(r => r.game_duration_seconds && r.game_duration_seconds > 0)
+        const validRounds = this.roundResults.filter((r) => r.game_duration_seconds && r.game_duration_seconds > 0)
 
         const totalGameTime = this.roundResults.reduce((sum, result) => sum + (result.game_duration_seconds || 0), 0)
-        const averageRoundTime = validRounds.length > 0 ?
-            validRounds.reduce((sum, r) => sum + r.game_duration_seconds, 0) / validRounds.length : 0
-        const bestRoundTime = validRounds.length > 0 ?
-            Math.min(...validRounds.map(r => r.game_duration_seconds)) : 0
-        const worstRoundTime = validRounds.length > 0 ?
-            Math.max(...validRounds.map(r => r.game_duration_seconds)) : 0
+        const averageRoundTime =
+            validRounds.length > 0
+                ? validRounds.reduce((sum, r) => sum + r.game_duration_seconds, 0) / validRounds.length
+                : 0
+        const bestRoundTime = validRounds.length > 0 ? Math.min(...validRounds.map((r) => r.game_duration_seconds)) : 0
+        const worstRoundTime = validRounds.length > 0 ? Math.max(...validRounds.map((r) => r.game_duration_seconds)) : 0
 
         // Calculate batch size impact
         const batchSizeImpact = this.calculateBatchSizeImpact()
@@ -234,7 +236,7 @@ window.gameStatsTracker = {
             playerSummary,
             roundResults: this.roundResults,
             validRounds: validRounds.length,
-            incompleteRounds: totalRounds - validRounds.length
+            incompleteRounds: totalRounds - validRounds.length,
         }
     },
 
@@ -268,7 +270,7 @@ window.gameStatsTracker = {
                         player_timers: {},
                         total_completed: 12,
                         started_at: null,
-                        ended_at: null
+                        ended_at: null,
                     }
 
                     // Try to get some data from current game state if it matches
@@ -290,7 +292,7 @@ window.gameStatsTracker = {
     calculateBatchSizeImpact() {
         const batchSizes = {}
 
-        this.roundResults.forEach(result => {
+        this.roundResults.forEach((result) => {
             const size = result.batch_size
             if (!batchSizes[size]) {
                 batchSizes[size] = {
@@ -299,7 +301,7 @@ window.gameStatsTracker = {
                     totalEfficiency: 0,
                     avgTime: 0,
                     avgEfficiency: 0,
-                    validRounds: 0 // Track how many rounds have valid data
+                    validRounds: 0, // Track how many rounds have valid data
                 }
             }
 
@@ -314,7 +316,7 @@ window.gameStatsTracker = {
         })
 
         // Calculate averages only from valid data
-        Object.keys(batchSizes).forEach(size => {
+        Object.keys(batchSizes).forEach((size) => {
             const data = batchSizes[size]
             if (data.validRounds > 0) {
                 data.avgTime = data.totalTime / data.validRounds
@@ -333,10 +335,10 @@ window.gameStatsTracker = {
     calculatePlayerSummary() {
         const playerStats = {}
 
-        this.roundResults.forEach(result => {
+        this.roundResults.forEach((result) => {
             if (!result.player_timers) return
 
-            Object.values(result.player_timers).forEach(timer => {
+            Object.values(result.player_timers).forEach((timer) => {
                 const player = timer.player
                 if (!playerStats[player]) {
                     playerStats[player] = {
@@ -347,7 +349,7 @@ window.gameStatsTracker = {
                         worstTime: 0,
                         avgTime: 0,
                         totalEfficiency: 0,
-                        avgEfficiency: 0
+                        avgEfficiency: 0,
                     }
                 }
 
@@ -365,7 +367,7 @@ window.gameStatsTracker = {
         })
 
         // Calculate averages
-        Object.values(playerStats).forEach(stats => {
+        Object.values(playerStats).forEach((stats) => {
             if (stats.roundsCompleted > 0) {
                 stats.avgTime = stats.totalTime / stats.roundsCompleted
                 stats.avgEfficiency = stats.totalEfficiency / stats.roundsCompleted
@@ -376,7 +378,7 @@ window.gameStatsTracker = {
         })
 
         return playerStats
-    }
+    },
 }
 
 export function handleWSMessage(data) {
@@ -740,11 +742,11 @@ function handleRoundComplete(msg) {
     // Debug: Log current stats tracker state
     console.log('📊 Current stats tracker state:', {
         totalRounds: window.gameStatsTracker.roundResults.length,
-        rounds: window.gameStatsTracker.roundResults.map(r => ({
+        rounds: window.gameStatsTracker.roundResults.map((r) => ({
             round: r.round_number,
             batch: r.batch_size,
-            time: r.game_duration_seconds
-        }))
+            time: r.game_duration_seconds,
+        })),
     })
 }
 
@@ -845,14 +847,14 @@ function handleGameOver(msg) {
 
     console.log('🏁 Game over message received:', msg)
 
-    // CRITICAL: The last round stats are often missing because the game goes directly 
+    // CRITICAL: The last round stats are often missing because the game goes directly
     // from active to results without passing through round_complete
 
     // Strategy 1: Try to get final round data from msg.final_state
     let lastRoundSaved = false
     if (msg.final_state && msg.final_state.current_round) {
         const currentRound = msg.final_state.current_round
-        const existingRound = window.gameStatsTracker.roundResults.find(r => r.round_number === currentRound)
+        const existingRound = window.gameStatsTracker.roundResults.find((r) => r.round_number === currentRound)
 
         if (!existingRound) {
             // Create round result from final state
@@ -863,7 +865,7 @@ function handleGameOver(msg) {
                 player_timers: msg.final_state.player_timers || {},
                 total_completed: msg.final_state.total_completed || 12,
                 started_at: msg.final_state.started_at,
-                ended_at: msg.final_state.ended_at
+                ended_at: msg.final_state.ended_at,
             }
 
             console.log('🔧 Saving final round stats from final_state:', finalRoundResult)
@@ -900,7 +902,7 @@ function handleGameOver(msg) {
                     player_timers: window.gameState.player_timers || {},
                     total_completed: 12,
                     started_at: window.gameState.started_at,
-                    ended_at: window.gameState.ended_at || new Date().toISOString()
+                    ended_at: window.gameState.ended_at || new Date().toISOString(),
                 }
 
                 console.log(`🔨 Reconstructing missing round ${roundNum}:`, reconstructedRound)
@@ -913,8 +915,8 @@ function handleGameOver(msg) {
     console.log('🏁 Final stats before results display:', {
         totalRoundsTracked: window.gameStatsTracker.roundResults.length,
         expectedRounds: getTotalRounds(window.gameState?.round_type),
-        rounds: window.gameStatsTracker.roundResults.map(r => `R${r.round_number}(B${r.batch_size})`),
-        fullData: window.gameStatsTracker.roundResults
+        rounds: window.gameStatsTracker.roundResults.map((r) => `R${r.round_number}(B${r.batch_size})`),
+        fullData: window.gameStatsTracker.roundResults,
     })
 
     showNotification('🎯 Partie terminée ! Félicitations à tous !', 'success')
@@ -926,9 +928,9 @@ function handleGameOver(msg) {
 // Helper function to get batch size for a specific round
 function getBatchSizeForRound(roundType, roundNumber) {
     const batchSizes = {
-        'single': [12], // Default, should be overridden by selected_batch_size
-        'two_rounds': [12, 1],
-        'three_rounds': [12, 4, 1]
+        single: [12], // Default, should be overridden by selected_batch_size
+        two_rounds: [12, 1],
+        three_rounds: [12, 4, 1],
     }
 
     const sizes = batchSizes[roundType] || [12, 4, 1]
@@ -1122,7 +1124,7 @@ function updateResultsDisplay() {
     // Debug logging
     console.log('📊 Stats tracker state for results:', {
         roundResults: window.gameStatsTracker.roundResults,
-        gameSummary: gameSummary
+        gameSummary: gameSummary,
     })
 
     if (!gameSummary || gameSummary.roundResults.length === 0) {
@@ -1180,12 +1182,13 @@ function updateMainGameStats(gameSummary) {
     }
 
     // Calculate stats with error handling for missing data
-    const validRounds = gameSummary.roundResults.filter(r => r.game_duration_seconds && r.game_duration_seconds > 0)
-    const avgTime = validRounds.length > 0 ?
-        validRounds.reduce((sum, r) => sum + r.game_duration_seconds, 0) / validRounds.length : 0
+    const validRounds = gameSummary.roundResults.filter((r) => r.game_duration_seconds && r.game_duration_seconds > 0)
+    const avgTime =
+        validRounds.length > 0
+            ? validRounds.reduce((sum, r) => sum + r.game_duration_seconds, 0) / validRounds.length
+            : 0
 
-    const bestTime = validRounds.length > 0 ?
-        Math.min(...validRounds.map(r => r.game_duration_seconds)) : 0
+    const bestTime = validRounds.length > 0 ? Math.min(...validRounds.map((r) => r.game_duration_seconds)) : 0
 
     // Update main stats grid
     const statsGrid = document.getElementById('statsGrid')
@@ -1268,7 +1271,9 @@ function updateRoundBreakdown(roundResults) {
             roundCard.className = 'round-summary-card'
 
             // Handle missing data gracefully
-            const gameTime = result.game_duration_seconds ? TimeUtils.formatTime(result.game_duration_seconds) : 'Données manquantes'
+            const gameTime = result.game_duration_seconds
+                ? TimeUtils.formatTime(result.game_duration_seconds)
+                : 'Données manquantes'
             const efficiency = result.efficiency ? result.efficiency.toFixed(1) : '--'
             const completionRate = result.completionRate ? result.completionRate.toFixed(0) : '100'
             const batchSizeText = getBatchSizeDescription(result.batch_size)
@@ -1299,17 +1304,22 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${hasValidRankings ?
-                    result.playerRankings.slice(0, 3).map((ranking, idx) => `
+                    ${
+                        hasValidRankings
+                            ? result.playerRankings
+                                  .slice(0, 3)
+                                  .map(
+                                      (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
-                        `).join('')
-                    :
-                    '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                }
+                        `
+                                  )
+                                  .join('')
+                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                    }
                 </div>
             `
 
@@ -1322,10 +1332,14 @@ function updateRoundBreakdown(roundResults) {
 
 function getBatchSizeDescription(batchSize) {
     switch (batchSize) {
-        case 1: return 'Une par une'
-        case 4: return 'Par groupes de 4'
-        case 12: return 'Toutes ensemble'
-        default: return `Par groupes de ${batchSize}`
+        case 1:
+            return 'Une par une'
+        case 4:
+            return 'Par groupes de 4'
+        case 12:
+            return 'Toutes ensemble'
+        default:
+            return `Par groupes de ${batchSize}`
     }
 }
 
@@ -1368,7 +1382,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
         // Sort batch sizes for consistent display
         const sortedBatchSizes = Object.keys(batchSizeImpact).sort((a, b) => parseInt(b) - parseInt(a))
 
-        sortedBatchSizes.forEach(batchSize => {
+        sortedBatchSizes.forEach((batchSize) => {
             const data = batchSizeImpact[batchSize]
             const batchCard = document.createElement('div')
             batchCard.className = 'batch-comparison-card'
@@ -1406,7 +1420,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
             <div class="insights-content">
                 <h4>💡 Observations</h4>
                 <ul>
-                    ${insights.map(insight => `<li>${insight}</li>`).join('')}
+                    ${insights.map((insight) => `<li>${insight}</li>`).join('')}
                 </ul>
             </div>
         `
@@ -1415,7 +1429,9 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
 
 function generateBatchSizeInsights(batchSizeImpact) {
     const insights = []
-    const batchSizes = Object.keys(batchSizeImpact).map(Number).sort((a, b) => a - b)
+    const batchSizes = Object.keys(batchSizeImpact)
+        .map(Number)
+        .sort((a, b) => a - b)
 
     if (batchSizes.length >= 2) {
         const smallestBatch = batchSizeImpact[batchSizes[0]]
@@ -1428,10 +1444,10 @@ function generateBatchSizeInsights(batchSizeImpact) {
         }
 
         if (smallestBatch.avgEfficiency > largestBatch.avgEfficiency) {
-            insights.push('Les petits lots améliorent l\'efficacité du flux de production')
+            insights.push("Les petits lots améliorent l'efficacité du flux de production")
         }
 
-        insights.push('Les gros lots créent plus de temps d\'attente entre les joueurs')
+        insights.push("Les gros lots créent plus de temps d'attente entre les joueurs")
         insights.push('Les petits lots permettent un travail plus parallèle')
     }
 
@@ -1446,7 +1462,7 @@ function updatePlayerPerformanceSummary(playerSummary) {
 
     // Sort players by average time (best performers first)
     const sortedPlayers = Object.values(playerSummary)
-        .filter(player => player.roundsCompleted > 0)
+        .filter((player) => player.roundsCompleted > 0)
         .sort((a, b) => a.avgTime - b.avgTime)
 
     sortedPlayers.forEach((playerStats, index) => {
@@ -1488,7 +1504,7 @@ function updateLeanInsights(gameSummary) {
     // Generate dynamic insights based on actual game data
     const insights = generateDynamicInsights(gameSummary)
 
-    insightsList.innerHTML = insights.map(insight => `<li>${insight}</li>`).join('')
+    insightsList.innerHTML = insights.map((insight) => `<li>${insight}</li>`).join('')
 }
 
 function generateDynamicInsights(gameSummary) {
@@ -1496,27 +1512,41 @@ function generateDynamicInsights(gameSummary) {
 
     // Batch size insights
     if (Object.keys(gameSummary.batchSizeImpact).length > 1) {
-        insights.push('<strong>Batch Size:</strong> Vous avez testé différentes tailles de lots et observé leur impact sur les temps de cycle')
+        insights.push(
+            '<strong>Batch Size:</strong> Vous avez testé différentes tailles de lots et observé leur impact sur les temps de cycle'
+        )
     } else {
-        insights.push('<strong>Batch Size:</strong> Essayez différentes tailles de lots pour observer leur impact sur le temps de cycle')
+        insights.push(
+            '<strong>Batch Size:</strong> Essayez différentes tailles de lots pour observer leur impact sur le temps de cycle'
+        )
     }
 
     // Flow insights
     const playerCount = Object.keys(gameSummary.playerSummary).length
     if (playerCount > 2) {
-        insights.push('<strong>Flow:</strong> Plus il y a de joueurs dans la chaîne, plus la coordination devient importante')
+        insights.push(
+            '<strong>Flow:</strong> Plus il y a de joueurs dans la chaîne, plus la coordination devient importante'
+        )
     } else {
-        insights.push('<strong>Flow:</strong> Analysez les goulots d\'étranglement et les temps d\'attente dans votre processus')
+        insights.push(
+            "<strong>Flow:</strong> Analysez les goulots d'étranglement et les temps d'attente dans votre processus"
+        )
     }
 
     // Lead time insights
     const avgRoundTime = gameSummary.averageRoundTime
-    const avgPlayerTime = Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) / Object.keys(gameSummary.playerSummary).length
+    const avgPlayerTime =
+        Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) /
+        Object.keys(gameSummary.playerSummary).length
 
     if (avgRoundTime > avgPlayerTime * 1.5) {
-        insights.push('<strong>Lead Time:</strong> Le temps total est significativement plus long que le temps individuel - signe de temps d\'attente')
+        insights.push(
+            "<strong>Lead Time:</strong> Le temps total est significativement plus long que le temps individuel - signe de temps d'attente"
+        )
     } else {
-        insights.push('<strong>Lead Time:</strong> Comparez le temps individuel vs. temps total du processus pour identifier les inefficacités')
+        insights.push(
+            '<strong>Lead Time:</strong> Comparez le temps individuel vs. temps total du processus pour identifier les inefficacités'
+        )
     }
 
     // Improvement insights
@@ -1525,12 +1555,18 @@ function generateDynamicInsights(gameSummary) {
         const lastRound = gameSummary.roundResults[gameSummary.roundResults.length - 1]
 
         if (lastRound.game_duration_seconds < firstRound.game_duration_seconds) {
-            insights.push('<strong>Amélioration Continue:</strong> Votre équipe s\'est améliorée au fil des manches - excellent travail d\'équipe !')
+            insights.push(
+                "<strong>Amélioration Continue:</strong> Votre équipe s'est améliorée au fil des manches - excellent travail d'équipe !"
+            )
         } else {
-            insights.push('<strong>Amélioration Continue:</strong> Discutez des optimisations possibles pour les prochaines itérations')
+            insights.push(
+                '<strong>Amélioration Continue:</strong> Discutez des optimisations possibles pour les prochaines itérations'
+            )
         }
     } else {
-        insights.push('<strong>Amélioration Continue:</strong> Jouez plusieurs manches pour voir l\'évolution de votre performance')
+        insights.push(
+            "<strong>Amélioration Continue:</strong> Jouez plusieurs manches pour voir l'évolution de votre performance"
+        )
     }
 
     return insights
