@@ -233,7 +233,7 @@ function createPlayerStation(player, gameState, playerIndex) {
                 coin.classList.add('grayscale')
             }
 
-            // CRITICAL: Only allow interaction for current player who can interact with tails coins
+            // Only allow interaction for current player who can interact with tails coins
             if (canInteract && !isHeads) {
                 coin.classList.add('interactive', 'clickable')
                 coin.style.cursor = 'pointer'

@@ -272,13 +272,32 @@ async def start_next_round_endpoint(room_id: str, host_secret: str = Cookie(None
 
     # Check if we're in the right state
     if game.state != GameState.ROUND_COMPLETE:
-        raise HTTPException(status_code=400, detail="Can only start next round when current round is complete")
+        logger.error(
+            f"Invalid state for next round in room {room_id}: " f"Expected ROUND_COMPLETE, got {game.state.value}"
+        )
+
+        # Check if we're already in active state (double-click protection)
+        if game.state == GameState.ACTIVE:
+            raise HTTPException(status_code=400, detail="La manche est déjà en cours")
+
+        # Check if we're in results (all rounds done)
+        if game.state == GameState.RESULTS:
+            raise HTTPException(status_code=400, detail="Toutes les manches sont terminées")
+
+        # For any other state, provide a helpful error
+        raise HTTPException(
+            status_code=400, detail=f"État invalide pour démarrer la manche suivante. État actuel: {game.state.value}"
+        )
+
+    # Additional validation: check if there are more rounds to play
+    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+    if game.current_round >= len(batch_sizes):
+        raise HTTPException(status_code=400, detail="Toutes les manches ont déjà été jouées")
 
     # Start the next round
     if not start_next_round(game):
-        raise HTTPException(status_code=400, detail="No more rounds to play")
+        raise HTTPException(status_code=400, detail="Impossible de démarrer la manche suivante")
 
-    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
     total_rounds = len(batch_sizes)
 
     # Broadcast round start
@@ -418,7 +437,13 @@ async def _handle_game_over(room_id: str, game):
 
 
 async def _handle_round_complete(room_id: str, game):
-    """Handle round complete state."""
+    """Handle round complete state with proper state verification."""
+    # Ensure the game state is properly set
+    if game.state != GameState.ROUND_COMPLETE:
+        logger.warning(f"Expected ROUND_COMPLETE state but got {game.state} for room {room_id}")
+        # Force the state if we know the round is complete
+        game.state = GameState.ROUND_COMPLETE
+
     await broadcast_game_state(room_id, state=GameState.ROUND_COMPLETE)
 
     round_result = game.round_results[-1] if game.round_results else None
@@ -435,9 +460,11 @@ async def _handle_round_complete(room_id: str, game):
             "batch_size": next_batch_size,
             "round_result": round_result.dict() if round_result else None,
             "game_over": False,
+            "game_state": game.state.value,
+            "current_round": game.current_round,
         },
     )
-    logger.info(f"Round {game.current_round} completed: {room_id}")
+    logger.info(f"Round {game.current_round} completed: {room_id}, state: {game.state.value}")
 
 
 @router.post("/game/reset/{room_id}")

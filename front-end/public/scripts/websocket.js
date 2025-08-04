@@ -452,7 +452,7 @@ function handleWelcomeMessage(msg) {
         window.gameState = gameState
         window.gameStatsTracker.currentGameState = gameState
 
-        // CRITICAL: Set user role and host status properly
+        // Set user role and host status properly
         const currentUsername = window.currentUsername
         window.isHost = gameState.host === currentUsername
         window.userRole = gameState.players.includes(currentUsername) ? 'player' : 'spectator'
@@ -640,7 +640,7 @@ function handleActionMade(msg) {
     // Update the game board
     renderGameBoard(gameState)
 
-    // CRITICAL: Update current game state in stats tracker
+    // Update current game state in stats tracker
     window.gameStatsTracker.currentGameState = gameState
 
     // Only show notifications for send actions (batch sending), not for individual coin flips
@@ -725,7 +725,19 @@ function handleRoundComplete(msg) {
     ViewManager.switchToRoundCompleteView()
     stopRealTimeTimers()
 
-    // Save round stats - CRITICAL: Always save, even for last round
+    // Update the global game state to match server state
+    if (window.gameState) {
+        window.gameState.state = 'round_complete'
+        window.gameState.current_round = msg.round_number
+
+        // Update any other relevant state from the message
+        if (msg.round_result) {
+            window.gameState.game_duration_seconds = msg.round_result.game_duration_seconds
+            window.gameState.player_timers = msg.round_result.player_timers || {}
+        }
+    }
+
+    // Save round stats
     if (msg.round_result) {
         console.log(`💾 Saving round ${msg.round_number} stats:`, msg.round_result)
         window.gameStatsTracker.addRoundResult(msg.round_result)
@@ -747,6 +759,7 @@ function handleRoundComplete(msg) {
             batch: r.batch_size,
             time: r.game_duration_seconds,
         })),
+        gameState: window.gameState?.state
     })
 }
 
@@ -847,7 +860,7 @@ function handleGameOver(msg) {
 
     console.log('🏁 Game over message received:', msg)
 
-    // CRITICAL: The last round stats are often missing because the game goes directly
+    // The last round stats are often missing because the game goes directly
     // from active to results without passing through round_complete
 
     // Strategy 1: Try to get final round data from msg.final_state
@@ -1304,22 +1317,21 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${
-                        hasValidRankings
-                            ? result.playerRankings
-                                  .slice(0, 3)
-                                  .map(
-                                      (ranking, idx) => `
+                    ${hasValidRankings
+                    ? result.playerRankings
+                        .slice(0, 3)
+                        .map(
+                            (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                                  )
-                                  .join('')
-                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                    }
+                        )
+                        .join('')
+                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                }
                 </div>
             `
 
