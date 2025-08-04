@@ -35,7 +35,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
                         <span>➕ Créer une salle</span>
                     </label>
                     <label class="select-button selected">
-                        <input type="radio" name="roomAction" required value="join" checked />
+                        <input type="radio" name="roomAction" value="join" checked />
                         <span>🔑 Rejoindre une salle</span>
                     </label>
                 </div>
@@ -43,7 +43,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
 
             <div id="roomCodeField" class="input-group">
                 <label for="roomCode">Code de la salle :</label>
-                <input type="text" id="roomCode" name="roomCode" placeholder="ABCD1234" />
+                <input type="text" id="roomCode" name="roomCode" required placeholder="ABCD1234" />
             </div>
 
             <button type="submit" class="btn btn-primary">VALIDER</button>
@@ -94,6 +94,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
                 updateSelected('roomAction')
                 const join = form.querySelector('[name=roomAction]:checked')?.value === 'join'
                 roomCodeField.style.display = join ? '' : 'none'
+                roomCodeField.querySelector('input')?.toggleAttribute('required', join)
                 title.textContent = join ? 'Rejoindre une partie' : 'Créer une partie'
                 if (roleChoice) roleChoice.style.display = join ? '' : 'none'
             })
