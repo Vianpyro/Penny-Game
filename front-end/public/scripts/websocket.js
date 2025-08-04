@@ -759,7 +759,7 @@ function handleRoundComplete(msg) {
             batch: r.batch_size,
             time: r.game_duration_seconds,
         })),
-        gameState: window.gameState?.state
+        gameState: window.gameState?.state,
     })
 }
 
@@ -1317,21 +1317,22 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${hasValidRankings
-                    ? result.playerRankings
-                        .slice(0, 3)
-                        .map(
-                            (ranking, idx) => `
+                    ${
+                        hasValidRankings
+                            ? result.playerRankings
+                                  .slice(0, 3)
+                                  .map(
+                                      (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                        )
-                        .join('')
-                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                }
+                                  )
+                                  .join('')
+                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                    }
                 </div>
             `
 
