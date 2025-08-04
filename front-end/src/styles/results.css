@@ -1,7 +1,7 @@
 /* Enhanced Results CSS - Replaces existing results.css */
 
 .insights {
-    background: rgba(46, 204, 113, 0.1);
+    background: rgb(46 204 113 / 10%);
     border-left: 5px solid #27ae60;
     border-radius: 0 15px 15px 0;
     margin: 30px 0;
@@ -59,7 +59,7 @@
     border-radius: 20px;
     padding: 30px;
     margin-top: 20px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 15px 35px rgb(0 0 0 / 10%);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -77,7 +77,7 @@
 
 /* Round Breakdown Section */
 .round-breakdown-section {
-    background: rgba(155, 89, 182, 0.1);
+    background: rgb(155 89 182 / 10%);
     border-radius: 15px;
     padding: 25px;
     margin: 25px 0;
@@ -103,17 +103,17 @@
 }
 
 .round-summary-card {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 90%);
     border-radius: 12px;
     padding: 20px;
-    border: 2px solid rgba(155, 89, 182, 0.2);
+    border: 2px solid rgb(155 89 182 / 20%);
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 15px rgb(0 0 0 / 10%);
 }
 
 .round-summary-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
+    box-shadow: 0 8px 25px rgb(155 89 182 / 20%);
     border-color: #9b59b6;
 }
 
@@ -122,7 +122,7 @@
     align-items: center;
     gap: 15px;
     padding-bottom: 12px;
-    border-bottom: 2px solid rgba(236, 240, 241, 0.5);
+    border-bottom: 2px solid rgb(236 240 241 / 50%);
     justify-content: space-between;
     margin-bottom: 20px;
 }
@@ -138,7 +138,7 @@
     justify-content: center;
     font-size: 1.4em;
     font-weight: 900;
-    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+    box-shadow: 0 4px 15px rgb(155 89 182 / 30%);
 }
 
 .round-batch-info {
@@ -166,11 +166,11 @@
 }
 
 .mini-stat {
-    background: rgba(52, 152, 219, 0.1);
+    background: rgb(52 152 219 / 10%);
     border-radius: 8px;
     padding: 10px;
     text-align: center;
-    border: 1px solid rgba(52, 152, 219, 0.2);
+    border: 1px solid rgb(52 152 219 / 20%);
 }
 
 .mini-stat-value {
@@ -190,10 +190,10 @@
 }
 
 .round-rankings {
-    background: rgba(39, 174, 96, 0.1);
+    background: rgb(39 174 96 / 10%);
     border-radius: 8px;
     padding: 12px;
-    border: 1px solid rgba(39, 174, 96, 0.2);
+    border: 1px solid rgb(39 174 96 / 20%);
 }
 
 .mini-ranking {
@@ -205,7 +205,7 @@
 }
 
 .mini-ranking:not(:last-child) {
-    border-bottom: 1px solid rgba(39, 174, 96, 0.2);
+    border-bottom: 1px solid rgb(39 174 96 / 20%);
     padding-bottom: 6px;
     margin-bottom: 6px;
 }
@@ -232,7 +232,7 @@
 
 /* Batch Analysis Section */
 .batch-analysis-section {
-    background: rgba(241, 196, 15, 0.1);
+    background: rgb(241 196 15 / 10%);
     border-radius: 15px;
     padding: 25px;
     margin: 25px 0;
@@ -259,24 +259,24 @@
 }
 
 .batch-comparison-card {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(255 255 255 / 90%);
     border-radius: 12px;
     padding: 20px;
-    border: 2px solid rgba(241, 196, 15, 0.3);
+    border: 2px solid rgb(241 196 15 / 30%);
     transition: all 0.3s ease;
     text-align: center;
 }
 
 .batch-comparison-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(241, 196, 15, 0.2);
+    box-shadow: 0 8px 25px rgb(241 196 15 / 20%);
     border-color: #f39c12;
 }
 
 .batch-size-header {
     margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 2px solid rgba(236, 240, 241, 0.5);
+    border-bottom: 2px solid rgb(236 240 241 / 50%);
 }
 
 .batch-size-number {
@@ -299,10 +299,10 @@
 }
 
 .batch-metric {
-    background: rgba(52, 152, 219, 0.1);
+    background: rgb(52 152 219 / 10%);
     border-radius: 8px;
     padding: 12px;
-    border: 1px solid rgba(52, 152, 219, 0.2);
+    border: 1px solid rgb(52 152 219 / 20%);
 }
 
 .metric-value {
@@ -322,10 +322,10 @@
 }
 
 .insights-content {
-    background: rgba(255, 255, 255, 0.8);
+    background: rgb(255 255 255 / 80%);
     border-radius: 10px;
     padding: 15px;
-    border: 1px solid rgba(241, 196, 15, 0.3);
+    border: 1px solid rgb(241 196 15 / 30%);
 }
 
 .insights-content h4 {
@@ -362,7 +362,7 @@
     justify-content: center;
     font-style: italic;
     color: #e74c3c;
-    background: rgba(231, 76, 60, 0.1);
+    background: rgb(231 76 60 / 10%);
     border-radius: 6px;
     padding: 8px;
     margin: 4px 0;
@@ -374,7 +374,7 @@
 
 .round-summary-card.incomplete {
     border-color: #e74c3c;
-    background: linear-gradient(135deg, rgba(231, 76, 60, 0.05) 0%, rgba(192, 57, 43, 0.1) 100%);
+    background: linear-gradient(135deg, rgb(231 76 60 / 5%) 0%, rgb(192 57 43 / 10%) 100%);
 }
 
 .round-summary-card.incomplete .round-number-badge {
@@ -388,8 +388,8 @@
 
 /* Enhanced error states */
 .stats-error {
-    background: rgba(231, 76, 60, 0.1);
-    border: 2px solid rgba(231, 76, 60, 0.3);
+    background: rgb(231 76 60 / 10%);
+    border: 2px solid rgb(231 76 60 / 30%);
     border-radius: 10px;
     padding: 15px;
     margin: 10px 0;
@@ -410,7 +410,7 @@
     justify-content: space-between;
     margin-top: 15px;
     padding-top: 10px;
-    border-top: 1px solid rgba(236, 240, 241, 0.5);
+    border-top: 1px solid rgb(236 240 241 / 50%);
 }
 
 .player-detail {
@@ -519,7 +519,6 @@
     height: 4px;
     background: linear-gradient(90deg, #3498db, #2980b9);
 }
-
 
 .round-badge {
     background: linear-gradient(135deg, #3498db, #2980b9);
@@ -922,10 +921,7 @@
 .overall-stat-card.highlight::before {
     content: '';
     position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
+    inset: -2px;
     background: linear-gradient(45deg, #f39c12, #e67e22);
     border-radius: 17px;
     z-index: -1;
@@ -966,7 +962,7 @@
 }
 
 /* Responsive Design */
-@media screen and (max-width: 768px) {
+@media screen and (width <= 768px) {
     .rounds-grid {
         grid-template-columns: 1fr;
         gap: 20px;
@@ -1032,7 +1028,7 @@
     }
 }
 
-@media screen and (max-width: 480px) {
+@media screen and (width <= 480px) {
     .comprehensive-results {
         margin-top: 20px;
     }
@@ -1129,25 +1125,25 @@
 }
 
 /* Animation for progressive reveal */
-.comprehensive-results>* {
+.comprehensive-results > * {
     opacity: 0;
     transform: translateY(20px);
     animation: reveal-section 0.6s ease forwards;
 }
 
-.comprehensive-results>*:nth-child(1) {
+.comprehensive-results > *:nth-child(1) {
     animation-delay: 0.1s;
 }
 
-.comprehensive-results>*:nth-child(2) {
+.comprehensive-results > *:nth-child(2) {
     animation-delay: 0.3s;
 }
 
-.comprehensive-results>*:nth-child(3) {
+.comprehensive-results > *:nth-child(3) {
     animation-delay: 0.5s;
 }
 
-.comprehensive-results>*:nth-child(4) {
+.comprehensive-results > *:nth-child(4) {
     animation-delay: 0.7s;
 }
 
