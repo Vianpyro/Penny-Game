@@ -354,10 +354,17 @@ async def flip_coin(room_id: str, flip: FlipRequest):
     action_data = GameResponseBuilder.build_websocket_action_data(
         flip.username, "flip", result, {"coin_index": flip.coin_index}
     )
+
+    # Include round_complete flag in the broadcast
+    action_data["round_complete"] = result.get("round_complete", False)
+    action_data["current_round"] = result.get("current_round", game.current_round)
+
     await broadcast_game_update(room_id, action_data)
 
-    # Handle round completion
-    await _handle_round_completion(room_id, game, result)
+    # Handle round completion with proper state broadcasting
+    if result.get("round_complete", False):
+        logger.info(f"Round completed after flip in room {room_id}, broadcasting state change")
+        await _handle_round_completion(room_id, game, result)
 
     return GameResponseBuilder.build_game_state_response(game)
 
@@ -396,10 +403,17 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
         action_data = GameResponseBuilder.build_websocket_action_data(
             send.username, "send", result, {"batch_count": batch_count}
         )
+
+        # Include round_complete flag in the broadcast
+        action_data["round_complete"] = result.get("round_complete", False)
+        action_data["current_round"] = result.get("current_round", game.current_round)
+
         await broadcast_game_update(room_id, action_data)
 
-        # Handle round completion
-        await _handle_round_completion(room_id, game, result)
+        # Handle round completion with proper state broadcasting
+        if result.get("round_complete", False):
+            logger.info(f"Round completed after send in room {room_id}, broadcasting state change")
+            await _handle_round_completion(room_id, game, result)
 
         return GameResponseBuilder.build_send_batch_response(result, batch_count)
 
@@ -578,4 +592,5 @@ def _get_error_status_code(error: str) -> int:
     elif "invalid host" in error.lower():
         return 403
     else:
+        return 400
         return 400

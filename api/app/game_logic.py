@@ -3,12 +3,15 @@ Core game logic for the Penny Game.
 Handles all game mechanics including coin flipping, batch sending, and round management.
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
 
 from .constants import DEFAULT_BATCH_SIZE, DEFAULT_REQUIRED_PLAYERS, MAX_PENNIES
 from .models import GameState, PennyGame, PlayerTimer, RoundResult, RoundType
+
+logger = logging.getLogger(__name__)
 
 # Module-level storage
 games: Dict[str, PennyGame] = {}
@@ -485,8 +488,10 @@ def process_flip(game: PennyGame, player: str, coin_index: int) -> dict:
     game_over = False
 
     if round_complete:
+        logger.info(f"Round {game.current_round} completed after flip by {player}")
         complete_current_round(game)
         game_over = game.state == GameState.RESULTS
+        logger.info(f"After complete_current_round: state={game.state.value}, game_over={game_over}")
 
     # Ensure we have player_timers in the response
     if not hasattr(game, "player_timers") or game.player_timers is None:
@@ -519,8 +524,10 @@ def process_send(game: PennyGame, player: str) -> dict:
     game_over = False
 
     if round_complete:
+        logger.info(f"Round {game.current_round} completed after send by {player}")
         complete_current_round(game)
         game_over = game.state == GameState.RESULTS
+        logger.info(f"After complete_current_round: state={game.state.value}, game_over={game_over}")
 
     # Ensure we have player_timers in the response
     if not hasattr(game, "player_timers") or game.player_timers is None:
@@ -531,18 +538,21 @@ def process_send(game: PennyGame, player: str) -> dict:
 
 def _build_action_response(game: PennyGame, round_complete: bool, game_over: bool) -> dict:
     """Build standardized action response."""
-    return {
+    response = {
         "success": True,
         "round_complete": round_complete,
         "game_over": game_over,
         "player_coins": game.player_coins.copy(),
         "sent_coins": game.sent_coins.copy(),
         "total_completed": get_total_completed_coins(game),
-        "state": game.state.value,
+        "state": game.state.value,  # Include current state
         "current_round": game.current_round,
         "player_timers": {k: v.to_dict() for k, v in game.player_timers.items()} if game.player_timers else {},
         "game_duration_seconds": game.game_duration_seconds,
     }
+
+    logger.debug(f"Action response: round_complete={round_complete}, state={game.state.value}")
+    return response
 
 
 def reset_game(game: PennyGame) -> None:
