@@ -473,7 +473,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // NEW: Add self-role switching button for players
     function addSelfRoleSwitchButton() {
         try {
             const isHost = window.isHost
