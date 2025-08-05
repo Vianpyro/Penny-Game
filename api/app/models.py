@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from .constants import DEFAULT_BATCH_SIZE, DEFAULT_REQUIRED_PLAYERS, MAX_PENNIES
+from .constants import DEFAULT_BATCH_SIZE, DEFAULT_REQUIRED_PLAYERS, TOTAL_COINS, get_valid_batch_sizes
 
 
 class GameState(Enum):
@@ -58,6 +58,7 @@ class RoundResult(BaseModel):
     game_duration_seconds: Optional[float] = None
     player_timers: Dict[str, PlayerTimer] = Field(default_factory=dict)
     total_completed: int = 0
+    total_coins: int = TOTAL_COINS
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
 
@@ -74,7 +75,7 @@ class PennyGame(BaseModel):
 
     # Game state
     pennies: List[bool] = Field(
-        default_factory=lambda: [False] * MAX_PENNIES
+        default_factory=lambda: [False] * TOTAL_COINS
     )  # False = Tails (starting state), True = Heads
     created_at: datetime
     last_active_at: datetime
@@ -88,7 +89,7 @@ class PennyGame(BaseModel):
     required_players: int = DEFAULT_REQUIRED_PLAYERS
     current_round: int = 0  # 0 = not started, 1-3 = round number
     round_results: List[RoundResult] = Field(default_factory=list)
-    batch_sizes: List[int] = Field(default_factory=lambda: [12, 4, 1])
+    batch_sizes: List[int] = Field(default_factory=lambda: get_valid_batch_sizes())
     selected_batch_size: Optional[int] = None  # For single round mode
 
     # Current round state
@@ -117,7 +118,7 @@ class FlipRequest(BaseModel):
     """Request to flip a coin."""
 
     username: str = Field(..., min_length=1)
-    coin_index: int = Field(..., ge=0, le=MAX_PENNIES - 1, description="Index of coin to flip (0-based)")
+    coin_index: int = Field(..., ge=0, le=TOTAL_COINS - 1, description=f"Index of coin to flip (0-{TOTAL_COINS-1})")
 
     class Config:
         str_strip_whitespace = True

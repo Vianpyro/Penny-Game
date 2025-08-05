@@ -20,6 +20,13 @@ const ButtonStates = {
  * Main Game Actions class
  */
 export class GameActions {
+    // Add a debounce tracker
+    static actionInProgress = {
+        nextRound: false,
+        reset: false,
+        playAgain: false,
+    }
+
     /**
      * Initialize all game actions
      */
@@ -69,9 +76,15 @@ export class GameActions {
     }
 
     /**
-     * Handle "Play Again" action
+     * Handle "Play Again" action with debouncing
      */
     static async handlePlayAgain() {
+        // Prevent double-clicks
+        if (GameActions.actionInProgress.playAgain) {
+            console.log('⚠️ Play again action already in progress')
+            return
+        }
+
         const gameCode = GameActions.getGameCode()
         const apiUrl = GameActions.getApiUrl()
 
@@ -88,6 +101,9 @@ export class GameActions {
         const playAgainBtn = document.getElementById('playAgainBtn')
 
         try {
+            // Set debounce flag
+            GameActions.actionInProgress.playAgain = true
+
             GameActions.setButtonState(playAgainBtn, ButtonStates.LOADING, 'Redémarrage...')
 
             // Reset the game first
@@ -110,6 +126,11 @@ export class GameActions {
             GameActions.showAlert('Erreur lors du redémarrage de la partie')
         } finally {
             GameActions.setButtonState(playAgainBtn, ButtonStates.NORMAL, 'Rejouer')
+
+            // Clear debounce flag after a delay
+            setTimeout(() => {
+                GameActions.actionInProgress.playAgain = false
+            }, 1000)
         }
     }
 
@@ -169,9 +190,15 @@ export class GameActions {
     }
 
     /**
-     * Handle "Next Round" action
+     * Handle "Next Round" action with debouncing and state verification
      */
     static async handleNextRound() {
+        // Prevent double-clicks
+        if (GameActions.actionInProgress.nextRound) {
+            console.log('⚠️ Next round action already in progress')
+            return
+        }
+
         const gameCode = GameActions.getGameCode()
         const apiUrl = GameActions.getApiUrl()
 
@@ -185,9 +212,20 @@ export class GameActions {
             return
         }
 
+        // Verify game state before making the request
+        const currentState = window.gameState?.state
+        if (currentState !== 'round_complete') {
+            console.error(`Invalid state for next round: ${currentState}`)
+            GameActions.showAlert(`État invalide pour démarrer la manche suivante. État actuel: ${currentState}`)
+            return
+        }
+
         const nextRoundBtn = document.getElementById('nextRoundBtn')
 
         try {
+            // Set debounce flag
+            GameActions.actionInProgress.nextRound = true
+
             GameActions.setButtonState(nextRoundBtn, ButtonStates.LOADING, 'Démarrage...')
 
             const response = await fetch(`${apiUrl}/game/next_round/${gameCode}`, {
@@ -197,7 +235,7 @@ export class GameActions {
 
             if (!response.ok) {
                 const errorData = await response.json()
-                throw new Error(errorData.detail || 'Erreur lors du démarrage de la manche suivante')
+                console.warn(errorData.detail || 'Erreur lors du démarrage de la manche suivante')
             }
 
             console.log('✅ Next round started successfully')
@@ -206,13 +244,24 @@ export class GameActions {
             GameActions.showAlert(error.message || 'Impossible de démarrer la manche suivante')
         } finally {
             GameActions.setButtonState(nextRoundBtn, ButtonStates.NORMAL, 'Manche Suivante')
+
+            // Clear debounce flag after a delay
+            setTimeout(() => {
+                GameActions.actionInProgress.nextRound = false
+            }, 1000)
         }
     }
 
     /**
-     * Handle "Reset" action
+     * Handle "Reset" action with debouncing
      */
     static async handleReset() {
+        // Prevent double-clicks
+        if (GameActions.actionInProgress.reset) {
+            console.log('⚠️ Reset action already in progress')
+            return
+        }
+
         const gameCode = GameActions.getGameCode()
         const apiUrl = GameActions.getApiUrl()
 
@@ -233,6 +282,9 @@ export class GameActions {
         const resetBtn = document.getElementById('resetBtn')
 
         try {
+            // Set debounce flag
+            GameActions.actionInProgress.reset = true
+
             GameActions.setButtonState(resetBtn, ButtonStates.LOADING, 'Réinitialisation...')
 
             const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
@@ -251,6 +303,11 @@ export class GameActions {
             GameActions.showAlert(error.message || 'Impossible de réinitialiser la partie')
         } finally {
             GameActions.setButtonState(resetBtn, ButtonStates.NORMAL, 'Réinitialiser')
+
+            // Clear debounce flag after a delay
+            setTimeout(() => {
+                GameActions.actionInProgress.reset = false
+            }, 1000)
         }
     }
 

@@ -5,7 +5,7 @@ Contains all validation logic for game states, actions, and user permissions.
 
 from typing import Optional, Tuple
 
-from .constants import MAX_PLAYERS, VALID_BATCH_SIZES
+from .constants import MAX_PLAYERS, get_valid_batch_sizes
 from .models import GameState, PennyGame
 
 
@@ -82,8 +82,9 @@ class GameValidator:
     @staticmethod
     def validate_batch_size(batch_size: int) -> Tuple[bool, Optional[str]]:
         """Validate a batch size."""
-        if batch_size not in VALID_BATCH_SIZES:
-            return False, f"Invalid batch size. Must be one of: {VALID_BATCH_SIZES}"
+        valid_sizes = get_valid_batch_sizes()
+        if batch_size not in valid_sizes:
+            return False, f"Invalid batch size. Must be one of: {valid_sizes}"
         return True, None
 
     @staticmethod

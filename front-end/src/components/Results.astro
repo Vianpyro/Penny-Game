@@ -4,36 +4,44 @@ import '../styles/results.css'
 ---
 
 <div class="results" id="results" style="display: none;">
-    <h2>📊 Résultats de la Simulation</h2>
+    <h2>🏆 Résultats Complets de la Simulation</h2>
 
     <!-- Game Timer Section -->
     <div class="game-time-section" id="gameTimeSection">
         <div class="game-time-card">
             <div class="game-time-icon">⏱️</div>
             <div class="game-time-value" id="gameTimeValue">--:--</div>
-            <div class="game-time-label">Temps total de la partie</div>
+            <div class="game-time-label">Temps total de toutes les manches</div>
         </div>
     </div>
 
-    <!-- Player Timers Section -->
-    <div class="player-timers-section" id="playerTimersSection">
-        <h3>👥 Performance des Joueurs</h3>
-        <div class="player-timers-grid" id="playerTimersGrid">
-            <!-- Player timer cards will be dynamically generated -->
-        </div>
-    </div>
-
-    <!-- Statistics Grid -->
+    <!-- Main Statistics Grid -->
     <div class="stats-section">
-        <h3>📈 Statistiques de la Partie</h3>
+        <h3>📈 Statistiques Générales</h3>
         <div class="stats-grid" id="statsGrid">
             <!-- Stats will be dynamically generated -->
         </div>
     </div>
 
-    <!-- Insights Section -->
+    <!-- Player Performance Summary Section -->
+    <div class="player-timers-section" id="playerTimersSection">
+        <h3>👥 Performance Globale des Joueurs</h3>
+        <p class="section-description">Classement basé sur la performance moyenne sur toutes les manches</p>
+        <div class="player-timers-grid" id="playerTimersGrid">
+            <!-- Player summary cards will be dynamically generated -->
+        </div>
+    </div>
+
+    <!-- Round-by-Round Breakdown -->
+    <!-- This section will be dynamically inserted by JavaScript -->
+
+    <!-- Batch Size Analysis -->
+    <!-- This section will be dynamically inserted by JavaScript -->
+
+    <!-- Insights Section with Dynamic Content -->
     <div class="insights">
-        <h3>💡 Enseignements Lean</h3>
+        <h3>💡 Enseignements Lean Personnalisés</h3>
+        <p class="insights-description">Basés sur vos résultats de simulation</p>
         <ul id="insightsList">
             <li>
                 <strong>Batch Size:</strong> Observer l'impact de la taille des lots sur le temps de cycle
@@ -58,6 +66,38 @@ import '../styles/results.css'
 </div>
 
 <style>
+    /* Enhanced Results Styles */
+    .results {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 20px;
+        padding: 30px;
+        margin-top: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .results h2 {
+        color: #2c3e50;
+        font-size: 2.2em;
+        font-weight: 700;
+        margin-bottom: 30px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    .section-description,
+    .insights-description {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 0.95em;
+        margin-bottom: 20px;
+        font-style: italic;
+    }
+
+    /* Game Time Section */
     .game-time-section {
         text-align: center;
         margin-bottom: 30px;
@@ -69,8 +109,13 @@ import '../styles/results.css'
         border-radius: 20px;
         padding: 30px;
         display: inline-block;
-        min-width: 250px;
+        min-width: 280px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease;
+    }
+
+    .game-time-card:hover {
+        transform: translateY(-3px);
     }
 
     .game-time-icon {
@@ -92,70 +137,7 @@ import '../styles/results.css'
         opacity: 0.9;
     }
 
-    .player-timers-section {
-        margin-bottom: 30px;
-    }
-
-    .player-timers-section h3 {
-        color: #2c3e50;
-        font-size: 1.4em;
-        margin-bottom: 20px;
-        text-align: center;
-    }
-
-    .player-timers-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-
-    .player-timer-result {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        border: 3px solid #ecf0f1;
-        transition: all 0.3s ease;
-    }
-
-    .player-timer-result:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    }
-
-    .player-timer-result.completed {
-        border-color: #27ae60;
-        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-        color: white;
-    }
-
-    .player-timer-result.not-started {
-        border-color: #95a5a6;
-        background: #ecf0f1;
-        color: #7f8c8d;
-    }
-
-    .player-name {
-        font-size: 1.2em;
-        font-weight: 700;
-        margin-bottom: 10px;
-    }
-
-    .player-time {
-        font-family: 'Courier New', monospace;
-        font-size: 2em;
-        font-weight: 700;
-        margin-bottom: 10px;
-    }
-
-    .player-status {
-        font-size: 0.9em;
-        font-weight: 600;
-        opacity: 0.8;
-    }
-
+    /* Stats Section */
     .stats-section {
         margin-bottom: 30px;
     }
@@ -165,41 +147,538 @@ import '../styles/results.css'
         font-size: 1.4em;
         margin-bottom: 20px;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
     }
 
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 20px;
         margin-bottom: 20px;
     }
 
     .stat-card {
         background: white;
-        border-radius: 12px;
-        padding: 20px;
+        border-radius: 15px;
+        padding: 25px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        border: 2px solid #ecf0f1;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border: 3px solid #ecf0f1;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        border-color: #3498db;
     }
 
     .stat-value {
-        font-size: 2em;
+        font-family: 'Courier New', monospace;
+        font-size: 2.2em;
         font-weight: 700;
         color: #3498db;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
+        display: block;
     }
 
     .stat-label {
         font-size: 0.9em;
         color: #7f8c8d;
         font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
-    /* Responsive design */
+    /* Player Timers Section */
+    .player-timers-section {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #3498db;
+    }
+
+    .player-timers-section h3 {
+        margin: 0 0 10px;
+        color: #2c3e50;
+        font-size: 1.4em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .player-timers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .player-timer-result {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        border: 3px solid #ecf0f1;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .player-timer-result:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .player-timer-result.completed {
+        border-color: #27ae60;
+        background: linear-gradient(135deg, rgba(39, 174, 96, 0.05) 0%, rgba(46, 204, 113, 0.1) 100%);
+    }
+
+    .ranking-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: linear-gradient(45deg, #f39c12, #e67e22);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 0 15px 0 15px;
+        font-size: 0.8em;
+        font-weight: 700;
+        box-shadow: 0 3px 10px rgba(243, 156, 18, 0.3);
+    }
+
+    .player-name {
+        font-size: 1.3em;
+        font-weight: 700;
+        margin: 10px 0;
+        color: #2c3e50;
+    }
+
+    .player-time {
+        font-family: 'Courier New', monospace;
+        font-size: 2.2em;
+        font-weight: 700;
+        margin: 15px 0;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+        color: #27ae60;
+    }
+
+    .player-status {
+        font-size: 0.9em;
+        font-weight: 600;
+        margin: 10px 0;
+        opacity: 0.8;
+        color: #7f8c8d;
+    }
+
+    .player-details {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(236, 240, 241, 0.5);
+    }
+
+    .player-detail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .detail-label {
+        font-size: 0.75em;
+        font-weight: 600;
+        color: #95a5a6;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+        font-size: 0.9em;
+        font-weight: 700;
+        color: #2c3e50;
+        font-family: 'Courier New', monospace;
+    }
+
+    /* Round Breakdown Section */
+    .round-breakdown-section {
+        background: rgba(155, 89, 182, 0.1);
+        border-radius: 15px;
+        padding: 25px;
+        margin: 25px 0;
+        border-left: 5px solid #9b59b6;
+    }
+
+    .round-breakdown-section h3 {
+        margin: 0 0 20px;
+        color: #2c3e50;
+        font-size: 1.4em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .round-breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .round-summary-card {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        padding: 20px;
+        border: 2px solid rgba(155, 89, 182, 0.2);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .round-summary-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(155, 89, 182, 0.2);
+        border-color: #9b59b6;
+    }
+
+    .round-number-badge {
+        background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        color: white;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4em;
+        font-weight: 900;
+        box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+    }
+
+    .round-batch-info {
+        flex: 1;
+    }
+
+    .batch-size {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 3px;
+    }
+
+    .batch-description {
+        font-size: 0.85em;
+        color: #7f8c8d;
+        font-style: italic;
+    }
+
+    .round-stats-mini {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .mini-stat {
+        background: rgba(52, 152, 219, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        border: 1px solid rgba(52, 152, 219, 0.2);
+    }
+
+    .mini-stat-value {
+        font-family: 'Courier New', monospace;
+        font-size: 1.1em;
+        font-weight: 700;
+        color: #3498db;
+        margin-bottom: 3px;
+    }
+
+    .mini-stat-label {
+        font-size: 0.75em;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .round-rankings {
+        background: rgba(39, 174, 96, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid rgba(39, 174, 96, 0.2);
+    }
+
+    .mini-ranking {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 0;
+        font-size: 0.85em;
+    }
+
+    .mini-ranking:not(:last-child) {
+        border-bottom: 1px solid rgba(39, 174, 96, 0.2);
+        padding-bottom: 6px;
+        margin-bottom: 6px;
+    }
+
+    .ranking-position {
+        font-size: 1em;
+        min-width: 25px;
+    }
+
+    .ranking-player {
+        font-weight: 600;
+        color: #2c3e50;
+        flex: 1;
+        text-align: left;
+        margin-left: 8px;
+    }
+
+    .ranking-time {
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        color: #27ae60;
+        font-size: 0.9em;
+    }
+
+    /* Batch Analysis Section */
+    .batch-analysis-section {
+        background: rgba(241, 196, 15, 0.1);
+        border-radius: 15px;
+        padding: 25px;
+        margin: 25px 0;
+        border-left: 5px solid #f1c40f;
+    }
+
+    .batch-analysis-section h3 {
+        margin: 0 0 20px;
+        color: #2c3e50;
+        font-size: 1.4em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .batch-comparison-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .batch-comparison-card {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        padding: 20px;
+        border: 2px solid rgba(241, 196, 15, 0.3);
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .batch-comparison-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(241, 196, 15, 0.2);
+        border-color: #f39c12;
+    }
+
+    .batch-size-header {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid rgba(236, 240, 241, 0.5);
+    }
+
+    .batch-size-number {
+        font-size: 2.5em;
+        font-weight: 900;
+        color: #f39c12;
+        margin-bottom: 5px;
+    }
+
+    .batch-size-label {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .batch-metrics {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .batch-metric {
+        background: rgba(52, 152, 219, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid rgba(52, 152, 219, 0.2);
+    }
+
+    .metric-value {
+        font-family: 'Courier New', monospace;
+        font-size: 1.3em;
+        font-weight: 700;
+        color: #3498db;
+        margin-bottom: 4px;
+    }
+
+    .metric-label {
+        font-size: 0.8em;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .insights-content {
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+        padding: 15px;
+        border: 1px solid rgba(241, 196, 15, 0.3);
+    }
+
+    .insights-content h4 {
+        margin: 0 0 12px;
+        color: #2c3e50;
+        font-size: 1.1em;
+        font-weight: 700;
+    }
+
+    .insights-content ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: none;
+    }
+
+    .insights-content li {
+        margin-bottom: 8px;
+        padding-left: 20px;
+        position: relative;
+        color: #34495e;
+        font-size: 0.9em;
+        line-height: 1.4;
+    }
+
+    .insights-content li::before {
+        content: '💡';
+        position: absolute;
+        left: 0;
+        font-size: 1em;
+    }
+
+    /* Enhanced Insights Section */
+    .insights {
+        background: rgba(46, 204, 113, 0.1);
+        border-left: 5px solid #27ae60;
+        border-radius: 0 15px 15px 0;
+        padding: 25px;
+        margin: 30px 0;
+    }
+
+    .insights h3 {
+        margin: 0 0 10px;
+        color: #2c3e50;
+        font-size: 1.4em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .insights ul {
+        color: #34495e;
+        line-height: 1.6;
+        margin: 15px 0 0;
+        padding-left: 25px;
+        list-style: none;
+    }
+
+    .insights li {
+        margin-bottom: 12px;
+        padding-left: 25px;
+        position: relative;
+        font-size: 0.95em;
+    }
+
+    .insights li::before {
+        content: '🎯';
+        position: absolute;
+        left: 0;
+        font-size: 1.1em;
+    }
+
+    .insights li strong {
+        color: #27ae60;
+        font-weight: 700;
+    }
+
+    /* Results Actions */
+    .results-actions {
+        margin-top: 40px;
+        text-align: center;
+        display: flex;
+        gap: 20px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .results-actions .btn {
+        min-width: 160px;
+        padding: 15px 25px;
+        font-size: 1.1em;
+    }
+
+    .btn-secondary {
+        background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+        color: #fff;
+    }
+
+    .btn-secondary:hover {
+        box-shadow: 0 8px 20px rgba(149, 165, 166, 0.3);
+        transform: translateY(-2px);
+    }
+
+    /* Responsive Design */
+    @media screen and (max-width: 1024px) {
+        .round-breakdown-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .batch-comparison-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+    }
+
     @media screen and (max-width: 768px) {
+        .results {
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .results h2 {
+            font-size: 1.8em;
+            margin-bottom: 25px;
+        }
+
         .game-time-card {
-            min-width: 200px;
+            min-width: 220px;
             padding: 20px;
         }
 
@@ -207,18 +686,65 @@ import '../styles/results.css'
             font-size: 2.5em;
         }
 
+        .stats-grid {
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            padding: 20px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+        }
+
         .player-timers-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .player-timer-result {
+            padding: 15px;
+        }
+
+        .player-time {
+            font-size: 1.8em;
+            margin: 12px 0;
+            padding: 10px;
+        }
+
+        .round-breakdown-grid {
             grid-template-columns: 1fr;
             gap: 15px;
         }
 
-        .stats-grid {
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
+        .batch-comparison-grid {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .results-actions {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .results-actions .btn {
+            width: 100%;
+            max-width: 250px;
         }
     }
 
     @media screen and (max-width: 480px) {
+        .results {
+            padding: 15px;
+        }
+
+        .results h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
         .game-time-card {
             min-width: 180px;
             padding: 15px;
@@ -228,12 +754,13 @@ import '../styles/results.css'
             font-size: 2em;
         }
 
-        .player-timer-result {
-            padding: 15px;
+        .game-time-icon {
+            font-size: 2em;
         }
 
-        .player-time {
-            font-size: 1.5em;
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
         }
 
         .stat-card {
@@ -243,5 +770,150 @@ import '../styles/results.css'
         .stat-value {
             font-size: 1.5em;
         }
+
+        .stat-label {
+            font-size: 0.8em;
+        }
+
+        .player-timers-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .player-timer-result {
+            padding: 12px;
+        }
+
+        .player-time {
+            font-size: 1.5em;
+            margin: 10px 0;
+            padding: 8px;
+        }
+
+        .player-name {
+            font-size: 1.1em;
+        }
+
+        .player-details {
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .round-header {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .round-number-badge {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2em;
+        }
+
+        .round-stats-mini {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .mini-stat {
+            padding: 8px;
+        }
+
+        .mini-stat-value {
+            font-size: 1em;
+        }
+
+        .batch-size-number {
+            font-size: 2em;
+        }
+
+        .batch-metrics {
+            gap: 8px;
+        }
+
+        .batch-metric {
+            padding: 10px;
+        }
+
+        .metric-value {
+            font-size: 1.1em;
+        }
+
+        .player-timers-section,
+        .round-breakdown-section,
+        .batch-analysis-section,
+        .insights {
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .section-description,
+        .insights-description {
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .insights li {
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .insights-content {
+            padding: 12px;
+        }
+
+        .insights-content li {
+            font-size: 0.85em;
+        }
+    }
+
+    /* Animation for new sections appearing */
+    .round-breakdown-section,
+    .batch-analysis-section {
+        animation: fade-in-up 0.5s ease-out;
+    }
+
+    @keyframes fade-in-up {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Loading state */
+    .results-loading {
+        text-align: center;
+        padding: 40px;
+        color: #7f8c8d;
+        font-style: italic;
+    }
+
+    .results-loading::before {
+        content: '⏳';
+        font-size: 2em;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    /* Empty state */
+    .results-empty {
+        text-align: center;
+        padding: 40px;
+        color: #95a5a6;
+        font-style: italic;
+    }
+
+    .results-empty::before {
+        content: '📊';
+        font-size: 3em;
+        display: block;
+        margin-bottom: 15px;
+        opacity: 0.5;
     }
 </style>

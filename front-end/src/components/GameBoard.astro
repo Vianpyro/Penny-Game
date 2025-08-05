@@ -1,8 +1,7 @@
 ---
 import '../styles/main.css'
 import '../styles/game-board.css'
-
-import { MAX_PLAYERS } from '../config.js'
+import { MAX_PLAYERS, TOTAL_COINS } from '../config.js'
 ---
 
 <div class="game-board">
@@ -15,7 +14,7 @@ import { MAX_PLAYERS } from '../config.js'
                     <div class="board-player" id={`player${count}`} {...(count === 1 ? { active: true } : {})}>
                         <p>Player {count}</p>
                         <div class="penny-container" id={`pennyContainer${count}`}>
-                            {count === 1 && Array.from({ length: 12 }).map(() => <div class="flip">🪙</div>)}
+                            {count === 1 && Array.from({ length: TOTAL_COINS }).map(() => <div class="flip">🪙</div>)}
                         </div>
                     </div>
                 )

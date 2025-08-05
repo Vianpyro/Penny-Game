@@ -272,13 +272,32 @@ async def start_next_round_endpoint(room_id: str, host_secret: str = Cookie(None
 
     # Check if we're in the right state
     if game.state != GameState.ROUND_COMPLETE:
-        raise HTTPException(status_code=400, detail="Can only start next round when current round is complete")
+        logger.error(
+            f"Invalid state for next round in room {room_id}: " f"Expected ROUND_COMPLETE, got {game.state.value}"
+        )
+
+        # Check if we're already in active state (double-click protection)
+        if game.state == GameState.ACTIVE:
+            raise HTTPException(status_code=400, detail="La manche est déjà en cours")
+
+        # Check if we're in results (all rounds done)
+        if game.state == GameState.RESULTS:
+            raise HTTPException(status_code=400, detail="Toutes les manches sont terminées")
+
+        # For any other state, provide a helpful error
+        raise HTTPException(
+            status_code=400, detail=f"État invalide pour démarrer la manche suivante. État actuel: {game.state.value}"
+        )
+
+    # Additional validation: check if there are more rounds to play
+    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
+    if game.current_round >= len(batch_sizes):
+        raise HTTPException(status_code=400, detail="Toutes les manches ont déjà été jouées")
 
     # Start the next round
     if not start_next_round(game):
-        raise HTTPException(status_code=400, detail="No more rounds to play")
+        raise HTTPException(status_code=400, detail="Impossible de démarrer la manche suivante")
 
-    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
     total_rounds = len(batch_sizes)
 
     # Broadcast round start
@@ -335,10 +354,17 @@ async def flip_coin(room_id: str, flip: FlipRequest):
     action_data = GameResponseBuilder.build_websocket_action_data(
         flip.username, "flip", result, {"coin_index": flip.coin_index}
     )
+
+    # Include round_complete flag in the broadcast
+    action_data["round_complete"] = result.get("round_complete", False)
+    action_data["current_round"] = result.get("current_round", game.current_round)
+
     await broadcast_game_update(room_id, action_data)
 
-    # Handle round completion
-    await _handle_round_completion(room_id, game, result)
+    # Handle round completion with proper state broadcasting
+    if result.get("round_complete", False):
+        logger.info(f"Round completed after flip in room {room_id}, broadcasting state change")
+        await _handle_round_completion(room_id, game, result)
 
     return GameResponseBuilder.build_game_state_response(game)
 
@@ -377,10 +403,17 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
         action_data = GameResponseBuilder.build_websocket_action_data(
             send.username, "send", result, {"batch_count": batch_count}
         )
+
+        # Include round_complete flag in the broadcast
+        action_data["round_complete"] = result.get("round_complete", False)
+        action_data["current_round"] = result.get("current_round", game.current_round)
+
         await broadcast_game_update(room_id, action_data)
 
-        # Handle round completion
-        await _handle_round_completion(room_id, game, result)
+        # Handle round completion with proper state broadcasting
+        if result.get("round_complete", False):
+            logger.info(f"Round completed after send in room {room_id}, broadcasting state change")
+            await _handle_round_completion(room_id, game, result)
 
         return GameResponseBuilder.build_send_batch_response(result, batch_count)
 
@@ -418,7 +451,13 @@ async def _handle_game_over(room_id: str, game):
 
 
 async def _handle_round_complete(room_id: str, game):
-    """Handle round complete state."""
+    """Handle round complete state with proper state verification."""
+    # Ensure the game state is properly set
+    if game.state != GameState.ROUND_COMPLETE:
+        logger.warning(f"Expected ROUND_COMPLETE state but got {game.state} for room {room_id}")
+        # Force the state if we know the round is complete
+        game.state = GameState.ROUND_COMPLETE
+
     await broadcast_game_state(room_id, state=GameState.ROUND_COMPLETE)
 
     round_result = game.round_results[-1] if game.round_results else None
@@ -435,9 +474,11 @@ async def _handle_round_complete(room_id: str, game):
             "batch_size": next_batch_size,
             "round_result": round_result.dict() if round_result else None,
             "game_over": False,
+            "game_state": game.state.value,
+            "current_round": game.current_round,
         },
     )
-    logger.info(f"Round {game.current_round} completed: {room_id}")
+    logger.info(f"Round {game.current_round} completed: {room_id}, state: {game.state.value}")
 
 
 @router.post("/game/reset/{room_id}")
@@ -551,4 +592,5 @@ def _get_error_status_code(error: str) -> int:
     elif "invalid host" in error.lower():
         return 403
     else:
+        return 400
         return 400

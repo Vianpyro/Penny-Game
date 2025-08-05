@@ -1,10 +1,11 @@
 // Enhanced main.js with fixed drag & drop and self-role switching
 
 import { joinRoom, fetchGameState, changeRole, setRoundConfig } from './api.js'
-import { updateGameCode, renderPlayers, renderSpectators, updateConfig, updatePlayerCountDisplay } from './dom.js'
-import { handleDragOver, addDnDEvents, draggedItem } from './dnd.js'
+import { updateGameCode, renderPlayers, renderSpectators, updatePlayerCountDisplay } from './dom.js'
 import { connectWebSocket } from './websocket.js'
-import { fetchBoardGameState, renderGameBoard, updateGameUI } from './game-board.js'
+
+const TOTAL_COINS = 15
+const VALID_BATCH_SIZES = [1, 3, 5, 15]
 
 // Global reference to track dragged item
 let currentDraggedItem = null
@@ -473,7 +474,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // NEW: Add self-role switching button for players
     function addSelfRoleSwitchButton() {
         try {
             const isHost = window.isHost
@@ -549,7 +549,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Initialize default values
     let selectedRoundType = 'three_rounds'
-    let selectedBatchSize = 12
+    let selectedBatchSize = TOTAL_COINS
     let requiredPlayers = 5
 
     // Update UI based on user role - FIXED VERSION with null checks
@@ -694,7 +694,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const batchSize = parseInt(opt.dataset.size, 10)
-                if (!batchSize) return
+                if (!batchSize || !VALID_BATCH_SIZES.includes(batchSize)) return
 
                 // Update UI
                 singleBatchSelector.querySelectorAll('.batch-option').forEach((o) => o.classList.remove('active'))
