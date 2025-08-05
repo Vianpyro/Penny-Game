@@ -235,7 +235,7 @@ export class GameActions {
 
             if (!response.ok) {
                 const errorData = await response.json()
-                throw new Error(errorData.detail || 'Erreur lors du démarrage de la manche suivante')
+                console.warn(errorData.detail || 'Erreur lors du démarrage de la manche suivante')
             }
 
             console.log('✅ Next round started successfully')
