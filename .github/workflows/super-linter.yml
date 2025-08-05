@@ -53,7 +53,7 @@ jobs:
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_PYLINT: false
           VALIDATE_TYPESCRIPT_ES: false
-          VASLIDATE_TYPESCRIPT_STANDARD: false
+          VALIDATE_TYPESCRIPT_STANDARD: false
 
           # Disable validators for already handled files
           VALIDATE_CSS_PRETTIER: false

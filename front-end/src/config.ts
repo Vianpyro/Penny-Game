@@ -20,7 +20,7 @@ export const VALID_BATCH_SIZES = getValidBatchSizes()
 export const ROUND_TYPE_BATCH_SIZES = {
     three_rounds: DEFAULT_BATCH_SIZES,
     two_rounds: [TOTAL_COINS, 1],
-    single: null  // User selects
+    single: null, // User selects
 }
 
 // Export for backward compatibility

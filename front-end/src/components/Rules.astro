@@ -4,12 +4,10 @@ import '../styles/rules.css'
 import { TOTAL_COINS, VALID_BATCH_SIZES } from '../config.js'
 
 // Generate batch size examples based on valid sizes
-const batchExamples = VALID_BATCH_SIZES
-    .filter(size => size !== TOTAL_COINS && size !== 1)
-    .map(size => ({
-        size,
-        description: size === 5 ? 'Par groupes de 5 (compromis)' : `Par groupes de ${size}`
-    }))
+const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS && size !== 1).map((size) => ({
+    size,
+    description: size === 5 ? 'Par groupes de 5 (compromis)' : `Par groupes de ${size}`,
+}))
 ---
 
 <div class="rules">
@@ -49,8 +47,8 @@ const batchExamples = VALID_BATCH_SIZES
                 <h4>🪙 Mécaniques</h4>
                 <ul>
                     <li>
-                        <strong>{TOTAL_COINS} pièces</strong> commencent en position "pile" (<span style="filter: grayscale(100%)"
-                            >🪙</span
+                        <strong>{TOTAL_COINS} pièces</strong> commencent en position "pile" (<span
+                            style="filter: grayscale(100%)">🪙</span
                         >)
                     </li>
                     <li><strong>Retournez</strong> vos pièces de pile vers face (🪙)</li>
@@ -64,9 +62,13 @@ const batchExamples = VALID_BATCH_SIZES
                 <h4>📦 Tailles de Lots</h4>
                 <ul>
                     <li><strong>Lot de {TOTAL_COINS} :</strong> Toutes les pièces d'un coup (beaucoup d'attente)</li>
-                    {batchExamples.map(example => (
-                        <li><strong>Lot de {example.size} :</strong> {example.description}</li>
-                    ))}
+                    {
+                        batchExamples.map((example) => (
+                            <li>
+                                <strong>Lot de {example.size} :</strong> {example.description}
+                            </li>
+                        ))
+                    }
                     <li><strong>Lot de 1 :</strong> Une par une (flux continu)</li>
                 </ul>
                 <div class="valid-sizes-note">
