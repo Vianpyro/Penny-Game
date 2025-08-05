@@ -9,6 +9,14 @@ import { ViewManager } from './view-manager.js'
 import { TimeUtils } from './time-utils.js'
 import { GameActions } from './game-actions.js'
 
+const DEFAULT_BATCH_SIZES = [15, 5, 1]
+const TOTAL_COINS = DEFAULT_BATCH_SIZES[0]
+const ROUND_TYPE_BATCH_SIZES = {
+    three_rounds: DEFAULT_BATCH_SIZES,
+    two_rounds: [TOTAL_COINS, 1],
+    single: null  // User selects
+}
+
 // Global stats tracking
 window.gameStatsTracker = {
     roundResults: [],
@@ -935,7 +943,7 @@ function handleGameOver(msg) {
                 batch_size: msg.final_state.batch_size,
                 game_duration_seconds: msg.final_state.game_duration_seconds,
                 player_timers: msg.final_state.player_timers || {},
-                total_completed: msg.final_state.total_completed || 12,
+                total_completed: msg.final_state.total_completed || TOTAL_COINS,
                 started_at: msg.final_state.started_at,
                 ended_at: msg.final_state.ended_at,
             }
@@ -992,20 +1000,12 @@ function handleGameOver(msg) {
     })
 
     showNotification('🎯 Partie terminée ! Félicitations à tous !', 'success')
-
-    // Update results with comprehensive stats
     updateResultsDisplay()
 }
 
 // Helper function to get batch size for a specific round
 function getBatchSizeForRound(roundType, roundNumber) {
-    const batchSizes = {
-        single: [12], // Default, should be overridden by selected_batch_size
-        two_rounds: [12, 1],
-        three_rounds: [12, 4, 1],
-    }
-
-    const sizes = batchSizes[roundType] || [12, 4, 1]
+    const sizes = ROUND_TYPE_BATCH_SIZES[roundType] || DEFAULT_BATCH_SIZES
     return sizes[roundNumber - 1] || 1
 }
 
@@ -1376,22 +1376,21 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${
-                        hasValidRankings
-                            ? result.playerRankings
-                                  .slice(0, 3)
-                                  .map(
-                                      (ranking, idx) => `
+                    ${hasValidRankings
+                    ? result.playerRankings
+                        .slice(0, 3)
+                        .map(
+                            (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                                  )
-                                  .join('')
-                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                    }
+                        )
+                        .join('')
+                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                }
                 </div>
             `
 

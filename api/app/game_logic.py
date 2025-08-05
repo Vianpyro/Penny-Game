@@ -4,11 +4,19 @@ Handles all game mechanics including coin flipping, batch sending, and round man
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-from .constants import DEFAULT_BATCH_SIZE, DEFAULT_REQUIRED_PLAYERS, MAX_PENNIES
+from .constants import (
+    DEFAULT_BATCH_SIZE,
+    DEFAULT_REQUIRED_PLAYERS,
+    PLAYER_INACTIVITY_THRESHOLD,
+    ROOM_INACTIVITY_THRESHOLD,
+    ROUND_TYPE_BATCH_SIZES,
+    TOTAL_COINS,
+    get_valid_batch_sizes,
+)
 from .models import GameState, PennyGame, PlayerTimer, RoundResult, RoundType
 
 logger = logging.getLogger(__name__)
@@ -17,10 +25,6 @@ logger = logging.getLogger(__name__)
 games: Dict[str, PennyGame] = {}
 rooms: Dict[str, List] = {}
 online_users: Dict[str, set] = {}
-
-# Configuration constants
-ROOM_INACTIVITY_THRESHOLD = timedelta(minutes=60)
-PLAYER_INACTIVITY_THRESHOLD = timedelta(minutes=5)
 
 
 def create_new_game() -> tuple[str, str]:
@@ -32,7 +36,7 @@ def create_new_game() -> tuple[str, str]:
     games[room_id] = PennyGame(
         room_id=room_id,
         players=[],
-        pennies=[False] * MAX_PENNIES,
+        pennies=[False] * TOTAL_COINS,
         created_at=now,
         last_active_at=now,
         host_secret=host_secret,
@@ -64,7 +68,7 @@ def remove_game(room_id: str) -> None:
 def get_tails_count(game: PennyGame) -> int:
     """Count how many pennies are still tails (False) - need to be flipped."""
     if not game.player_coins:
-        return MAX_PENNIES  # All coins start as tails
+        return TOTAL_COINS  # All coins start as tails
 
     total_tails = 0
     for player_coins in game.player_coins.values():
@@ -96,12 +100,12 @@ def get_total_rounds(round_type: RoundType) -> int:
 def get_batch_sizes_for_round_type(round_type: RoundType, selected_batch_size: Optional[int] = None) -> List[int]:
     """Get the batch sizes to play for a given round type."""
     if round_type == RoundType.SINGLE:
-        return [selected_batch_size] if selected_batch_size else [12]
+        return [selected_batch_size] if selected_batch_size else [TOTAL_COINS]
     elif round_type == RoundType.TWO_ROUNDS:
-        return [12, 1]  # First and last
+        return ROUND_TYPE_BATCH_SIZES["two_rounds"]
     elif round_type == RoundType.THREE_ROUNDS:
-        return [12, 4, 1]  # All three
-    return [12]
+        return ROUND_TYPE_BATCH_SIZES["three_rounds"]
+    return [TOTAL_COINS]
 
 
 def set_round_config(
@@ -115,7 +119,8 @@ def set_round_config(
     if round_type == RoundType.SINGLE and not selected_batch_size:
         return False
 
-    if selected_batch_size and selected_batch_size not in [1, 4, 12]:
+    valid_batch_sizes = get_valid_batch_sizes()
+    if selected_batch_size and selected_batch_size not in valid_batch_sizes:
         return False
 
     if required_players < 2 or required_players > 5:
@@ -142,7 +147,7 @@ def initialize_player_coins(game: PennyGame) -> None:
 
     # Give all coins (as tails) to first player
     first_player = game.players[0]
-    game.player_coins[first_player] = [False] * MAX_PENNIES
+    game.player_coins[first_player] = [False] * TOTAL_COINS
 
     # Initialize player timers
     _initialize_player_timers(game)
@@ -181,7 +186,7 @@ def start_next_round(game: PennyGame) -> bool:
     game.state = GameState.ACTIVE
 
     # Reset game mechanics for new round
-    game.pennies = [False] * MAX_PENNIES
+    game.pennies = [False] * TOTAL_COINS
     initialize_player_coins(game)
 
     return True
@@ -441,7 +446,7 @@ def is_round_over(game: PennyGame) -> bool:
     # Check if all players have finished their work
     all_players_finished = all(has_player_finished(game, player) for player in game.players)
 
-    return total_completed >= MAX_PENNIES or all_players_finished
+    return total_completed >= TOTAL_COINS or all_players_finished
 
 
 def get_total_completed_coins(game: PennyGame) -> int:
@@ -557,7 +562,7 @@ def _build_action_response(game: PennyGame, round_complete: bool, game_over: boo
 
 def reset_game(game: PennyGame) -> None:
     """Reset the game to initial state."""
-    game.pennies = [False] * MAX_PENNIES  # All tails
+    game.pennies = [False] * TOTAL_COINS  # All tails
     game.state = GameState.LOBBY
     game.started_at = None
     game.ended_at = None

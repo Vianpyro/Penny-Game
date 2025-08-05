@@ -2,6 +2,8 @@
 import { flipCoin, sendBatch } from './api.js'
 import { showNotification } from './utility.js'
 
+const TOTAL_COINS = 15
+
 export async function fetchBoardGameState(gameCode) {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     if (!apiUrl || !gameCode) return null
@@ -101,7 +103,7 @@ export function renderGameBoard(gameState) {
             </div>
             <div class="game-progress">
                 <div class="progress-stats">
-                    <span class="stat">🪙 Total: ${gameState.total_completed}/12 terminées</span>
+                    <span class="stat">🪙 Total: ${gameState.total_completed}/${TOTAL_COINS} terminées</span>
                     <span class="stat">⏳ ${gameState.tails_remaining} pièces à traiter</span>
                 </div>
             </div>
@@ -145,7 +147,7 @@ export function renderGameBoard(gameState) {
             <div class="completed-coins">
                 ${Array(gameState.total_completed).fill('🪙').join('')}
             </div>
-            <div class="completion-count">${gameState.total_completed}/12</div>
+            <div class="completion-count">${gameState.total_completed}/${TOTAL_COINS}</div>
         </div>
     `
     productionLine.appendChild(completionArea)
@@ -167,9 +169,16 @@ export function renderGameBoard(gameState) {
             <li>📦 Envoyez par lots de ${gameState.batch_size} pièce${gameState.batch_size > 1 ? 's' : ''}</li>
             <li>⚡ Travaillez en parallèle - pas de tour de rôle !</li>
             <li>🎯 Objectif : terminer le plus vite possible ensemble</li>
+            <li>🪙 ${TOTAL_COINS} pièces au total à traiter</li>
         </ul>
     `
     gameBoard.appendChild(rulesReminder)
+}
+
+function getCoinsProcessedByPlayer(playerName, roundResult) {
+    const totalCoins = roundResult.total_completed || TOTAL_COINS
+    const playerCount = Object.keys(roundResult.player_timers || {}).length
+    return Math.ceil(totalCoins / playerCount)
 }
 
 function createPlayerStation(player, gameState, playerIndex) {

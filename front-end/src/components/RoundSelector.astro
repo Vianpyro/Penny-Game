@@ -1,27 +1,47 @@
 ---
 import '../styles/main.css'
 import '../styles/round-selector.css'
+import { TOTAL_COINS, VALID_BATCH_SIZES, DEFAULT_BATCH_SIZES } from '../config.js'
 
 const roundOptions = [
     {
         number: 1,
         title: '1 Manche',
-        description: "L'hôte choisit quelle manche jouer (12, 4, ou 1)",
+        description: `L'hôte choisit quelle manche jouer (${VALID_BATCH_SIZES.join(', ')})`,
         type: 'single',
     },
     {
         number: 2,
         title: '2 Manches',
-        description: 'Jouer les manches extrêmes : Lot de 12 puis Lot de 1',
+        description: `Jouer les manches extrêmes : Lot de ${TOTAL_COINS} puis Lot de 1`,
         type: 'two_rounds',
     },
     {
         number: 3,
         title: '3 Manches',
-        description: 'Jouer toutes les manches : 12, puis 4, puis 1 (par défaut)',
+        description: `Jouer toutes les manches : ${DEFAULT_BATCH_SIZES.join(', puis ')} (par défaut)`,
         type: 'three_rounds',
     },
 ]
+
+const batchOptions = VALID_BATCH_SIZES.map((size) => {
+    let title = `Lot de ${size}`
+    let description = ''
+
+    if (size === 1) {
+        description = 'Une pièce à la fois'
+    } else if (size === TOTAL_COINS) {
+        description = "Toutes les pièces d'un coup"
+    } else if (size === 5) {
+        description = 'Par groupes de 5'
+    } else if (size === 3) {
+        description = 'Par groupes de 3'
+    } else {
+        description = `Par groupes de ${size}`
+    }
+
+    return { size, title, description }
+})
 ---
 
 <div class="round-selector-container">
@@ -51,26 +71,30 @@ const roundOptions = [
     <div class="single-batch-selector" id="singleBatchSelector" style="display: none;">
         <h4>📦 Choisir la Taille de Lot</h4>
         <div class="batch-size-options">
-            <div class="batch-option active" data-size="12">
-                <div class="batch-size-number">12</div>
-                <div class="batch-title">Lot de 12</div>
-                <div class="batch-description">Toutes les pièces d'un coup</div>
-            </div>
-            <div class="batch-option" data-size="4">
-                <div class="batch-size-number">4</div>
-                <div class="batch-title">Lot de 4</div>
-                <div class="batch-description">Par groupes de 4</div>
-            </div>
-            <div class="batch-option" data-size="1">
-                <div class="batch-size-number">1</div>
-                <div class="batch-title">Lot de 1</div>
-                <div class="batch-description">Une pièce à la fois</div>
-            </div>
+            {
+                batchOptions.map((opt, idx) => (
+                    <div class={`batch-option${opt.size === TOTAL_COINS ? ' active' : ''}`} data-size={opt.size}>
+                        <div class="batch-size-number">{opt.size}</div>
+                        <div class="batch-title">{opt.title}</div>
+                        <div class="batch-description">{opt.description}</div>
+                    </div>
+                ))
+            }
         </div>
     </div>
 </div>
 
 <style>
+    .coin-info {
+        color: #7f8c8d;
+        font-weight: 600;
+        background: rgb(241 196 15 / 10%);
+        padding: 2px 8px;
+        border-radius: 12px;
+        display: inline-block;
+        margin-top: 5px;
+    }
+
     .round-count-selector {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

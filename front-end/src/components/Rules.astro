@@ -1,6 +1,15 @@
 ---
 import '../styles/main.css'
 import '../styles/rules.css'
+import { TOTAL_COINS, VALID_BATCH_SIZES } from '../config.js'
+
+// Generate batch size examples based on valid sizes
+const batchExamples = VALID_BATCH_SIZES
+    .filter(size => size !== TOTAL_COINS && size !== 1)
+    .map(size => ({
+        size,
+        description: size === 5 ? 'Par groupes de 5 (compromis)' : `Par groupes de ${size}`
+    }))
 ---
 
 <div class="rules">
@@ -20,22 +29,17 @@ import '../styles/rules.css'
                 <strong>Le Penny Game</strong> est une simulation Lean <strong>coopérative</strong> qui visualise l'impact
                 de la taille des lots sur l'efficacité du flux de production.
             </p>
+            <div class="coin-info-banner">
+                🪙 Cette version utilise <strong>{TOTAL_COINS} pièces</strong> au total
+            </div>
         </div>
 
         <div class="rules-sections">
             <div class="rule-section">
-                <h4>🎯 Objectif</h4>
-                <p>
-                    Travaillez <strong>ensemble</strong> pour faire passer toutes les pièces de la chaîne de production le
-                    plus rapidement possible.
-                </p>
-            </div>
-
-            <div class="rule-section">
                 <h4>👥 Joueurs</h4>
                 <ul>
                     <li>2 à 5 joueurs forment une <strong>chaîne de production</strong></li>
-                    <li>Le premier joueur reçoit toutes les pièces au début</li>
+                    <li>Le premier joueur reçoit toutes les {TOTAL_COINS} pièces au début</li>
                     <li>Chaque joueur traite puis passe au suivant</li>
                     <li>L'hôte démarre la partie mais ne joue pas</li>
                 </ul>
@@ -45,7 +49,7 @@ import '../styles/rules.css'
                 <h4>🪙 Mécaniques</h4>
                 <ul>
                     <li>
-                        <strong>12 pièces</strong> commencent en position "pile" (<span style="filter: grayscale(100%)"
+                        <strong>{TOTAL_COINS} pièces</strong> commencent en position "pile" (<span style="filter: grayscale(100%)"
                             >🪙</span
                         >)
                     </li>
@@ -59,10 +63,15 @@ import '../styles/rules.css'
             <div class="rule-section">
                 <h4>📦 Tailles de Lots</h4>
                 <ul>
-                    <li><strong>Lot de 12 :</strong> Toutes les pièces d'un coup (beaucoup d'attente)</li>
-                    <li><strong>Lot de 4 :</strong> Par groupes de 4 (compromis)</li>
+                    <li><strong>Lot de {TOTAL_COINS} :</strong> Toutes les pièces d'un coup (beaucoup d'attente)</li>
+                    {batchExamples.map(example => (
+                        <li><strong>Lot de {example.size} :</strong> {example.description}</li>
+                    ))}
                     <li><strong>Lot de 1 :</strong> Une par une (flux continu)</li>
                 </ul>
+                <div class="valid-sizes-note">
+                    Tailles valides : {VALID_BATCH_SIZES.join(', ')}
+                </div>
             </div>
 
             <div class="rule-section cooperative">
