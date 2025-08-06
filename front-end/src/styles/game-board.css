@@ -233,6 +233,7 @@
 }
 
 @keyframes pulse {
+
     0%,
     100% {
         transform: scale(1);
@@ -498,5 +499,193 @@
 
     100% {
         transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+.coin-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.coin.holdable {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.coin.holdable:hover {
+    transform: scale(1.05);
+}
+
+.coin.holding {
+    transform: scale(0.95);
+    animation: holding-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes holding-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
+    }
+
+    50% {
+        box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+    }
+}
+
+/* Progress ring styles */
+.coin-progress-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.coin-progress-ring.active {
+    opacity: 1;
+}
+
+.progress-ring__svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring__circle-bg,
+.progress-ring__circle {
+    fill: none;
+    stroke-width: 3;
+    r: 18;
+    cx: 20;
+    cy: 20;
+}
+
+.progress-ring__circle-bg {
+    stroke: rgba(255, 255, 255, 0.3);
+}
+
+.progress-ring__circle {
+    stroke: #3498db;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.016s linear;
+}
+
+.coin-progress-ring.complete .progress-ring__circle {
+    stroke: #27ae60;
+}
+
+/* Hold instruction tooltip */
+.hold-instruction {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.hold-instruction.visible {
+    opacity: 1;
+}
+
+/* Flip success animation */
+.coin.flip-success {
+    animation: flip-success 0.5s ease;
+}
+
+@keyframes flip-success {
+    0% {
+        transform: scale(0.95) rotateY(0deg);
+    }
+
+    50% {
+        transform: scale(1.1) rotateY(180deg);
+    }
+
+    100% {
+        transform: scale(1) rotateY(360deg);
+    }
+}
+
+/* Message d'échec */
+.incomplete-message {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(231, 76, 60, 0.9);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 1001;
+}
+
+.incomplete-message.visible {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .coin.holdable {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .coin.holding {
+        transform: scale(0.9);
+    }
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .coin-progress-ring {
+        width: 35px;
+        height: 35px;
+    }
+
+    .progress-ring__circle-bg,
+    .progress-ring__circle {
+        r: 15;
+        cx: 17.5;
+        cy: 17.5;
+        stroke-width: 2.5;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .coin-progress-ring {
+        width: 30px;
+        height: 30px;
+    }
+
+    .progress-ring__circle-bg,
+    .progress-ring__circle {
+        r: 13;
+        cx: 15;
+        cy: 15;
+        stroke-width: 2;
+    }
+
+    .hold-instruction {
+        font-size: 0.7em;
+        padding: 3px 6px;
     }
 }
