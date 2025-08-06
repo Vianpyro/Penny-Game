@@ -8,7 +8,6 @@ const FLIP_HOLD_DURATION = 1500
 const coinHoldTimers = new Map()
 const coinProgressIntervals = new Map()
 
-
 export async function fetchBoardGameState(gameCode) {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     if (!apiUrl || !gameCode) return null
@@ -433,7 +432,7 @@ function setupCoinHoldEvents(coinElement, coinIndex, progressRing) {
         if (circle) {
             const radius = 18
             const circumference = 2 * Math.PI * radius
-            const offset = circumference - (progress * circumference)
+            const offset = circumference - progress * circumference
             circle.style.strokeDasharray = `${circumference} ${circumference}`
             circle.style.strokeDashoffset = offset
         }
@@ -453,10 +452,10 @@ function setupCoinHoldEvents(coinElement, coinIndex, progressRing) {
     coinElement.addEventListener('contextmenu', (e) => e.preventDefault())
 
     // Prevent click event from triggering flip
-    coinElement.addEventListener('click', (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-    })
+    // coinElement.addEventListener('click', (e) => {
+    //     e.preventDefault()
+    //     e.stopPropagation()
+    // })
 }
 
 function showIncompleteMessage(coinElement) {
@@ -617,57 +616,6 @@ function stopRealTimeTimers() {
     }
 }
 
-async function handleCoinFlip(coinIndex, coinElement) {
-    const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-    const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
-    const username = window.currentUsername
-
-    if (!apiUrl || !gameCode || !username) {
-        console.error('Missing required data for coin flip')
-        return
-    }
-
-    // Double-check permissions
-    if (window.isHost) {
-        showNotification('Les hôtes ne peuvent pas jouer', 'error')
-        return
-    }
-
-    if (window.userRole !== 'player') {
-        showNotification('Seuls les joueurs peuvent retourner les pièces', 'error')
-        return
-    }
-
-    // Immediate visual feedback using existing flip animation
-    coinElement.classList.toggle('flipped')
-    setTimeout(() => {
-        coinElement.classList.toggle('grayscale')
-        coinElement.textContent = '🪙' // Update to heads emoji
-        coinElement.classList.remove('tails')
-        coinElement.classList.add('heads')
-        coinElement.style.cursor = 'default'
-        coinElement.title = 'Face - Prête à envoyer'
-    }, 200)
-
-    try {
-        await flipCoin(apiUrl, gameCode, username, coinIndex)
-        // The websocket will handle updating the full UI state
-    } catch (error) {
-        console.error('Error flipping coin:', error)
-
-        // Revert the visual change if the API call failed
-        coinElement.classList.toggle('flipped')
-        setTimeout(() => {
-            coinElement.classList.toggle('grayscale')
-            coinElement.textContent = '🪙'
-            coinElement.classList.remove('heads')
-            coinElement.classList.add('tails')
-            coinElement.style.cursor = 'pointer'
-            coinElement.title = 'Pile - Cliquez pour retourner'
-        }, 200)
-    }
-}
-
 async function handleSendBatch() {
     const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
@@ -779,4 +727,4 @@ async function resetGame() {
 }
 
 // Export utility functions for use in other modules
-export { handleCoinFlip, handleSendBatch, stopRealTimeTimers }
+export { handleSendBatch, stopRealTimeTimers }

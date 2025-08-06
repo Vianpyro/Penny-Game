@@ -233,7 +233,6 @@
 }
 
 @keyframes pulse {
-
     0%,
     100% {
         transform: scale(1);
@@ -508,7 +507,9 @@
 }
 
 .coin.holdable {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .coin.holdable:hover {
@@ -521,7 +522,6 @@
 }
 
 @keyframes holding-pulse {
-
     0%,
     100% {
         box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
