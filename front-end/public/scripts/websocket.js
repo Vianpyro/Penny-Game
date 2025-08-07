@@ -661,12 +661,12 @@ function handleActionMade(msg) {
     // Only show notifications for send actions
     if (msg.action === 'send') {
         const isCompletion = msg.player === gameState.players[gameState.players.length - 1]
-        if (isCompletion) {
+        if (isCompletion && msg.batch_count >= 3) {
             showNotification(
                 `${msg.player} a terminé ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
                 'success'
             )
-        } else {
+        } else if (msg.batch_count >= 3) {
             showNotification(
                 `${msg.player} a envoyé un lot de ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
                 'info'

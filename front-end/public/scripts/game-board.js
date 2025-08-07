@@ -518,7 +518,6 @@ async function performCoinFlip(coinIndex, coinElement) {
 
     try {
         await flipCoin(apiUrl, gameCode, username, coinIndex)
-        showNotification('🪙 Pièce retournée !', 'success')
     } catch (error) {
         console.error('Error flipping coin:', error)
 
