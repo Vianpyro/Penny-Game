@@ -529,9 +529,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Rest of your existing code (flip coin logic, round configuration, etc.)
-    // ... [keep all existing code from here down]
-
     // Flip coin logic
     const coinFlip = document.getElementById('coinFlip')
     if (coinFlip) {

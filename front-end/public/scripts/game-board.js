@@ -115,11 +115,6 @@ export function renderGameBoard(gameState) {
     `
     gameBoard.appendChild(gameStatus)
 
-    // Start real-time timer updates if game is active
-    if (gameState.state === 'active' && gameState.started_at && !gameState.ended_at) {
-        startRealTimeTimers(gameState)
-    }
-
     // Add reset button for hosts
     if (window.isHost) {
         addResetButton()
@@ -177,6 +172,14 @@ export function renderGameBoard(gameState) {
         </ul>
     `
     gameBoard.appendChild(rulesReminder)
+
+    setTimeout(() => {
+        document.querySelectorAll('.coin.flip').forEach(coin => {
+            if (!coin.textContent.includes('🪙')) {
+                coin.innerHTML = '🪙'
+            }
+        })
+    }, 0)
 }
 
 function getCoinsProcessedByPlayer(playerName, roundResult) {
@@ -510,7 +513,7 @@ async function performCoinFlip(coinIndex, coinElement) {
 
     // Remove all event listeners to prevent further interaction
     const newCoin = coinElement.cloneNode(true)
-    newCoin.textContent = '🪙' // Ensure emoji is shown, not timer
+    newCoin.textContent = '🪙'
     coinElement.parentNode.replaceChild(newCoin, coinElement)
 
     try {
@@ -560,53 +563,6 @@ function addTimersSummary(gameState) {
 
     timersSummary.appendChild(timersGrid)
     gameBoard.appendChild(timersSummary)
-}
-
-function startRealTimeTimers(gameState) {
-    // Clear any existing timer interval
-    if (window.pennyGameTimerInterval) {
-        clearInterval(window.pennyGameTimerInterval)
-    }
-
-    window.pennyGameTimerInterval = setInterval(() => {
-        const now = new Date()
-
-        // Update game timer
-        if (gameState.started_at && !gameState.ended_at) {
-            try {
-                const startTime = new Date(gameState.started_at)
-                if (!isNaN(startTime.getTime())) {
-                    const currentDuration = Math.max(0, (now - startTime) / 1000)
-                    const gameTimerDisplay = document.getElementById('gameTimerDisplay')
-                    if (gameTimerDisplay) {
-                        gameTimerDisplay.textContent = formatTime(currentDuration)
-                    }
-                }
-            } catch (error) {
-                console.error('Error updating game timer:', error)
-            }
-        }
-
-        // Update player timers - only for players who have started but not finished
-        if (gameState.player_timers) {
-            Object.values(gameState.player_timers).forEach((timer) => {
-                if (timer.started_at && !timer.ended_at) {
-                    try {
-                        const startTime = new Date(timer.started_at)
-                        if (!isNaN(startTime.getTime())) {
-                            const currentDuration = Math.max(0, (now - startTime) / 1000)
-                            const timerElements = document.querySelectorAll(`[data-player="${timer.player}"]`)
-                            timerElements.forEach((element) => {
-                                element.textContent = formatTime(currentDuration)
-                            })
-                        }
-                    } catch (error) {
-                        console.error('Error updating player timer for', timer.player, error)
-                    }
-                }
-            })
-        }
-    }, 1000) // Update every second
 }
 
 function stopRealTimeTimers() {
