@@ -65,10 +65,6 @@ export class GameActions {
         console.log('🪙 Setting up coin flip actions')
 
         document.addEventListener('click', (event) => {
-            if (event.target.classList.contains('coin') && event.target.classList.contains('tails')) {
-                GameActions.handleCoinFlip(event.target)
-            }
-
             if (event.target.classList.contains('send-batch-btn')) {
                 GameActions.handleSendBatch(event.target)
             }
@@ -308,48 +304,6 @@ export class GameActions {
             setTimeout(() => {
                 GameActions.actionInProgress.reset = false
             }, 1000)
-        }
-    }
-
-    /**
-     * Handle coin flip action
-     */
-    static async handleCoinFlip(coinElement) {
-        const coinIndex = parseInt(coinElement.dataset.coinIndex)
-        const player = coinElement.dataset.player || window.currentUsername
-
-        if (!GameActions.validateCoinFlip(coinIndex, player)) {
-            return
-        }
-
-        const gameCode = GameActions.getGameCode()
-        const apiUrl = GameActions.getApiUrl()
-
-        if (!apiUrl || !gameCode) {
-            console.error('Missing API configuration')
-            return
-        }
-
-        try {
-            const response = await fetch(`${apiUrl}/game/flip/${gameCode}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: player,
-                    coin_index: coinIndex,
-                }),
-                credentials: 'include',
-            })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.detail || 'Erreur lors du retournement de pièce')
-            }
-
-            console.log('✅ Coin flipped successfully')
-        } catch (error) {
-            console.error('❌ Error flipping coin:', error)
-            // Don't show alert for coin flips to avoid spam
         }
     }
 

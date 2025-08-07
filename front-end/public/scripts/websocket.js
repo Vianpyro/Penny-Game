@@ -3,7 +3,7 @@
 
 import { renderPlayers, renderSpectators, updateRoundConfiguration, updatePlayerCountDisplay } from './dom.js'
 import { addDnDEvents } from './dnd.js'
-import { renderGameBoard, stopRealTimeTimers } from './game-board.js'
+import { renderGameBoard } from './game-board.js'
 import { showNotification } from './utility.js'
 import { ViewManager } from './view-manager.js'
 import { TimeUtils } from './time-utils.js'
@@ -619,18 +619,15 @@ function handleGameStateChange(msg) {
     switch (msg.state) {
         case 'lobby':
             ViewManager.switchToLobbyView()
-            stopRealTimeTimers() // Stop timers when returning to lobby
             break
         case 'active':
             ViewManager.switchToGameView()
             break
         case 'round_complete':
             ViewManager.switchToRoundCompleteView()
-            stopRealTimeTimers() // Stop timers when round ends
             break
         case 'results':
             ViewManager.switchToResultsView()
-            stopRealTimeTimers() // Stop timers when game ends
             break
     }
 }
@@ -664,12 +661,12 @@ function handleActionMade(msg) {
     // Only show notifications for send actions
     if (msg.action === 'send') {
         const isCompletion = msg.player === gameState.players[gameState.players.length - 1]
-        if (isCompletion) {
+        if (isCompletion && msg.batch_count >= 3) {
             showNotification(
                 `${msg.player} a terminé ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
                 'success'
             )
-        } else {
+        } else if (msg.batch_count >= 3) {
             showNotification(
                 `${msg.player} a envoyé un lot de ${msg.batch_count} pièce${msg.batch_count > 1 ? 's' : ''}`,
                 'info'
@@ -787,7 +784,6 @@ function handleRoundComplete(msg) {
 
     // Switch view
     ViewManager.switchToRoundCompleteView()
-    stopRealTimeTimers()
 
     // Save round stats
     if (msg.round_result) {
@@ -923,7 +919,6 @@ function updateRoundCompleteDisplay(msg) {
 
 function handleGameOver(msg) {
     ViewManager.switchToResultsView()
-    stopRealTimeTimers()
 
     console.log('🏁 Game over message received:', msg)
 
@@ -1011,7 +1006,6 @@ function getBatchSizeForRound(roundType, roundNumber) {
 
 function handleGameReset(msg) {
     ViewManager.switchToLobbyView()
-    stopRealTimeTimers()
 
     // Reset stats tracking
     window.gameStatsTracker.reset()
@@ -1050,7 +1044,6 @@ function handleUserStatusChange(msg) {
 }
 
 function handleHostDisconnected(msg) {
-    stopRealTimeTimers()
     alert("La salle a été fermée car l'hôte a quitté.")
     window.location.reload()
 }
@@ -1376,22 +1369,21 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${
-                        hasValidRankings
-                            ? result.playerRankings
-                                  .slice(0, 3)
-                                  .map(
-                                      (ranking, idx) => `
+                    ${hasValidRankings
+                    ? result.playerRankings
+                        .slice(0, 3)
+                        .map(
+                            (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                                  )
-                                  .join('')
-                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                    }
+                        )
+                        .join('')
+                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                }
                 </div>
             `
 
@@ -1671,7 +1663,6 @@ export function connectWebSocket(apiUrl, roomId, username) {
             return // Don't reload, handleHostDisconnected will handle this
         }
 
-        stopRealTimeTimers()
         showNotification('❌ Connexion perdue', 'error')
 
         // Try to reconnect after a delay
