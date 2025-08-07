@@ -3,7 +3,7 @@
 
 import { renderPlayers, renderSpectators, updateRoundConfiguration, updatePlayerCountDisplay } from './dom.js'
 import { addDnDEvents } from './dnd.js'
-import { renderGameBoard, stopRealTimeTimers } from './game-board.js'
+import { renderGameBoard } from './game-board.js'
 import { showNotification } from './utility.js'
 import { ViewManager } from './view-manager.js'
 import { TimeUtils } from './time-utils.js'
@@ -619,18 +619,15 @@ function handleGameStateChange(msg) {
     switch (msg.state) {
         case 'lobby':
             ViewManager.switchToLobbyView()
-            stopRealTimeTimers() // Stop timers when returning to lobby
             break
         case 'active':
             ViewManager.switchToGameView()
             break
         case 'round_complete':
             ViewManager.switchToRoundCompleteView()
-            stopRealTimeTimers() // Stop timers when round ends
             break
         case 'results':
             ViewManager.switchToResultsView()
-            stopRealTimeTimers() // Stop timers when game ends
             break
     }
 }
@@ -787,7 +784,6 @@ function handleRoundComplete(msg) {
 
     // Switch view
     ViewManager.switchToRoundCompleteView()
-    stopRealTimeTimers()
 
     // Save round stats
     if (msg.round_result) {
@@ -923,7 +919,6 @@ function updateRoundCompleteDisplay(msg) {
 
 function handleGameOver(msg) {
     ViewManager.switchToResultsView()
-    stopRealTimeTimers()
 
     console.log('🏁 Game over message received:', msg)
 
@@ -1011,7 +1006,6 @@ function getBatchSizeForRound(roundType, roundNumber) {
 
 function handleGameReset(msg) {
     ViewManager.switchToLobbyView()
-    stopRealTimeTimers()
 
     // Reset stats tracking
     window.gameStatsTracker.reset()
@@ -1050,7 +1044,6 @@ function handleUserStatusChange(msg) {
 }
 
 function handleHostDisconnected(msg) {
-    stopRealTimeTimers()
     alert("La salle a été fermée car l'hôte a quitté.")
     window.location.reload()
 }
@@ -1670,7 +1663,6 @@ export function connectWebSocket(apiUrl, roomId, username) {
             return // Don't reload, handleHostDisconnected will handle this
         }
 
-        stopRealTimeTimers()
         showNotification('❌ Connexion perdue', 'error')
 
         // Try to reconnect after a delay

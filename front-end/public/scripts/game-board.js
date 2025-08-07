@@ -565,13 +565,6 @@ function addTimersSummary(gameState) {
     gameBoard.appendChild(timersSummary)
 }
 
-function stopRealTimeTimers() {
-    if (window.pennyGameTimerInterval) {
-        clearInterval(window.pennyGameTimerInterval)
-        window.pennyGameTimerInterval = null
-    }
-}
-
 async function handleSendBatch() {
     const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
@@ -618,20 +611,12 @@ async function handleSendBatch() {
 export function updateGameUI(gameState) {
     if (!gameState) return
 
-    // Re-render the entire board to reflect new state
-    renderGameBoard(gameState)
-
     // Update batch size display if changed
     const batchSizeSelectors = document.querySelectorAll('.batch-size-option')
     batchSizeSelectors.forEach((option) => {
         const size = parseInt(option.dataset.size)
         option.classList.toggle('active', size === gameState.batch_size)
     })
-
-    // If game ended, stop real-time timers
-    if (gameState.state === 'results') {
-        stopRealTimeTimers()
-    }
 }
 
 // Add reset functionality for hosts
@@ -673,8 +658,6 @@ async function resetGame() {
             throw new Error(errorData.detail || 'Échec de la réinitialisation')
         }
 
-        // Stop timers when game is reset
-        stopRealTimeTimers()
         console.log('Game reset successful')
     } catch (error) {
         console.error('Error resetting game:', error)
@@ -683,4 +666,4 @@ async function resetGame() {
 }
 
 // Export utility functions for use in other modules
-export { handleSendBatch, stopRealTimeTimers }
+export { handleSendBatch }
