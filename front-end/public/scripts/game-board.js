@@ -153,7 +153,7 @@ function fullRenderGameBoard(gameBoard, gameState) {
 
     // Fix coin display
     setTimeout(() => {
-        document.querySelectorAll('.coin.flip').forEach(coin => {
+        document.querySelectorAll('.coin.flip').forEach((coin) => {
             if (!coin.textContent.includes('🪙')) {
                 coin.innerHTML = '🪙'
             }
@@ -222,9 +222,9 @@ function updateGameStatus(gameState) {
             if (tailsRemaining === undefined || tailsRemaining === null) {
                 tailsRemaining = 0
                 if (gameState.player_coins) {
-                    Object.values(gameState.player_coins).forEach(coins => {
+                    Object.values(gameState.player_coins).forEach((coins) => {
                         if (Array.isArray(coins)) {
-                            tailsRemaining += coins.filter(coin => !coin).length
+                            tailsRemaining += coins.filter((coin) => !coin).length
                         }
                     })
                 }
@@ -316,8 +316,8 @@ function updateStationStats(station, playerCoins) {
             playerCoins = []
         }
 
-        const tailsCount = playerCoins.filter(coin => coin === false).length
-        const headsCount = playerCoins.filter(coin => coin === true).length
+        const tailsCount = playerCoins.filter((coin) => coin === false).length
+        const headsCount = playerCoins.filter((coin) => coin === true).length
         const totalCoins = playerCoins.length
 
         const statsContainer = station.querySelector('.station-stats')
@@ -484,7 +484,7 @@ function updateStationActions(station, player, playerCoins, gameState, isCurrent
         return
     }
 
-    const headsCount = playerCoins.filter(coin => coin).length
+    const headsCount = playerCoins.filter((coin) => coin).length
     const totalCoins = playerCoins.length
     const canSend = headsCount >= gameState.batch_size || (headsCount > 0 && headsCount === totalCoins)
 
@@ -511,9 +511,10 @@ function updateStationActions(station, player, playerCoins, gameState, isCurrent
 
         const sendButton = document.createElement('button')
         sendButton.className = `btn ${canSend ? 'btn-primary' : 'btn-disabled'}`
-        sendButton.textContent = playerIndex === gameState.players.length - 1
-            ? `Terminer ${headsCount} pièce${headsCount > 1 ? 's' : ''}`
-            : `Envoyer lot (${headsCount}/${gameState.batch_size})`
+        sendButton.textContent =
+            playerIndex === gameState.players.length - 1
+                ? `Terminer ${headsCount} pièce${headsCount > 1 ? 's' : ''}`
+                : `Envoyer lot (${headsCount}/${gameState.batch_size})`
         sendButton.disabled = !canSend
 
         if (canSend) {
@@ -578,7 +579,7 @@ function updateTimersSummary(gameState) {
             return
         }
 
-        gameState.players.forEach(player => {
+        gameState.players.forEach((player) => {
             const timerElement = document.querySelector(`.timer-value[data-player="${player}"]`)
             if (timerElement && gameState.player_timers && gameState.player_timers[player]) {
                 const timerInfo = formatPlayerTimer(gameState.player_timers[player])
@@ -858,7 +859,7 @@ function setupCoinHoldEvents(coinElement, coinIndex, progressRing) {
             timer: holdTimer,
             interval: progressInterval,
             startTime: startTime,
-            element: coinElement
+            element: coinElement,
         })
 
         // Visual feedback
@@ -1125,7 +1126,11 @@ async function handleSendBatch() {
     const username = window.currentUsername
 
     if (!apiUrl || !gameCode || !username) {
-        console.error('Missing required data for send batch:', { apiUrl: !!apiUrl, gameCode: !!gameCode, username: !!username })
+        console.error('Missing required data for send batch:', {
+            apiUrl: !!apiUrl,
+            gameCode: !!gameCode,
+            username: !!username,
+        })
         throw new Error('Missing required data')
     }
 
@@ -1153,7 +1158,7 @@ async function handleSendBatch() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                Accept: 'application/json',
             },
             body: JSON.stringify({ username: username }),
             credentials: 'include',
@@ -1174,7 +1179,6 @@ async function handleSendBatch() {
         console.log('Batch sent successfully:', data)
         // Success notification will be shown by websocket update
         return data
-
     } catch (error) {
         console.error('Error sending batch:', error)
 
