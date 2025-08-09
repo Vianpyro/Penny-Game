@@ -174,7 +174,7 @@ export function renderGameBoard(gameState) {
     gameBoard.appendChild(rulesReminder)
 
     setTimeout(() => {
-        document.querySelectorAll('.coin.flip').forEach(coin => {
+        document.querySelectorAll('.coin.flip').forEach((coin) => {
             if (!coin.textContent.includes('🪙')) {
                 coin.innerHTML = '🪙'
             }
