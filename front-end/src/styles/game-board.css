@@ -117,8 +117,8 @@
 }
 
 .coins-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(30px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 15px;
     padding: 15px;
@@ -233,6 +233,7 @@
 }
 
 @keyframes pulse {
+
     0%,
     100% {
         transform: scale(1);
@@ -367,7 +368,6 @@
     }
 
     .coins-container {
-        grid-template-columns: repeat(auto-fit, minmax(25px, 1fr));
         gap: 6px;
         padding: 12px;
     }
@@ -417,7 +417,6 @@
     }
 
     .coins-container {
-        grid-template-columns: repeat(auto-fit, minmax(22px, 1fr));
         gap: 4px;
         padding: 10px;
     }
@@ -522,6 +521,7 @@
 }
 
 @keyframes holding-pulse {
+
     0%,
     100% {
         box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
