@@ -3,7 +3,7 @@ import { flipCoin } from './api.js'
 import { showNotification } from './utility.js'
 
 const TOTAL_COINS = 15
-const FLIP_HOLD_DURATION = 1500
+const FLIP_HOLD_DURATION = 1000
 
 // Track active interactions
 const activeHolds = new Map() // coinKey -> { timer, interval, startTime, element }
