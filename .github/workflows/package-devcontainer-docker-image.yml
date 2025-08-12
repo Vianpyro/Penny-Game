@@ -1,5 +1,5 @@
 ---
-name: Package Frontend Docker Image
+name: Package DevContainer Docker Image
 
 permissions:
   packages: write
