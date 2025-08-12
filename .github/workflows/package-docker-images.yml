@@ -17,6 +17,7 @@ on:
 
 jobs:
   build-docker-images:
+    name: Build and Push Docker Images
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
@@ -27,19 +28,17 @@ jobs:
             context: ./api
             dockerfile: api/Dockerfile
             path_filter: api/
-            build_args: ""
+            needs_api_url: false
           - name: frontend
             context: ./front-end
             dockerfile: front-end/Dockerfile
             path_filter: front-end/
-            build_args: |
-              PUBLIC_API_URL=${{ secrets.PUBLIC_API_URL }}
+            needs_api_url: true
           - name: devcontainer
             context: ./.devcontainer
             dockerfile: .devcontainer/Dockerfile
             path_filter: .devcontainer/
-            build_args: |
-              PUBLIC_API_URL=${{ secrets.PUBLIC_API_URL }}
+            needs_api_url: true
 
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +96,7 @@ jobs:
           context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: ${{ matrix.build_args }}
+          build-args: ${{ matrix.needs_api_url == true && format('PUBLIC_API_URL={0}', secrets.PUBLIC_API_URL) || '' }}
           tags: |
             ghcr.io/${{ steps.repo.outputs.name }}-${{ matrix.name }}:${{ steps.version.outputs.tag }}
             ghcr.io/${{ steps.repo.outputs.name }}-${{ matrix.name }}:latest
