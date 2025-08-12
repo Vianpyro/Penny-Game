@@ -1,20 +1,20 @@
 ---
-name: Package Frontend Docker Image
+name: Package Backend Docker Images
 
 permissions:
   packages: write
-  contents: read
+  contents: write
 
 on:
   push:
     branches:
       - main
     paths:
-      - "front-end/**"
-      - ".github/workflows/package-frontend-docker.yml"
+      - "api/**"
+      - ".github/workflows/package-backend-docker-image.yml"
 
 jobs:
-  build-and-push-frontend:
+  build-and-push-api:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
 
       - name: Validate Dockerfile exists
         run: |
-          test -f "front-end/Dockerfile" || (echo "Dockerfile not found in front-end/" && exit 1)
+          test -f "api/Dockerfile" || (echo "Dockerfile not found in api/" && exit 1)
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -48,24 +48,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Frontend image
+      - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
-          context: ./front-end
+          context: ./api
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: |
-            PUBLIC_API_URL=${{ secrets.PUBLIC_API_URL }}
           tags: |
-            ghcr.io/${{ steps.repo.outputs.name }}-frontend:${{ steps.version.outputs.tag }}
-            ghcr.io/${{ steps.repo.outputs.name }}-frontend:latest
+            ghcr.io/${{ steps.repo.outputs.name }}-api:${{ steps.version.outputs.tag }}
+            ghcr.io/${{ steps.repo.outputs.name }}-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ghcr.io/${{ steps.repo.outputs.name }}-frontend:${{ steps.version.outputs.tag }}
+          image: ghcr.io/${{ steps.repo.outputs.name }}-api:${{ steps.version.outputs.tag }}
           format: spdx-json
           upload-release-assets: false
-          artifact-name: sbom-frontend-${{ steps.version.outputs.tag }}
+          artifact-name: sbom-api-${{ steps.version.outputs.tag }}
