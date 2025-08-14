@@ -4,6 +4,7 @@ import { joinRoom, fetchGameState, changeRole, setRoundConfig } from './api.js'
 import { updateGameCode, renderPlayers, renderSpectators, updatePlayerCountDisplay } from './dom.js'
 import { connectWebSocket } from './websocket.js'
 
+const FLIP_HOLD_DURATION = 1000
 const TOTAL_COINS = 15
 const VALID_BATCH_SIZES = [1, 3, 5, 15]
 
@@ -810,7 +811,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initial UI update with multiple attempts to ensure it works
     updateUIForRole()
     setTimeout(updateUIForRole, 500)
-    setTimeout(updateUIForRole, 1500)
+    setTimeout(updateUIForRole, FLIP_HOLD_DURATION)
     setTimeout(updatePlayerCountDisplay, 100)
 
     // Initial drag and drop setup

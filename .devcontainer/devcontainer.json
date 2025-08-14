@@ -1,6 +1,6 @@
 {
     "name": "Lean Agile - Penny Game",
-    "dockerFile": "Dockerfile",
+    "image": "ghcr.io/vianpyro/penny-game-devcontainer:latest",
     "customizations": {
         "settings": {
             "terminal.integrated.shell.linux": "/bin/bash"
