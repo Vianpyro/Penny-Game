@@ -17,7 +17,7 @@ on:
 
 jobs:
   build-docker-images:
-    name: Build and Push Docker Images
+    name: Build and push ${{ matrix.name }} image
     runs-on: ubuntu-latest
     continue-on-error: true
     strategy:
