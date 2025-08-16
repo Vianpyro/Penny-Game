@@ -152,6 +152,11 @@ def initialize_player_coins(game: PennyGame) -> None:
     # Initialize player timers
     _initialize_player_timers(game)
 
+    # Reset lead time tracking
+    game.first_flip_at = None
+    game.first_delivery_at = None
+    game.lead_time_seconds = None
+
 
 def _initialize_player_timers(game: PennyGame) -> None:
     """Initialize player timers for all players."""
@@ -211,6 +216,9 @@ def complete_current_round(game: PennyGame) -> None:
         round_number=game.current_round,
         batch_size=game.batch_size,
         game_duration_seconds=game.game_duration_seconds,
+        lead_time_seconds=game.lead_time_seconds,
+        first_flip_at=game.first_flip_at,
+        first_delivery_at=game.first_delivery_at,
         player_timers=game.player_timers.copy(),
         total_completed=get_total_completed_coins(game),
         started_at=game.started_at,
@@ -244,7 +252,13 @@ def start_player_timer(game: PennyGame, player: str) -> None:
         game.player_timers[player] = PlayerTimer(player=player)
 
     if game.player_timers[player].started_at is None:
-        game.player_timers[player].started_at = datetime.now()
+        now = datetime.now()
+        game.player_timers[player].started_at = now
+
+        # Track the very first flip across all players for lead time
+        if game.first_flip_at is None:
+            game.first_flip_at = now
+            logger.info(f"First coin flip recorded at {now} by {player}")
 
 
 def end_player_timer(game: PennyGame, player: str) -> None:
@@ -405,6 +419,16 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
 
     # Determine how many coins to send based on batch size
     coins_to_complete = min(heads_count, game.batch_size)
+
+    # Track first delivery for lead time
+    if coins_to_complete > 0 and game.first_delivery_at is None:
+        game.first_delivery_at = datetime.now()
+
+        # Calculate lead time if we have both timestamps
+        if game.first_flip_at:
+            game.lead_time_seconds = (game.first_delivery_at - game.first_flip_at).total_seconds()
+            logger.info(f"First delivery recorded. Lead time: {game.lead_time_seconds:.2f} seconds")
+
     completed_coins, remaining_coins = _prepare_completion_transfer(player_coins, coins_to_complete)
 
     # Update player state

@@ -77,6 +77,20 @@ window.gameStatsTracker = {
             }
         }
 
+        // Fix missing lead time data
+        if (!fixed.lead_time_seconds && fixed.first_flip_at && fixed.first_delivery_at) {
+            try {
+                const firstFlip = new Date(fixed.first_flip_at)
+                const firstDelivery = new Date(fixed.first_delivery_at)
+                if (!isNaN(firstFlip.getTime()) && !isNaN(firstDelivery.getTime())) {
+                    fixed.lead_time_seconds = (firstDelivery - firstFlip) / 1000
+                    console.log(`🔧 Fixed missing lead time: ${fixed.lead_time_seconds}s`)
+                }
+            } catch (error) {
+                console.error('Error calculating lead time:', error)
+            }
+        }
+
         // If player timers have null values but the game has duration, estimate them
         if (fixed.player_timers && fixed.game_duration_seconds) {
             Object.keys(fixed.player_timers).forEach((playerName) => {
@@ -228,6 +242,17 @@ window.gameStatsTracker = {
         const bestRoundTime = validRounds.length > 0 ? Math.min(...validRounds.map((r) => r.game_duration_seconds)) : 0
         const worstRoundTime = validRounds.length > 0 ? Math.max(...validRounds.map((r) => r.game_duration_seconds)) : 0
 
+        // Calculate lead time statistics
+        const leadTimes = this.roundResults
+            .filter(r => r.lead_time_seconds && r.lead_time_seconds > 0)
+            .map(r => r.lead_time_seconds)
+
+        const avgLeadTime = leadTimes.length > 0
+            ? leadTimes.reduce((sum, lt) => sum + lt, 0) / leadTimes.length
+            : 0
+        const bestLeadTime = leadTimes.length > 0 ? Math.min(...leadTimes) : 0
+        const worstLeadTime = leadTimes.length > 0 ? Math.max(...leadTimes) : 0
+
         // Calculate batch size impact
         const batchSizeImpact = this.calculateBatchSizeImpact()
 
@@ -240,6 +265,9 @@ window.gameStatsTracker = {
             averageRoundTime,
             bestRoundTime,
             worstRoundTime,
+            avgLeadTime,
+            bestLeadTime,
+            worstLeadTime,
             batchSizeImpact,
             playerSummary,
             roundResults: this.roundResults,
@@ -1219,6 +1247,9 @@ function updateResultsDisplay() {
     // Update main game statistics
     updateMainGameStats(gameSummary)
 
+    // Update lead time display
+    updateLeadTimeDisplay(gameSummary)
+
     // Update round-by-round breakdown
     updateRoundBreakdown(gameSummary.roundResults)
 
@@ -1275,6 +1306,11 @@ function updateMainGameStats(gameSummary) {
                 <div class="stat-value">${Object.keys(gameSummary.playerSummary).length}</div>
                 <div class="stat-label">Joueurs</div>
             </div>
+            <div class="stat-card highlight">
+                <div class="stat-value">${gameSummary.avgLeadTime > 0 ? TimeUtils.formatTime(gameSummary.avgLeadTime) : 'N/A'}</div>
+                <div class="stat-label">Lead Time moyen</div>
+                <div class="stat-sublabel">1ère pièce flip → livraison</div>
+            </div>
         `
 
         // Add warning if some rounds have missing data
@@ -1287,6 +1323,24 @@ function updateMainGameStats(gameSummary) {
             `
             statsGrid.after(warningDiv)
         }
+    }
+}
+
+function updateLeadTimeDisplay(gameSummary) {
+    const avgLeadTimeValue = document.getElementById('avgLeadTimeValue')
+    const bestLeadTimeElement = document.getElementById('bestLeadTime')
+    const worstLeadTimeElement = document.getElementById('worstLeadTime')
+
+    if (avgLeadTimeValue && gameSummary.avgLeadTime > 0) {
+        avgLeadTimeValue.textContent = TimeUtils.formatTime(gameSummary.avgLeadTime)
+    }
+
+    if (bestLeadTimeElement && gameSummary.bestLeadTime > 0) {
+        bestLeadTimeElement.textContent = TimeUtils.formatTime(gameSummary.bestLeadTime)
+    }
+
+    if (worstLeadTimeElement && gameSummary.worstLeadTime > 0) {
+        worstLeadTimeElement.textContent = TimeUtils.formatTime(gameSummary.worstLeadTime)
     }
 }
 
@@ -1339,9 +1393,10 @@ function updateRoundBreakdown(roundResults) {
             const gameTime = result.game_duration_seconds
                 ? TimeUtils.formatTime(result.game_duration_seconds)
                 : 'Données manquantes'
+            const leadTime = result.lead_time_seconds
+                ? TimeUtils.formatTime(result.lead_time_seconds)
+                : '--:--'
             const efficiency = result.efficiency ? result.efficiency.toFixed(1) : '--'
-            const completionRate = result.completionRate ? result.completionRate.toFixed(0) : '100'
-            const batchSizeText = getBatchSizeDescription(result.batch_size)
 
             // Check if we have valid player rankings
             const hasValidRankings = result.playerRankings && result.playerRankings.length > 0
@@ -1360,31 +1415,30 @@ function updateRoundBreakdown(roundResults) {
                         <div class="mini-stat-label">Temps total</div>
                     </div>
                     <div class="mini-stat">
+                        <div class="mini-stat-value">${leadTime}</div>
+                        <div class="mini-stat-label">Lead Time</div>
+                    </div>
+                    <div class="mini-stat">
                         <div class="mini-stat-value">${efficiency}</div>
                         <div class="mini-stat-label">Pièces/min</div>
                     </div>
-                    <div class="mini-stat">
-                        <div class="mini-stat-value">${completionRate}%</div>
-                        <div class="mini-stat-label">Complété</div>
-                    </div>
                 </div>
                 <div class="round-rankings">
-                    ${
-                        hasValidRankings
-                            ? result.playerRankings
-                                  .slice(0, 3)
-                                  .map(
-                                      (ranking, idx) => `
+                    ${hasValidRankings
+                    ? result.playerRankings
+                        .slice(0, 3)
+                        .map(
+                            (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                                  )
-                                  .join('')
-                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                    }
+                        )
+                        .join('')
+                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                }
                 </div>
             `
 

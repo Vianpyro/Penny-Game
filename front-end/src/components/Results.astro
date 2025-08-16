@@ -15,6 +15,27 @@ import '../styles/results.css'
         </div>
     </div>
 
+    <!-- Lead Time Section -->
+    <div class="lead-time-section" id="leadTimeSection">
+        <h3>⏱️ Lead Time Analysis</h3>
+        <p class="section-description">Temps écoulé entre le premier flip et la première livraison au client</p>
+        <div class="lead-time-card">
+            <div class="lead-time-icon">🏃‍♂️</div>
+            <div class="lead-time-value" id="avgLeadTimeValue">--:--</div>
+            <div class="lead-time-label">Lead Time Moyen</div>
+            <div class="lead-time-details">
+                <span class="detail-item">
+                    <span class="detail-label">Meilleur:</span>
+                    <span class="detail-value" id="bestLeadTime">--:--</span>
+                </span>
+                <span class="detail-item">
+                    <span class="detail-label">Pire:</span>
+                    <span class="detail-value" id="worstLeadTime">--:--</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Statistics Grid -->
     <div class="stats-section">
         <h3>📈 Statistiques Générales</h3>
@@ -915,5 +936,86 @@ import '../styles/results.css'
         display: block;
         margin-bottom: 15px;
         opacity: 0.5;
+    }
+
+    /* Lead Time Section */
+    .lead-time-section {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .lead-time-card {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 30px;
+        display: inline-block;
+        min-width: 320px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease;
+    }
+
+    .lead-time-card:hover {
+        transform: translateY(-3px);
+    }
+
+    .lead-time-icon {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+    }
+
+    .lead-time-value {
+        font-family: 'Courier New', monospace;
+        font-size: 2.5em;
+        font-weight: 700;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .lead-time-label {
+        font-size: 1.1em;
+        font-weight: 600;
+        opacity: 0.9;
+        margin-bottom: 15px;
+    }
+
+    .lead-time-details {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .lead-time-details .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .lead-time-details .detail-label {
+        font-size: 0.85em;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .lead-time-details .detail-value {
+        font-family: 'Courier New', monospace;
+        font-size: 1.2em;
+        font-weight: 700;
+    }
+
+    .stat-card.highlight {
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.2));
+        border-color: #3498db;
+        box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+    }
+
+    .stat-sublabel {
+        font-size: 0.75em;
+        color: #95a5a6;
+        font-style: italic;
+        margin-top: 3px;
     }
 </style>
