@@ -1360,20 +1360,21 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${hasValidOrder
-                    ? result.playerOrder
-                        .slice(0, 3)
-                        .map(
-                            (ranking) => `
+                    ${
+                        hasValidOrder
+                            ? result.playerOrder
+                                  .slice(0, 3)
+                                  .map(
+                                      (ranking) => `
                             <div class="mini-ranking">
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                        )
-                        .join('')
-                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                }
+                                  )
+                                  .join('')
+                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                    }
                 </div>
             `
 

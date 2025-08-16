@@ -233,7 +233,6 @@
 }
 
 @keyframes pulse {
-
     0%,
     100% {
         transform: scale(1);
@@ -521,7 +520,6 @@
 }
 
 @keyframes holding-pulse {
-
     0%,
     100% {
         box-shadow: 0 0 0 0 rgb(52 152 219 / 70%);
