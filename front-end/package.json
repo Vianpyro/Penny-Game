@@ -3,7 +3,7 @@
     "type": "module",
     "version": "0.2.0",
     "dependencies": {
-        "astro": "^5.12.7"
+        "astro": "^5.13.2"
     },
     "devDependencies": {
         "prettier": "^3.5.3",

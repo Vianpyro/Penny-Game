@@ -812,9 +812,9 @@ function createCoinElement(player, index, isHeads, canInteract) {
     const progressRing = document.createElement('div')
     progressRing.className = 'coin-progress-ring'
     progressRing.innerHTML = `
-        <svg class="progress-ring-svg">
-            <circle class="progress-ring-circle-bg"></circle>
-            <circle class="progress-ring-circle"></circle>
+        <svg class="progress-ring__svg">
+            <circle class="progress-ring__circle-bg"></circle>
+            <circle class="progress-ring__circle"></circle>
         </svg>
     `
 
@@ -955,7 +955,7 @@ function setupCoinHoldEvents(coinElement, coinIndex, progressRing) {
     }
 
     const updateProgress = (progress) => {
-        const circle = progressRing.querySelector('.progress-ring-circle')
+        const circle = progressRing.querySelector('.progress-ring__circle')
         if (circle) {
             const radius = 18
             const circumference = 2 * Math.PI * radius
