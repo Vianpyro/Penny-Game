@@ -254,7 +254,6 @@ window.gameStatsTracker = {
             .filter((r) => r.lead_time_seconds && r.lead_time_seconds > 0)
             .map((r) => r.lead_time_seconds)
 
-        const avgLeadTime = leadTimes.length > 0 ? leadTimes.reduce((sum, lt) => sum + lt, 0) / leadTimes.length : 0
         const bestLeadTime = leadTimes.length > 0 ? Math.min(...leadTimes) : 0
         const worstLeadTime = leadTimes.length > 0 ? Math.max(...leadTimes) : 0
 
@@ -270,7 +269,6 @@ window.gameStatsTracker = {
             averageRoundTime,
             bestRoundTime,
             worstRoundTime,
-            avgLeadTime,
             bestLeadTime,
             worstLeadTime,
             batchSizeImpact,
@@ -343,7 +341,6 @@ window.gameStatsTracker = {
                     totalLeadTime: 0,
                     avgTime: 0,
                     avgEfficiency: 0,
-                    avgLeadTime: 0,
                     validRounds: 0,
                     leadTimeRounds: 0,
                 }
@@ -370,10 +367,6 @@ window.gameStatsTracker = {
             if (data.validRounds > 0) {
                 data.avgTime = data.totalTime / data.validRounds
                 data.avgEfficiency = data.totalEfficiency / data.validRounds
-            }
-
-            if (data.leadTimeRounds > 0) {
-                data.avgLeadTime = data.totalLeadTime / data.leadTimeRounds
             }
         })
 
@@ -1351,13 +1344,8 @@ function updateMainGameStats(gameSummary) {
 }
 
 function updateLeadTimeDisplay(gameSummary) {
-    const avgLeadTimeValue = document.getElementById('avgLeadTimeValue')
     const bestLeadTimeElement = document.getElementById('bestLeadTime')
     const worstLeadTimeElement = document.getElementById('worstLeadTime')
-
-    if (avgLeadTimeValue && gameSummary.avgLeadTime > 0) {
-        avgLeadTimeValue.textContent = TimeUtils.formatTime(gameSummary.avgLeadTime)
-    }
 
     if (bestLeadTimeElement && gameSummary.bestLeadTime > 0) {
         bestLeadTimeElement.textContent = TimeUtils.formatTime(gameSummary.bestLeadTime)
@@ -1533,10 +1521,6 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
                     <div class="batch-metric">
                         <div class="metric-value">${TimeUtils.formatTime(data.avgTime)}</div>
                         <div class="metric-label">Temps moyen</div>
-                    </div>
-                    <div class="batch-metric">
-                        <div class="metric-value">${data.avgLeadTime > 0 ? TimeUtils.formatTime(data.avgLeadTime) : '--:--'}</div>
-                        <div class="metric-label">Lead Time</div>
                     </div>
                     <div class="batch-metric">
                         <div class="metric-value">${data.avgEfficiency.toFixed(1)}</div>
