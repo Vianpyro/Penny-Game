@@ -583,7 +583,7 @@ def _execute_role_change(game, username: str, new_role: str):
         game.players.remove(username)
         game.spectators.append(username)
         if game.state == GameState.ACTIVE:
-            initialize_player_coins(game)
+            initialize_player_coins(game, is_new_round=False)
 
 
 @router.post("/cleanup")

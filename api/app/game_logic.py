@@ -136,7 +136,7 @@ def set_round_config(
     return True
 
 
-def initialize_player_coins(game: PennyGame) -> None:
+def initialize_player_coins(game: PennyGame, is_new_round: bool = True) -> None:
     """Initialize coin distribution when round starts."""
     if not game.players:
         return
@@ -153,9 +153,10 @@ def initialize_player_coins(game: PennyGame) -> None:
     _initialize_player_timers(game)
 
     # Reset lead time tracking
-    game.first_flip_at = None
-    game.first_delivery_at = None
-    game.lead_time_seconds = None
+    if is_new_round:
+        game.first_flip_at = None
+        game.first_delivery_at = None
+        game.lead_time_seconds = None
 
 
 def _initialize_player_timers(game: PennyGame) -> None:
@@ -192,7 +193,7 @@ def start_next_round(game: PennyGame) -> bool:
 
     # Reset game mechanics for new round
     game.pennies = [False] * TOTAL_COINS
-    initialize_player_coins(game)
+    initialize_player_coins(game, is_new_round=True)
 
     game.first_flip_at = None
     game.first_delivery_at = None
@@ -215,6 +216,9 @@ def complete_current_round(game: PennyGame) -> None:
     for timer in game.player_timers.values():
         _end_timer_if_running(timer)
 
+    # Log lead time status before saving
+    logger.info(f"Completing round {game.current_round} with lead_time_seconds: {game.lead_time_seconds}")
+
     # Save round result
     round_result = RoundResult(
         round_number=game.current_round,
@@ -231,13 +235,8 @@ def complete_current_round(game: PennyGame) -> None:
 
     game.round_results.append(round_result)
 
-    # Determine next state
-    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
-
-    if game.current_round >= len(batch_sizes):
-        game.state = GameState.RESULTS  # All rounds completed
-    else:
-        game.state = GameState.ROUND_COMPLETE  # More rounds to play
+    # Log the saved result
+    logger.info(f"Saved round result with lead_time_seconds: {round_result.lead_time_seconds}")
 
 
 def _end_timer_if_running(timer: PlayerTimer) -> None:
@@ -438,6 +437,9 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
         if game.first_flip_at:
             game.lead_time_seconds = (game.first_delivery_at - game.first_flip_at).total_seconds()
             logger.info(f"First delivery recorded. Lead time: {game.lead_time_seconds:.2f} seconds")
+            logger.info(f"First flip was at: {game.first_flip_at}, First delivery at: {game.first_delivery_at}")
+        else:
+            logger.warning(f"First delivery recorded but no first flip timestamp available!")
 
     completed_coins, remaining_coins = _prepare_completion_transfer(player_coins, coins_to_complete)
 

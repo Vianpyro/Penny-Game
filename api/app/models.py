@@ -65,6 +65,9 @@ class RoundResult(BaseModel):
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
 
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
+
 
 class PennyGame(BaseModel):
     """Main game model representing a complete Penny Game session."""
