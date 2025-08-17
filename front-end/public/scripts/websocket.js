@@ -126,6 +126,13 @@ window.gameStatsTracker = {
                         }
                     }
                 }
+
+                if (!timer.player) {
+                    fixed.player_timers[playerName] = {
+                        ...timer,
+                        player: playerName
+                    }
+                }
             })
         }
 
@@ -196,7 +203,7 @@ window.gameStatsTracker = {
 
         return completedPlayers.map((timer, index) => ({
             rank: index + 1,
-            player: timer.player,
+            player: timer.player || 'Unknown',
             time: timer.duration_seconds,
             efficiency: this.calculatePlayerEfficiency(timer.duration_seconds),
         }))
@@ -1113,23 +1120,13 @@ function updatePlayerTimersDisplay(roundResult) {
 
     playerTimersGrid.innerHTML = ''
 
-    // Sort players by completion time (completed players first, then by duration)
-    const playerTimers = Object.values(roundResult.player_timers)
+    // Ensure each timer has the player name and sort alphabetically
+    const playerTimers = Object.entries(roundResult.player_timers).map(([playerName, timer]) => ({
+        ...timer,
+        player: timer.player || playerName
+    }))
     const sortedTimers = playerTimers.sort((a, b) => {
-        // Completed players first
-        const aCompleted = a.ended_at && a.duration_seconds !== null && a.duration_seconds !== undefined
-        const bCompleted = b.ended_at && b.duration_seconds !== null && b.duration_seconds !== undefined
-
-        if (aCompleted && !bCompleted) return -1
-        if (!aCompleted && bCompleted) return 1
-
-        // Among completed players, sort by duration (fastest first)
-        if (aCompleted && bCompleted) {
-            return (a.duration_seconds || 0) - (b.duration_seconds || 0)
-        }
-
-        // Among non-completed players, maintain original order
-        return 0
+        return (a.player || '').localeCompare(b.player || '')
     })
 
     sortedTimers.forEach((timer, index) => {
@@ -1431,6 +1428,9 @@ function updateRoundBreakdown(roundResults) {
             // Check if we have valid player order
             const hasValidOrder = result.playerOrder && result.playerOrder.length > 0
 
+            // Get batch size description
+            const batchSizeText = getBatchSizeDescription(result.batch_size)
+
             roundCard.innerHTML = `
                 <div class="round-header">
                     <div class="round-number-badge">${result.round_number}</div>
@@ -1454,21 +1454,19 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${
-                        hasValidOrder
-                            ? result.playerOrder
-                                  .slice(0, 3)
-                                  .map(
-                                      (ranking) => `
+                    ${hasValidOrder
+                    ? result.playerOrder
+                        .map(
+                            (ranking) => `
                             <div class="mini-ranking">
                                 <span class="ranking-player">${ranking.player}</span>
-                                <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
+                                <span class="ranking-time">${ranking.time ? TimeUtils.formatTime(ranking.time) : '--:--'}</span>
                             </div>
                         `
-                                  )
-                                  .join('')
-                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                    }
+                        )
+                        .join('')
+                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                }
                 </div>
             `
 
@@ -1613,10 +1611,10 @@ function updatePlayerPerformanceSummary(playerSummary) {
 
     playerTimersGrid.innerHTML = ''
 
-    // Sort players by average time (best performers first)
+    // Sort players alphabetically
     const sortedPlayers = Object.values(playerSummary)
         .filter((player) => player.roundsCompleted > 0)
-        .sort((a, b) => a.avgTime - b.avgTime)
+        .sort((a, b) => a.player.localeCompare(b.player))
 
     sortedPlayers.forEach((playerStats, index) => {
         const timerCard = document.createElement('div')
