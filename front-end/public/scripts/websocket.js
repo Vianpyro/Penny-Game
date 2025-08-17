@@ -1417,7 +1417,6 @@ function updateRoundBreakdown(roundResults) {
             const gameTime = result.game_duration_seconds
                 ? TimeUtils.formatTime(result.game_duration_seconds)
                 : 'Données manquantes'
-            const leadTime = result.lead_time_seconds ? TimeUtils.formatTime(result.lead_time_seconds) : '--:--'
             const efficiency = result.efficiency ? result.efficiency.toFixed(1) : '--'
 
             // Check if we have valid player order
@@ -1438,10 +1437,6 @@ function updateRoundBreakdown(roundResults) {
                     <div class="mini-stat">
                         <div class="mini-stat-value">${gameTime}</div>
                         <div class="mini-stat-label">Temps total</div>
-                    </div>
-                    <div class="mini-stat">
-                        <div class="mini-stat-value">${leadTime}</div>
-                        <div class="mini-stat-label">Lead Time</div>
                     </div>
                     <div class="mini-stat">
                         <div class="mini-stat-value">${efficiency}</div>
