@@ -194,6 +194,10 @@ def start_next_round(game: PennyGame) -> bool:
     game.pennies = [False] * TOTAL_COINS
     initialize_player_coins(game)
 
+    game.first_flip_at = None
+    game.first_delivery_at = None
+    game.lead_time_seconds = None
+
     return True
 
 
@@ -327,6 +331,12 @@ def flip_coin(game: PennyGame, player: str, coin_index: int) -> bool:
 
     # Start player timer on first coin flip
     start_player_timer(game, player)
+
+    # Debug logging for lead time
+    if game.first_flip_at:
+        logger.debug(f"First flip was at {game.first_flip_at}, current player: {player}")
+    else:
+        logger.debug(f"This is the FIRST flip in the round by {player}")
 
     # Flip the coin from tails to heads
     player_coins[coin_index] = True
@@ -574,13 +584,18 @@ def _build_action_response(game: PennyGame, round_complete: bool, game_over: boo
         "player_coins": game.player_coins.copy(),
         "sent_coins": game.sent_coins.copy(),
         "total_completed": get_total_completed_coins(game),
-        "state": game.state.value,  # Include current state
+        "state": game.state.value,
         "current_round": game.current_round,
         "player_timers": {k: v.to_dict() for k, v in game.player_timers.items()} if game.player_timers else {},
         "game_duration_seconds": game.game_duration_seconds,
+        "lead_time_seconds": game.lead_time_seconds,
+        "first_flip_at": game.first_flip_at.isoformat() if game.first_flip_at else None,
+        "first_delivery_at": game.first_delivery_at.isoformat() if game.first_delivery_at else None,
     }
 
-    logger.debug(f"Action response: round_complete={round_complete}, state={game.state.value}")
+    logger.debug(
+        f"Action response: round_complete={round_complete}, state={game.state.value}, lead_time={game.lead_time_seconds}"
+    )
     return response
 
 
@@ -599,6 +614,9 @@ def reset_game(game: PennyGame) -> None:
     game.current_round = 0
     game.round_results = []
     game.last_active_at = datetime.now()
+    game.first_flip_at = None
+    game.first_delivery_at = None
+    game.lead_time_seconds = None
 
 
 def cleanup() -> dict:

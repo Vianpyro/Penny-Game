@@ -244,12 +244,10 @@ window.gameStatsTracker = {
 
         // Calculate lead time statistics
         const leadTimes = this.roundResults
-            .filter(r => r.lead_time_seconds && r.lead_time_seconds > 0)
-            .map(r => r.lead_time_seconds)
+            .filter((r) => r.lead_time_seconds && r.lead_time_seconds > 0)
+            .map((r) => r.lead_time_seconds)
 
-        const avgLeadTime = leadTimes.length > 0
-            ? leadTimes.reduce((sum, lt) => sum + lt, 0) / leadTimes.length
-            : 0
+        const avgLeadTime = leadTimes.length > 0 ? leadTimes.reduce((sum, lt) => sum + lt, 0) / leadTimes.length : 0
         const bestLeadTime = leadTimes.length > 0 ? Math.min(...leadTimes) : 0
         const worstLeadTime = leadTimes.length > 0 ? Math.max(...leadTimes) : 0
 
@@ -335,9 +333,12 @@ window.gameStatsTracker = {
                     rounds: 0,
                     totalTime: 0,
                     totalEfficiency: 0,
+                    totalLeadTime: 0,
                     avgTime: 0,
                     avgEfficiency: 0,
-                    validRounds: 0, // Track how many rounds have valid data
+                    avgLeadTime: 0,
+                    validRounds: 0,
+                    leadTimeRounds: 0,
                 }
             }
 
@@ -349,6 +350,11 @@ window.gameStatsTracker = {
                 batchSizes[size].totalEfficiency += result.efficiency || 0
                 batchSizes[size].validRounds++
             }
+
+            if (result.lead_time_seconds && result.lead_time_seconds > 0) {
+                batchSizes[size].totalLeadTime += result.lead_time_seconds
+                batchSizes[size].leadTimeRounds++
+            }
         })
 
         // Calculate averages only from valid data
@@ -357,10 +363,10 @@ window.gameStatsTracker = {
             if (data.validRounds > 0) {
                 data.avgTime = data.totalTime / data.validRounds
                 data.avgEfficiency = data.totalEfficiency / data.validRounds
-            } else {
-                // No valid data for this batch size
-                data.avgTime = 0
-                data.avgEfficiency = 0
+            }
+
+            if (data.leadTimeRounds > 0) {
+                data.avgLeadTime = data.totalLeadTime / data.leadTimeRounds
             }
         })
 
@@ -673,6 +679,9 @@ function handleActionMade(msg) {
         current_round: msg.current_round,
         player_timers: msg.player_timers || {},
         game_duration_seconds: msg.game_duration_seconds,
+        lead_time_seconds: msg.lead_time_seconds,
+        first_flip_at: msg.first_flip_at,
+        first_delivery_at: msg.first_delivery_at,
         started_at: window.gameState?.started_at,
         ended_at: window.gameState?.ended_at,
     }
@@ -810,6 +819,19 @@ function handleRoundComplete(msg) {
         console.log('📌 Updated game state to round_complete, current round:', window.gameState.current_round)
     }
 
+    // Save round stats with lead time
+    if (msg.round_result) {
+        // Ensure lead time is included - ADD THIS BLOCK
+        if (!msg.round_result.lead_time_seconds && window.gameState?.lead_time_seconds) {
+            msg.round_result.lead_time_seconds = window.gameState.lead_time_seconds
+            msg.round_result.first_flip_at = window.gameState.first_flip_at
+            msg.round_result.first_delivery_at = window.gameState.first_delivery_at
+        }
+
+        console.log(`💾 Saving round ${msg.round_number} stats with lead time:`, msg.round_result.lead_time_seconds)
+        window.gameStatsTracker.addRoundResult(msg.round_result)
+    }
+
     // Switch view
     ViewManager.switchToRoundCompleteView()
 
@@ -898,6 +920,7 @@ function updateRoundCompleteDisplay(msg) {
     const completedRoundNumber = document.getElementById('completedRoundNumber')
     const completedBatchSize = document.getElementById('completedBatchSize')
     const completedRoundTime = document.getElementById('completedRoundTime')
+    const completedLeadTime = document.getElementById('completedLeadTime')
     const nextRoundSection = document.getElementById('nextRoundSection')
     const gameCompleteSection = document.getElementById('gameCompleteSection')
     const nextRoundNumber = document.getElementById('nextRoundNumber')
@@ -910,6 +933,14 @@ function updateRoundCompleteDisplay(msg) {
     if (completedBatchSize) completedBatchSize.textContent = msg.round_result?.batch_size || 'N/A'
     if (completedRoundTime && msg.round_result?.game_duration_seconds) {
         completedRoundTime.textContent = TimeUtils.formatTime(msg.round_result.game_duration_seconds)
+    }
+
+    if (completedLeadTime) {
+        if (msg.round_result?.lead_time_seconds) {
+            completedLeadTime.textContent = TimeUtils.formatTime(msg.round_result.lead_time_seconds)
+        } else {
+            completedLeadTime.textContent = '--:--'
+        }
     }
 
     // Update individual player timers - THIS IS THE KEY NEW FUNCTIONALITY
@@ -1150,12 +1181,22 @@ function updateRoundStatistics(roundResult) {
         participantCount.textContent = Object.keys(roundResult.player_timers).length
     }
 
-    // Calculate and update round efficiency (coins per minute for the whole round)
+    // Calculate and update round efficiency
     const roundEfficiency = document.getElementById('roundEfficiency')
     if (roundEfficiency && roundResult.game_duration_seconds) {
         const totalCoins = roundResult.total_completed || 12
         const efficiency = TimeUtils.calculateEfficiency(totalCoins, roundResult.game_duration_seconds)
         roundEfficiency.textContent = `${efficiency}`
+    }
+
+    // Update lead time statistic - ADD THIS BLOCK
+    const roundLeadTime = document.getElementById('roundLeadTime')
+    if (roundLeadTime) {
+        if (roundResult.lead_time_seconds) {
+            roundLeadTime.textContent = TimeUtils.formatTime(roundResult.lead_time_seconds)
+        } else {
+            roundLeadTime.textContent = '--:--'
+        }
     }
 
     // Calculate and update average player time
@@ -1393,9 +1434,7 @@ function updateRoundBreakdown(roundResults) {
             const gameTime = result.game_duration_seconds
                 ? TimeUtils.formatTime(result.game_duration_seconds)
                 : 'Données manquantes'
-            const leadTime = result.lead_time_seconds
-                ? TimeUtils.formatTime(result.lead_time_seconds)
-                : '--:--'
+            const leadTime = result.lead_time_seconds ? TimeUtils.formatTime(result.lead_time_seconds) : '--:--'
             const efficiency = result.efficiency ? result.efficiency.toFixed(1) : '--'
 
             // Check if we have valid player rankings
@@ -1424,21 +1463,22 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${hasValidRankings
-                    ? result.playerRankings
-                        .slice(0, 3)
-                        .map(
-                            (ranking, idx) => `
+                    ${
+                        hasValidRankings
+                            ? result.playerRankings
+                                  .slice(0, 3)
+                                  .map(
+                                      (ranking, idx) => `
                             <div class="mini-ranking">
                                 <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
                         `
-                        )
-                        .join('')
-                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                }
+                                  )
+                                  .join('')
+                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                    }
                 </div>
             `
 
@@ -1515,6 +1555,10 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
                     <div class="batch-metric">
                         <div class="metric-value">${TimeUtils.formatTime(data.avgTime)}</div>
                         <div class="metric-label">Temps moyen</div>
+                    </div>
+                    <div class="batch-metric">
+                        <div class="metric-value">${data.avgLeadTime > 0 ? TimeUtils.formatTime(data.avgLeadTime) : '--:--'}</div>
+                        <div class="metric-label">Lead Time</div>
                     </div>
                     <div class="batch-metric">
                         <div class="metric-value">${data.avgEfficiency.toFixed(1)}</div>
