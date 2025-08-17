@@ -1335,11 +1335,6 @@ function updateMainGameStats(gameSummary) {
                 <div class="stat-value">${Object.keys(gameSummary.playerSummary).length}</div>
                 <div class="stat-label">Joueurs</div>
             </div>
-            <div class="stat-card highlight">
-                <div class="stat-value">${gameSummary.avgLeadTime > 0 ? TimeUtils.formatTime(gameSummary.avgLeadTime) : 'N/A'}</div>
-                <div class="stat-label">Lead Time moyen</div>
-                <div class="stat-sublabel">1ère pièce flip → livraison</div>
-            </div>
         `
 
         // Add warning if some rounds have missing data
