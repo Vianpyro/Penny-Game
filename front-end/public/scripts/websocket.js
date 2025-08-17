@@ -160,7 +160,7 @@ window.gameStatsTracker = {
             batch_size: this.currentGameState.batch_size,
             game_duration_seconds: this.currentGameState.game_duration_seconds,
             player_timers: this.currentGameState.player_timers || {},
-            total_completed: this.currentGameState.total_completed || 12,
+            total_completed: this.currentGameState.total_completed || TOTAL_COINS,
             started_at: this.currentGameState.started_at,
             ended_at: this.currentGameState.ended_at || new Date().toISOString(),
         }
@@ -187,7 +187,7 @@ window.gameStatsTracker = {
     // Calculate efficiency (coins per minute)
     calculateEfficiency(roundResult) {
         if (!roundResult.game_duration_seconds || roundResult.game_duration_seconds === 0) return 0
-        const totalCoins = roundResult.total_completed || 12
+        const totalCoins = roundResult.total_completed || TOTAL_COINS
         return Math.round((totalCoins / roundResult.game_duration_seconds) * 60 * 100) / 100
     },
 
@@ -670,7 +670,7 @@ function handleActionMade(msg) {
     // Create a mock game state from the message data with timer information
     const gameState = {
         players: window.gameState?.players || [],
-        batch_size: window.gameState?.batch_size || 12,
+        batch_size: window.gameState?.batch_size || TOTAL_COINS,
         player_coins: msg.player_coins,
         sent_coins: msg.sent_coins,
         total_completed: msg.total_completed,
@@ -723,7 +723,7 @@ function handleActionMade(msg) {
                 round_number: msg.current_round,
                 round_result: {
                     round_number: msg.current_round,
-                    batch_size: window.gameState?.batch_size || 12,
+                    batch_size: window.gameState?.batch_size || TOTAL_COINS,
                     game_duration_seconds: msg.game_duration_seconds,
                     player_timers: msg.player_timers || {},
                     total_completed: msg.total_completed,
@@ -732,7 +732,7 @@ function handleActionMade(msg) {
                 },
                 next_round:
                     msg.current_round < (window.gameState?.round_results?.length || 3) ? msg.current_round + 1 : null,
-                batch_size: window.gameState?.batch_size || 12,
+                batch_size: window.gameState?.batch_size || TOTAL_COINS,
                 game_over: msg.game_over,
             })
         } else if (msg.state === 'results') {
@@ -821,7 +821,7 @@ function handleRoundComplete(msg) {
 
     // Save round stats with lead time
     if (msg.round_result) {
-        // Ensure lead time is included - ADD THIS BLOCK
+        // Ensure lead time is included
         if (!msg.round_result.lead_time_seconds && window.gameState?.lead_time_seconds) {
             msg.round_result.lead_time_seconds = window.gameState.lead_time_seconds
             msg.round_result.first_flip_at = window.gameState.first_flip_at
@@ -1153,7 +1153,7 @@ function updateRoundStatistics(roundResult) {
     // Update total coins completed
     const totalCoinsCompleted = document.getElementById('totalCoinsCompleted')
     if (totalCoinsCompleted) {
-        totalCoinsCompleted.textContent = roundResult.total_completed || 12
+        totalCoinsCompleted.textContent = roundResult.total_completed || TOTAL_COINS
     }
 
     // Update participant count
@@ -1165,19 +1165,15 @@ function updateRoundStatistics(roundResult) {
     // Calculate and update round efficiency
     const roundEfficiency = document.getElementById('roundEfficiency')
     if (roundEfficiency && roundResult.game_duration_seconds) {
-        const totalCoins = roundResult.total_completed || 12
+        const totalCoins = roundResult.total_completed || TOTAL_COINS
         const efficiency = TimeUtils.calculateEfficiency(totalCoins, roundResult.game_duration_seconds)
         roundEfficiency.textContent = `${efficiency}`
     }
 
-    // Update lead time statistic - ADD THIS BLOCK
+    // Update lead time statistic
     const roundLeadTime = document.getElementById('roundLeadTime')
     if (roundLeadTime) {
-        if (roundResult.lead_time_seconds) {
-            roundLeadTime.textContent = TimeUtils.formatTime(roundResult.lead_time_seconds)
-        } else {
-            roundLeadTime.textContent = '--:--'
-        }
+        roundLeadTime.textContent = roundResult.lead_time_seconds ? TimeUtils.formatTime(roundResult.lead_time_seconds) : '--:--'
     }
 
     // Calculate and update average player time
@@ -1201,7 +1197,7 @@ function getCoinsProcessedByPlayer(playerName, roundResult) {
     // This is a simplified calculation - in a real implementation,
     // you might track the actual number of coins each player processed
     // For now, assume each player processed approximately the same amount
-    const totalCoins = roundResult.total_completed || 12
+    const totalCoins = roundResult.total_completed || TOTAL_COINS
     const playerCount = Object.keys(roundResult.player_timers || {}).length
     return Math.ceil(totalCoins / playerCount)
 }
