@@ -49,7 +49,7 @@ window.gameStatsTracker = {
         const enhancedResult = {
             ...fixedResult,
             efficiency: this.calculateEfficiency(fixedResult),
-            playerRankings: this.calculatePlayerRankings(fixedResult),
+            playerOrder: this.orderPlayers(fixedResult),
             avgPlayerTime: this.calculateAveragePlayerTime(fixedResult),
             completionRate: ((fixedResult.total_completed || 0) / 12) * 100,
             timestamp: new Date().toISOString(),
@@ -170,15 +170,15 @@ window.gameStatsTracker = {
         return Math.round((totalCoins / roundResult.game_duration_seconds) * 60 * 100) / 100
     },
 
-    // Calculate player rankings based on completion time
-    calculatePlayerRankings(roundResult) {
+    // Calculate player sorting based on alphabetical order
+    orderPlayers(roundResult) {
         if (!roundResult.player_timers) return []
 
         const completedPlayers = Object.values(roundResult.player_timers)
             .filter(
                 (timer) => timer.ended_at && timer.duration_seconds !== null && timer.duration_seconds !== undefined
             )
-            .sort((a, b) => (a.duration_seconds || 0) - (b.duration_seconds || 0))
+            .sort((a, b) => a.player.localeCompare(b.player))
 
         return completedPlayers.map((timer, index) => ({
             rank: index + 1,
@@ -1079,14 +1079,6 @@ function updatePlayerTimersDisplay(roundResult) {
         const timerCard = document.createElement('div')
         timerCard.className = `player-timer-result ${timerInfo.status}`
 
-        // Add ranking for completed players
-        let rankingBadge = ''
-        if (timerInfo.status === 'completed') {
-            const rankEmojis = ['🥇', '🥈', '🥉', '🏅', '🏅']
-            const emoji = rankEmojis[index] || '🏅'
-            rankingBadge = `<div class="ranking-badge">${emoji} #${index + 1}</div>`
-        }
-
         // Calculate efficiency if completed
         let efficiencyText = '--'
         if (timer.duration_seconds && timer.duration_seconds > 0) {
@@ -1096,7 +1088,6 @@ function updatePlayerTimersDisplay(roundResult) {
         }
 
         timerCard.innerHTML = `
-            ${rankingBadge}
             <div class="player-name">${timer.player}</div>
             <div class="player-time">${timerInfo.time}</div>
             <div class="player-status">${timerInfo.statusText}</div>
@@ -1343,8 +1334,8 @@ function updateRoundBreakdown(roundResults) {
             const completionRate = result.completionRate ? result.completionRate.toFixed(0) : '100'
             const batchSizeText = getBatchSizeDescription(result.batch_size)
 
-            // Check if we have valid player rankings
-            const hasValidRankings = result.playerRankings && result.playerRankings.length > 0
+            // Check if we have valid player order
+            const hasValidOrder = result.playerOrder && result.playerOrder.length > 0
 
             roundCard.innerHTML = `
                 <div class="round-header">
@@ -1370,13 +1361,12 @@ function updateRoundBreakdown(roundResults) {
                 </div>
                 <div class="round-rankings">
                     ${
-                        hasValidRankings
-                            ? result.playerRankings
+                        hasValidOrder
+                            ? result.playerOrder
                                   .slice(0, 3)
                                   .map(
-                                      (ranking, idx) => `
+                                      (ranking) => `
                             <div class="mini-ranking">
-                                <span class="ranking-position">${['🥇', '🥈', '🥉'][idx] || '🏅'}</span>
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
                             </div>
@@ -1534,15 +1524,7 @@ function updatePlayerPerformanceSummary(playerSummary) {
         const timerCard = document.createElement('div')
         timerCard.className = 'player-timer-result completed'
 
-        // Add overall ranking
-        let rankingBadge = ''
-        if (index < 3) {
-            const rankEmojis = ['🥇', '🥈', '🥉']
-            rankingBadge = `<div class="ranking-badge">${rankEmojis[index]} #${index + 1}</div>`
-        }
-
         timerCard.innerHTML = `
-            ${rankingBadge}
             <div class="player-name">${playerStats.player}</div>
             <div class="player-time">${TimeUtils.formatTime(playerStats.avgTime)}</div>
             <div class="player-status">Moyenne sur ${playerStats.roundsCompleted} manche${playerStats.roundsCompleted > 1 ? 's' : ''}</div>
