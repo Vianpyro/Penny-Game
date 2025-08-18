@@ -1,6 +1,3 @@
-// Enhanced websocket.js with comprehensive stats tracking
-// Replaces the existing websocket.js file
-
 import { renderPlayers, renderSpectators, updateRoundConfiguration, updatePlayerCountDisplay } from './dom.js'
 import { addDnDEvents } from './dnd.js'
 import { renderGameBoard } from './game-board.js'
@@ -358,7 +355,7 @@ window.gameStatsTracker = {
                 batchSizes[size].validRounds++
             }
 
-            // Enhanced lead time tracking
+            // Lead time tracking
             if (result.lead_time_seconds && result.lead_time_seconds > 0) {
                 batchSizes[size].totalLeadTime += result.lead_time_seconds
                 batchSizes[size].leadTimeRounds++
@@ -923,7 +920,6 @@ function updateProgressBar(currentRound, totalRounds) {
     if (totalProgressRounds) totalProgressRounds.textContent = totalRounds
 }
 
-// Enhanced updateRoundCompleteDisplay function (replace the existing one)
 function updateRoundCompleteDisplay(msg) {
     const roundCompleteSection = document.getElementById('roundComplete')
     if (!roundCompleteSection) return

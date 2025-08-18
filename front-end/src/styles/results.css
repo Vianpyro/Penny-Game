@@ -1,5 +1,3 @@
-/* Enhanced Results CSS - Replaces existing results.css */
-
 .insights {
     background: rgb(46 204 113 / 10%);
     border-left: 5px solid #27ae60;
@@ -565,7 +563,6 @@
     color: #7f8c8d;
 }
 
-/* Enhanced batch metric for lead time */
 .batch-metric.lead-time-metric {
     background: linear-gradient(135deg, rgb(52 152 219 / 15%), rgb(41 128 185 / 25%));
     border-color: #3498db;
@@ -678,7 +675,6 @@
     font-style: italic;
 }
 
-/* Enhanced error states */
 .stats-error {
     background: rgb(231 76 60 / 10%);
     border: 2px solid rgb(231 76 60 / 30%);
@@ -696,7 +692,6 @@
     margin-bottom: 8px;
 }
 
-/* Enhanced Player Performance */
 .player-details {
     display: flex;
     justify-content: space-between;
