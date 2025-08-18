@@ -417,24 +417,6 @@
     background: linear-gradient(135deg, rgb(231 76 60 / 5%), rgb(192 57 43 / 10%));
 }
 
-.round-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid rgb(236 240 241 / 50%);
-}
-
-.round-badge {
-    background: linear-gradient(45deg, #3498db, #2980b9);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 15px;
-    font-weight: 700;
-    font-size: 0.9em;
-}
-
 .performance-badge {
     padding: 4px 10px;
     border-radius: 12px;

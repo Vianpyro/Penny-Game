@@ -439,7 +439,7 @@ def send_to_completion(game: PennyGame, player: str) -> bool:
             logger.info(f"First delivery recorded. Lead time: {game.lead_time_seconds:.2f} seconds")
             logger.info(f"First flip was at: {game.first_flip_at}, First delivery at: {game.first_delivery_at}")
         else:
-            logger.warning(f"First delivery recorded but no first flip timestamp available!")
+            logger.warning("First delivery recorded but no first flip timestamp available!")
 
     completed_coins, remaining_coins = _prepare_completion_transfer(player_coins, coins_to_complete)
 
