@@ -250,6 +250,7 @@ async def _broadcast_game_started(room_id: str, game, total_rounds: int):
             "tails_remaining": 12,
             "player_timers": GameResponseBuilder._format_player_timers(game),
             "game_duration_seconds": game.game_duration_seconds,
+            "lead_time_seconds": None,
         },
     )
 
@@ -461,6 +462,12 @@ async def _handle_round_complete(room_id: str, game):
     await broadcast_game_state(room_id, state=GameState.ROUND_COMPLETE)
 
     round_result = game.round_results[-1] if game.round_results else None
+
+    if round_result and not round_result.lead_time_seconds and game.lead_time_seconds:
+        round_result.lead_time_seconds = game.lead_time_seconds
+        round_result.first_flip_at = game.first_flip_at
+        round_result.first_delivery_at = game.first_delivery_at
+
     batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
     next_round = game.current_round + 1 if game.current_round < len(batch_sizes) else None
     next_batch_size = batch_sizes[game.current_round] if next_round else None
@@ -576,7 +583,7 @@ def _execute_role_change(game, username: str, new_role: str):
         game.players.remove(username)
         game.spectators.append(username)
         if game.state == GameState.ACTIVE:
-            initialize_player_coins(game)
+            initialize_player_coins(game, is_new_round=False)
 
 
 @router.post("/cleanup")

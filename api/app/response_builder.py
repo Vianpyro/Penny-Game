@@ -37,6 +37,7 @@ class GameResponseBuilder:
             "tails_remaining": get_tails_count(game),
             "player_timers": GameResponseBuilder._format_player_timers(game),
             "game_duration_seconds": game.game_duration_seconds,
+            "lead_time_seconds": game.lead_time_seconds,
         }
 
         if include_secret and game.host_secret:

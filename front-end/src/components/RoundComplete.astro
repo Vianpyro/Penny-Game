@@ -13,6 +13,7 @@ import '../styles/round-complete.css'
                 <div class="round-details">
                     <div class="batch-info">Lot de <span id="completedBatchSize">12</span></div>
                     <div class="round-time">Temps total: <span id="completedRoundTime">--:--</span></div>
+                    <div class="lead-time">Lead Time: <span id="completedLeadTime">--:--</span></div>
                 </div>
             </div>
         </div>
@@ -43,6 +44,12 @@ import '../styles/round-complete.css'
                 <div class="stat-card">
                     <div class="stat-value" id="avgPlayerTime">--:--</div>
                     <div class="stat-label">Temps moyen</div>
+                </div>
+                <div class="stat-card highlight">
+                    <!-- ADD THIS ENTIRE STAT CARD -->
+                    <div class="stat-value" id="roundLeadTime">--:--</div>
+                    <div class="stat-label">Lead Time</div>
+                    <div class="stat-sublabel">1er flip → 1ère livraison</div>
                 </div>
             </div>
         </div>
@@ -99,3 +106,31 @@ import '../styles/round-complete.css'
         </div>
     </div>
 </div>
+
+<style>
+    .lead-time {
+        font-size: 1em;
+        color: #3498db;
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        margin-top: 5px;
+    }
+
+    .lead-time span {
+        font-weight: 700;
+        color: #2980b9;
+    }
+
+    .stat-card.highlight {
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.2));
+        border-color: #3498db;
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.25);
+    }
+
+    .stat-sublabel {
+        font-size: 0.75em;
+        color: #95a5a6;
+        font-style: italic;
+        margin-top: 3px;
+    }
+</style>

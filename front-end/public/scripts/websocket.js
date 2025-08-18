@@ -77,6 +77,20 @@ window.gameStatsTracker = {
             }
         }
 
+        // Fix missing lead time data
+        if (!fixed.lead_time_seconds && fixed.first_flip_at && fixed.first_delivery_at) {
+            try {
+                const firstFlip = new Date(fixed.first_flip_at)
+                const firstDelivery = new Date(fixed.first_delivery_at)
+                if (!isNaN(firstFlip.getTime()) && !isNaN(firstDelivery.getTime())) {
+                    fixed.lead_time_seconds = (firstDelivery - firstFlip) / 1000
+                    console.log(`🔧 Fixed missing lead time: ${fixed.lead_time_seconds}s`)
+                }
+            } catch (error) {
+                console.error('Error calculating lead time:', error)
+            }
+        }
+
         // If player timers have null values but the game has duration, estimate them
         if (fixed.player_timers && fixed.game_duration_seconds) {
             Object.keys(fixed.player_timers).forEach((playerName) => {
@@ -112,6 +126,13 @@ window.gameStatsTracker = {
                         }
                     }
                 }
+
+                if (!timer.player) {
+                    fixed.player_timers[playerName] = {
+                        ...timer,
+                        player: playerName
+                    }
+                }
             })
         }
 
@@ -139,7 +160,7 @@ window.gameStatsTracker = {
             batch_size: this.currentGameState.batch_size,
             game_duration_seconds: this.currentGameState.game_duration_seconds,
             player_timers: this.currentGameState.player_timers || {},
-            total_completed: this.currentGameState.total_completed || 12,
+            total_completed: this.currentGameState.total_completed || TOTAL_COINS,
             started_at: this.currentGameState.started_at,
             ended_at: this.currentGameState.ended_at || new Date().toISOString(),
         }
@@ -166,7 +187,7 @@ window.gameStatsTracker = {
     // Calculate efficiency (coins per minute)
     calculateEfficiency(roundResult) {
         if (!roundResult.game_duration_seconds || roundResult.game_duration_seconds === 0) return 0
-        const totalCoins = roundResult.total_completed || 12
+        const totalCoins = roundResult.total_completed || TOTAL_COINS
         return Math.round((totalCoins / roundResult.game_duration_seconds) * 60 * 100) / 100
     },
 
@@ -182,7 +203,7 @@ window.gameStatsTracker = {
 
         return completedPlayers.map((timer, index) => ({
             rank: index + 1,
-            player: timer.player,
+            player: timer.player || 'Unknown',
             time: timer.duration_seconds,
             efficiency: this.calculatePlayerEfficiency(timer.duration_seconds),
         }))
@@ -228,6 +249,14 @@ window.gameStatsTracker = {
         const bestRoundTime = validRounds.length > 0 ? Math.min(...validRounds.map((r) => r.game_duration_seconds)) : 0
         const worstRoundTime = validRounds.length > 0 ? Math.max(...validRounds.map((r) => r.game_duration_seconds)) : 0
 
+        // Calculate lead time statistics
+        const leadTimes = this.roundResults
+            .filter((r) => r.lead_time_seconds && r.lead_time_seconds > 0)
+            .map((r) => r.lead_time_seconds)
+
+        const bestLeadTime = leadTimes.length > 0 ? Math.min(...leadTimes) : 0
+        const worstLeadTime = leadTimes.length > 0 ? Math.max(...leadTimes) : 0
+
         // Calculate batch size impact
         const batchSizeImpact = this.calculateBatchSizeImpact()
 
@@ -240,6 +269,8 @@ window.gameStatsTracker = {
             averageRoundTime,
             bestRoundTime,
             worstRoundTime,
+            bestLeadTime,
+            worstLeadTime,
             batchSizeImpact,
             playerSummary,
             roundResults: this.roundResults,
@@ -307,9 +338,14 @@ window.gameStatsTracker = {
                     rounds: 0,
                     totalTime: 0,
                     totalEfficiency: 0,
+                    totalLeadTime: 0,
                     avgTime: 0,
                     avgEfficiency: 0,
-                    validRounds: 0, // Track how many rounds have valid data
+                    avgLeadTime: 0,
+                    validRounds: 0,
+                    leadTimeRounds: 0,
+                    bestLeadTime: Infinity,
+                    worstLeadTime: 0,
                 }
             }
 
@@ -321,6 +357,14 @@ window.gameStatsTracker = {
                 batchSizes[size].totalEfficiency += result.efficiency || 0
                 batchSizes[size].validRounds++
             }
+
+            // Enhanced lead time tracking
+            if (result.lead_time_seconds && result.lead_time_seconds > 0) {
+                batchSizes[size].totalLeadTime += result.lead_time_seconds
+                batchSizes[size].leadTimeRounds++
+                batchSizes[size].bestLeadTime = Math.min(batchSizes[size].bestLeadTime, result.lead_time_seconds)
+                batchSizes[size].worstLeadTime = Math.max(batchSizes[size].worstLeadTime, result.lead_time_seconds)
+            }
         })
 
         // Calculate averages only from valid data
@@ -329,11 +373,12 @@ window.gameStatsTracker = {
             if (data.validRounds > 0) {
                 data.avgTime = data.totalTime / data.validRounds
                 data.avgEfficiency = data.totalEfficiency / data.validRounds
-            } else {
-                // No valid data for this batch size
-                data.avgTime = 0
-                data.avgEfficiency = 0
             }
+            if (data.leadTimeRounds > 0) {
+                data.avgLeadTime = data.totalLeadTime / data.leadTimeRounds
+            }
+            // Fix infinity values
+            if (data.bestLeadTime === Infinity) data.bestLeadTime = 0
         })
 
         return batchSizes
@@ -636,7 +681,7 @@ function handleActionMade(msg) {
     // Create a mock game state from the message data with timer information
     const gameState = {
         players: window.gameState?.players || [],
-        batch_size: window.gameState?.batch_size || 12,
+        batch_size: window.gameState?.batch_size || TOTAL_COINS,
         player_coins: msg.player_coins,
         sent_coins: msg.sent_coins,
         total_completed: msg.total_completed,
@@ -645,6 +690,9 @@ function handleActionMade(msg) {
         current_round: msg.current_round,
         player_timers: msg.player_timers || {},
         game_duration_seconds: msg.game_duration_seconds,
+        lead_time_seconds: msg.lead_time_seconds,
+        first_flip_at: msg.first_flip_at,
+        first_delivery_at: msg.first_delivery_at,
         started_at: window.gameState?.started_at,
         ended_at: window.gameState?.ended_at,
     }
@@ -686,7 +734,7 @@ function handleActionMade(msg) {
                 round_number: msg.current_round,
                 round_result: {
                     round_number: msg.current_round,
-                    batch_size: window.gameState?.batch_size || 12,
+                    batch_size: window.gameState?.batch_size || TOTAL_COINS,
                     game_duration_seconds: msg.game_duration_seconds,
                     player_timers: msg.player_timers || {},
                     total_completed: msg.total_completed,
@@ -695,7 +743,7 @@ function handleActionMade(msg) {
                 },
                 next_round:
                     msg.current_round < (window.gameState?.round_results?.length || 3) ? msg.current_round + 1 : null,
-                batch_size: window.gameState?.batch_size || 12,
+                batch_size: window.gameState?.batch_size || TOTAL_COINS,
                 game_over: msg.game_over,
             })
         } else if (msg.state === 'results') {
@@ -780,6 +828,19 @@ function handleRoundComplete(msg) {
         }
 
         console.log('📌 Updated game state to round_complete, current round:', window.gameState.current_round)
+    }
+
+    // Save round stats with lead time
+    if (msg.round_result) {
+        // Ensure lead time is included
+        if (!msg.round_result.lead_time_seconds && window.gameState?.lead_time_seconds) {
+            msg.round_result.lead_time_seconds = window.gameState.lead_time_seconds
+            msg.round_result.first_flip_at = window.gameState.first_flip_at
+            msg.round_result.first_delivery_at = window.gameState.first_delivery_at
+        }
+
+        console.log(`💾 Saving round ${msg.round_number} stats with lead time:`, msg.round_result.lead_time_seconds)
+        window.gameStatsTracker.addRoundResult(msg.round_result)
     }
 
     // Switch view
@@ -870,6 +931,7 @@ function updateRoundCompleteDisplay(msg) {
     const completedRoundNumber = document.getElementById('completedRoundNumber')
     const completedBatchSize = document.getElementById('completedBatchSize')
     const completedRoundTime = document.getElementById('completedRoundTime')
+    const completedLeadTime = document.getElementById('completedLeadTime')
     const nextRoundSection = document.getElementById('nextRoundSection')
     const gameCompleteSection = document.getElementById('gameCompleteSection')
     const nextRoundNumber = document.getElementById('nextRoundNumber')
@@ -882,6 +944,14 @@ function updateRoundCompleteDisplay(msg) {
     if (completedBatchSize) completedBatchSize.textContent = msg.round_result?.batch_size || 'N/A'
     if (completedRoundTime && msg.round_result?.game_duration_seconds) {
         completedRoundTime.textContent = TimeUtils.formatTime(msg.round_result.game_duration_seconds)
+    }
+
+    if (completedLeadTime) {
+        if (msg.round_result?.lead_time_seconds) {
+            completedLeadTime.textContent = TimeUtils.formatTime(msg.round_result.lead_time_seconds)
+        } else {
+            completedLeadTime.textContent = '--:--'
+        }
     }
 
     // Update individual player timers - THIS IS THE KEY NEW FUNCTIONALITY
@@ -1054,23 +1124,13 @@ function updatePlayerTimersDisplay(roundResult) {
 
     playerTimersGrid.innerHTML = ''
 
-    // Sort players by completion time (completed players first, then by duration)
-    const playerTimers = Object.values(roundResult.player_timers)
+    // Ensure each timer has the player name and sort alphabetically
+    const playerTimers = Object.entries(roundResult.player_timers).map(([playerName, timer]) => ({
+        ...timer,
+        player: timer.player || playerName
+    }))
     const sortedTimers = playerTimers.sort((a, b) => {
-        // Completed players first
-        const aCompleted = a.ended_at && a.duration_seconds !== null && a.duration_seconds !== undefined
-        const bCompleted = b.ended_at && b.duration_seconds !== null && b.duration_seconds !== undefined
-
-        if (aCompleted && !bCompleted) return -1
-        if (!aCompleted && bCompleted) return 1
-
-        // Among completed players, sort by duration (fastest first)
-        if (aCompleted && bCompleted) {
-            return (a.duration_seconds || 0) - (b.duration_seconds || 0)
-        }
-
-        // Among non-completed players, maintain original order
-        return 0
+        return (a.player || '').localeCompare(b.player || '')
     })
 
     sortedTimers.forEach((timer, index) => {
@@ -1104,7 +1164,7 @@ function updateRoundStatistics(roundResult) {
     // Update total coins completed
     const totalCoinsCompleted = document.getElementById('totalCoinsCompleted')
     if (totalCoinsCompleted) {
-        totalCoinsCompleted.textContent = roundResult.total_completed || 12
+        totalCoinsCompleted.textContent = roundResult.total_completed || TOTAL_COINS
     }
 
     // Update participant count
@@ -1113,12 +1173,18 @@ function updateRoundStatistics(roundResult) {
         participantCount.textContent = Object.keys(roundResult.player_timers).length
     }
 
-    // Calculate and update round efficiency (coins per minute for the whole round)
+    // Calculate and update round efficiency
     const roundEfficiency = document.getElementById('roundEfficiency')
     if (roundEfficiency && roundResult.game_duration_seconds) {
-        const totalCoins = roundResult.total_completed || 12
+        const totalCoins = roundResult.total_completed || TOTAL_COINS
         const efficiency = TimeUtils.calculateEfficiency(totalCoins, roundResult.game_duration_seconds)
         roundEfficiency.textContent = `${efficiency}`
+    }
+
+    // Update lead time statistic
+    const roundLeadTime = document.getElementById('roundLeadTime')
+    if (roundLeadTime) {
+        roundLeadTime.textContent = roundResult.lead_time_seconds ? TimeUtils.formatTime(roundResult.lead_time_seconds) : '--:--'
     }
 
     // Calculate and update average player time
@@ -1142,7 +1208,7 @@ function getCoinsProcessedByPlayer(playerName, roundResult) {
     // This is a simplified calculation - in a real implementation,
     // you might track the actual number of coins each player processed
     // For now, assume each player processed approximately the same amount
-    const totalCoins = roundResult.total_completed || 12
+    const totalCoins = roundResult.total_completed || TOTAL_COINS
     const playerCount = Object.keys(roundResult.player_timers || {}).length
     return Math.ceil(totalCoins / playerCount)
 }
@@ -1174,7 +1240,7 @@ function getTotalRounds(roundType) {
     }
 }
 
-function updateResultsDisplay() {
+export function updateResultsDisplay() {
     const gameSummary = window.gameStatsTracker.getGameSummary()
 
     // Debug logging
@@ -1210,6 +1276,9 @@ function updateResultsDisplay() {
     // Update main game statistics
     updateMainGameStats(gameSummary)
 
+    // Update lead time display
+    updateLeadTimeDisplay(gameSummary)
+
     // Update round-by-round breakdown
     updateRoundBreakdown(gameSummary.roundResults)
 
@@ -1229,6 +1298,9 @@ function updateResultsDisplay() {
         GameActions.setupStandardButtons()
     }
 }
+
+// Make updateResultsDisplay available globally for ViewManager
+window.updateResultsDisplay = updateResultsDisplay
 
 function updateMainGameStats(gameSummary) {
     // Update total game time
@@ -1278,6 +1350,19 @@ function updateMainGameStats(gameSummary) {
             `
             statsGrid.after(warningDiv)
         }
+    }
+}
+
+function updateLeadTimeDisplay(gameSummary) {
+    const bestLeadTimeElement = document.getElementById('bestLeadTime')
+    const worstLeadTimeElement = document.getElementById('worstLeadTime')
+
+    if (bestLeadTimeElement && gameSummary.bestLeadTime > 0) {
+        bestLeadTimeElement.textContent = TimeUtils.formatTime(gameSummary.bestLeadTime)
+    }
+
+    if (worstLeadTimeElement && gameSummary.worstLeadTime > 0) {
+        worstLeadTimeElement.textContent = TimeUtils.formatTime(gameSummary.worstLeadTime)
     }
 }
 
@@ -1331,11 +1416,12 @@ function updateRoundBreakdown(roundResults) {
                 ? TimeUtils.formatTime(result.game_duration_seconds)
                 : 'Données manquantes'
             const efficiency = result.efficiency ? result.efficiency.toFixed(1) : '--'
-            const completionRate = result.completionRate ? result.completionRate.toFixed(0) : '100'
-            const batchSizeText = getBatchSizeDescription(result.batch_size)
 
             // Check if we have valid player order
             const hasValidOrder = result.playerOrder && result.playerOrder.length > 0
+
+            // Get batch size description
+            const batchSizeText = getBatchSizeDescription(result.batch_size)
 
             roundCard.innerHTML = `
                 <div class="round-header">
@@ -1352,29 +1438,23 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                     <div class="mini-stat">
                         <div class="mini-stat-value">${efficiency}</div>
-                        <div class="mini-stat-label">Pièces/min</div>
-                    </div>
-                    <div class="mini-stat">
-                        <div class="mini-stat-value">${completionRate}%</div>
-                        <div class="mini-stat-label">Complété</div>
+                        <div class="mini-stat-label">Débit (pièces/min)</div>
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${
-                        hasValidOrder
-                            ? result.playerOrder
-                                  .slice(0, 3)
-                                  .map(
-                                      (ranking) => `
+                    ${hasValidOrder
+                    ? result.playerOrder
+                        .map(
+                            (ranking) => `
                             <div class="mini-ranking">
                                 <span class="ranking-player">${ranking.player}</span>
-                                <span class="ranking-time">${TimeUtils.formatTime(ranking.time)}</span>
+                                <span class="ranking-time">${ranking.time ? TimeUtils.formatTime(ranking.time) : '--:--'}</span>
                             </div>
                         `
-                                  )
-                                  .join('')
-                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                    }
+                        )
+                        .join('')
+                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                }
                 </div>
             `
 
@@ -1419,6 +1499,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
     batchAnalysisSection.innerHTML = `
         <h3>📦 Impact de la Taille des Lots</h3>
         <div class="batch-comparison-grid" id="batchComparisonGrid"></div>
+        <div class="lead-time-comparison" id="leadTimeComparison"></div>
         <div class="batch-insights" id="batchInsights"></div>
     `
 
@@ -1442,6 +1523,9 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
             const batchCard = document.createElement('div')
             batchCard.className = 'batch-comparison-card'
 
+            // Calculate average lead time for this batch size
+            const avgLeadTime = data.leadTimeRounds > 0 ? data.totalLeadTime / data.leadTimeRounds : 0
+
             batchCard.innerHTML = `
                 <div class="batch-size-header">
                     <div class="batch-size-number">${batchSize}</div>
@@ -1450,15 +1534,16 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
                 <div class="batch-metrics">
                     <div class="batch-metric">
                         <div class="metric-value">${TimeUtils.formatTime(data.avgTime)}</div>
-                        <div class="metric-label">Temps moyen</div>
+                        <div class="metric-label">Temps total</div>
+                    </div>
+                    <div class="batch-metric lead-time-metric">
+                        <div class="metric-value">${avgLeadTime > 0 ? TimeUtils.formatTime(avgLeadTime) : '--:--'}</div>
+                        <div class="metric-label">Lead Time</div>
+                        <div class="metric-sublabel">1er flip → 1ère livraison</div>
                     </div>
                     <div class="batch-metric">
                         <div class="metric-value">${data.avgEfficiency.toFixed(1)}</div>
-                        <div class="metric-label">Pièces/min</div>
-                    </div>
-                    <div class="batch-metric">
-                        <div class="metric-value">${data.rounds}</div>
-                        <div class="metric-label">Manche${data.rounds > 1 ? 's' : ''}</div>
+                        <div class="metric-label">Débit (pièces/min)</div>
                     </div>
                 </div>
             `
@@ -1467,18 +1552,112 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
         })
     }
 
+    // Add detailed lead time comparison
+    updateLeadTimeComparison()
+
     // Add batch size insights
     const batchInsights = document.getElementById('batchInsights')
     if (batchInsights) {
         const insights = generateBatchSizeInsights(batchSizeImpact)
         batchInsights.innerHTML = `
             <div class="insights-content">
-                <h4>💡 Observations</h4>
+                <h4>💡 Observations sur l'Impact des Lots</h4>
                 <ul>
                     ${insights.map((insight) => `<li>${insight}</li>`).join('')}
                 </ul>
             </div>
         `
+    }
+}
+
+function updateLeadTimeComparison() {
+    const leadTimeComparison = document.getElementById('leadTimeComparison')
+    if (!leadTimeComparison) return
+
+    // Get rounds with lead time data
+    const roundsWithLeadTime = window.gameStatsTracker.roundResults.filter(
+        (round) => round.lead_time_seconds && round.lead_time_seconds > 0
+    )
+
+    if (roundsWithLeadTime.length === 0) {
+        leadTimeComparison.innerHTML = `
+            <div class="lead-time-section">
+                <h4>⏱️ Lead Time par Manche</h4>
+                <div class="no-lead-time-data">
+                    <p>Aucune donnée de Lead Time disponible pour cette partie.</p>
+                    <small>Le Lead Time mesure le temps entre le premier retournement de pièce et la première livraison.</small>
+                </div>
+            </div>
+        `
+        return
+    }
+
+    // Find best and worst lead times
+    const leadTimes = roundsWithLeadTime.map(r => r.lead_time_seconds)
+    const bestLeadTime = Math.min(...leadTimes)
+    const worstLeadTime = Math.max(...leadTimes)
+
+    leadTimeComparison.innerHTML = `
+        <div class="lead-time-section">
+            <h4>⏱️ Lead Time par Manche</h4>
+            <p class="lead-time-description">
+                Le Lead Time mesure le délai entre le premier retournement de pièce et la première livraison.
+                Un Lead Time plus court indique un meilleur flux de production.
+            </p>
+            <div class="lead-time-rounds-grid" id="leadTimeRoundsGrid"></div>
+            <div class="lead-time-summary">
+                <div class="lead-time-stat best">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value">${TimeUtils.formatTime(bestLeadTime)}</div>
+                    <div class="stat-label">Meilleur Lead Time</div>
+                </div>
+                <div class="lead-time-stat worst">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value">${TimeUtils.formatTime(worstLeadTime)}</div>
+                    <div class="stat-label">Lead Time le plus long</div>
+                </div>
+                <div class="lead-time-stat improvement">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value">${((worstLeadTime - bestLeadTime) / worstLeadTime * 100).toFixed(0)}%</div>
+                    <div class="stat-label">Amélioration possible</div>
+                </div>
+            </div>
+        </div>
+    `
+
+    // Populate individual round lead times
+    const leadTimeRoundsGrid = document.getElementById('leadTimeRoundsGrid')
+    if (leadTimeRoundsGrid) {
+        roundsWithLeadTime.forEach((round) => {
+            const isLongest = round.lead_time_seconds === worstLeadTime
+            const isShortest = round.lead_time_seconds === bestLeadTime
+
+            const roundCard = document.createElement('div')
+            roundCard.className = `lead-time-round-card ${isShortest ? 'best' : ''} ${isLongest ? 'worst' : ''}`
+
+            // Calculate performance relative to best
+            const performanceRatio = round.lead_time_seconds / bestLeadTime
+            let performanceClass = 'average'
+            if (performanceRatio <= 1.1) performanceClass = 'excellent'
+            else if (performanceRatio <= 1.3) performanceClass = 'good'
+            else if (performanceRatio >= 2) performanceClass = 'poor'
+
+            roundCard.innerHTML = `
+                <div class="round-header">
+                    <div class="round-badge">Manche ${round.round_number}</div>
+                    ${isShortest ? '<div class="performance-badge best">👑 Meilleur</div>' : ''}
+                    ${isLongest ? '<div class="performance-badge worst">⚠️ Plus long</div>' : ''}
+                </div>
+                <div class="lead-time-main">
+                    <div class="lead-time-value performance-${performanceClass}">
+                        ${TimeUtils.formatTime(round.lead_time_seconds)}
+                    </div>
+                    <div class="batch-info">Lot de ${round.batch_size}</div>
+                </div>
+            `
+
+            leadTimeRoundsGrid.appendChild(roundCard)
+        })
     }
 }
 
@@ -1492,18 +1671,57 @@ function generateBatchSizeInsights(batchSizeImpact) {
         const smallestBatch = batchSizeImpact[batchSizes[0]]
         const largestBatch = batchSizeImpact[batchSizes[batchSizes.length - 1]]
 
+        // Total time comparison
         if (smallestBatch.avgTime < largestBatch.avgTime) {
             const timeDiff = largestBatch.avgTime - smallestBatch.avgTime
             const percentDiff = ((timeDiff / largestBatch.avgTime) * 100).toFixed(0)
-            insights.push(`Les petits lots sont ${percentDiff}% plus rapides que les gros lots`)
+            insights.push(`⏱️ <strong>Temps total:</strong> Les petits lots sont ${percentDiff}% plus rapides que les gros lots`)
         }
 
+        // Lead time comparison - NEW!
+        const smallestLeadTime = smallestBatch.leadTimeRounds > 0 ? smallestBatch.totalLeadTime / smallestBatch.leadTimeRounds : 0
+        const largestLeadTime = largestBatch.leadTimeRounds > 0 ? largestBatch.totalLeadTime / largestBatch.leadTimeRounds : 0
+
+        if (smallestLeadTime > 0 && largestLeadTime > 0) {
+            if (smallestLeadTime < largestLeadTime) {
+                const leadTimeDiff = largestLeadTime - smallestLeadTime
+                const leadTimePercent = ((leadTimeDiff / largestLeadTime) * 100).toFixed(0)
+                insights.push(`🚀 <strong>Lead Time:</strong> Les petits lots réduisent le délai de livraison de ${leadTimePercent}%`)
+            } else if (largestLeadTime < smallestLeadTime) {
+                insights.push(`⚡ <strong>Lead Time:</strong> Contre-intuitivement, les gros lots ont un meilleur Lead Time dans cette simulation`)
+            }
+        }
+
+        // Efficiency comparison
         if (smallestBatch.avgEfficiency > largestBatch.avgEfficiency) {
-            insights.push("Les petits lots améliorent l'efficacité du flux de production")
+            const efficiencyGain = (smallestBatch.avgEfficiency - largestBatch.avgEfficiency).toFixed(1)
+            insights.push(`📈 <strong>Efficacité:</strong> Les petits lots améliorent le débit de ${efficiencyGain} pièces/min`)
         }
 
-        insights.push("Les gros lots créent plus de temps d'attente entre les joueurs")
-        insights.push('Les petits lots permettent un travail plus parallèle')
+        // Flow insights
+        insights.push(`🔄 <strong>Flux:</strong> Les gros lots créent plus de temps d'attente entre les joueurs`)
+        insights.push(`⚡ <strong>Parallélisme:</strong> Les petits lots permettent un travail plus simultané`)
+
+        // Waste identification
+        if (largestBatch.avgTime > smallestBatch.avgTime * 1.5) {
+            insights.push(`🗑️ <strong>Gaspillage:</strong> Les gros lots génèrent du temps d'attente significatif (Muda)`)
+        }
+
+        // Lead time insights based on batch size patterns
+        const roundsWithLeadTime = window.gameStatsTracker.roundResults.filter(r => r.lead_time_seconds > 0)
+        if (roundsWithLeadTime.length >= 2) {
+            const smallestBatchRounds = roundsWithLeadTime.filter(r => r.batch_size === batchSizes[0])
+            const largestBatchRounds = roundsWithLeadTime.filter(r => r.batch_size === batchSizes[batchSizes.length - 1])
+
+            if (smallestBatchRounds.length > 0 && largestBatchRounds.length > 0) {
+                const avgSmallLeadTime = smallestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / smallestBatchRounds.length
+                const avgLargeLeadTime = largestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / largestBatchRounds.length
+
+                if (avgSmallLeadTime < avgLargeLeadTime * 0.8) {
+                    insights.push(`🎯 <strong>Réactivité:</strong> Les petits lots permettent une livraison plus rapide du premier résultat`)
+                }
+            }
+        }
     }
 
     return insights
@@ -1515,10 +1733,10 @@ function updatePlayerPerformanceSummary(playerSummary) {
 
     playerTimersGrid.innerHTML = ''
 
-    // Sort players by average time (best performers first)
+    // Sort players alphabetically
     const sortedPlayers = Object.values(playerSummary)
         .filter((player) => player.roundsCompleted > 0)
-        .sort((a, b) => a.avgTime - b.avgTime)
+        .sort((a, b) => a.player.localeCompare(b.player))
 
     sortedPlayers.forEach((playerStats, index) => {
         const timerCard = document.createElement('div')

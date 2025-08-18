@@ -56,11 +56,17 @@ class RoundResult(BaseModel):
     round_number: int
     batch_size: int
     game_duration_seconds: Optional[float] = None
+    lead_time_seconds: Optional[float] = None
+    first_flip_at: Optional[datetime] = None
+    first_delivery_at: Optional[datetime] = None
     player_timers: Dict[str, PlayerTimer] = Field(default_factory=dict)
     total_completed: int = 0
     total_coins: int = TOTAL_COINS
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class PennyGame(BaseModel):
@@ -98,6 +104,9 @@ class PennyGame(BaseModel):
     sent_coins: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict)
     player_timers: Dict[str, PlayerTimer] = Field(default_factory=dict)
     game_duration_seconds: Optional[float] = None
+    first_flip_at: Optional[datetime] = None
+    first_delivery_at: Optional[datetime] = None
+    lead_time_seconds: Optional[float] = None
 
     class Config:
         use_enum_values = True
