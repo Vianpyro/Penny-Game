@@ -341,8 +341,11 @@ window.gameStatsTracker = {
                     totalLeadTime: 0,
                     avgTime: 0,
                     avgEfficiency: 0,
+                    avgLeadTime: 0,
                     validRounds: 0,
                     leadTimeRounds: 0,
+                    bestLeadTime: Infinity,
+                    worstLeadTime: 0,
                 }
             }
 
@@ -355,9 +358,12 @@ window.gameStatsTracker = {
                 batchSizes[size].validRounds++
             }
 
+            // Enhanced lead time tracking
             if (result.lead_time_seconds && result.lead_time_seconds > 0) {
                 batchSizes[size].totalLeadTime += result.lead_time_seconds
                 batchSizes[size].leadTimeRounds++
+                batchSizes[size].bestLeadTime = Math.min(batchSizes[size].bestLeadTime, result.lead_time_seconds)
+                batchSizes[size].worstLeadTime = Math.max(batchSizes[size].worstLeadTime, result.lead_time_seconds)
             }
         })
 
@@ -368,6 +374,11 @@ window.gameStatsTracker = {
                 data.avgTime = data.totalTime / data.validRounds
                 data.avgEfficiency = data.totalEfficiency / data.validRounds
             }
+            if (data.leadTimeRounds > 0) {
+                data.avgLeadTime = data.totalLeadTime / data.leadTimeRounds
+            }
+            // Fix infinity values
+            if (data.bestLeadTime === Infinity) data.bestLeadTime = 0
         })
 
         return batchSizes
@@ -1488,6 +1499,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
     batchAnalysisSection.innerHTML = `
         <h3>📦 Impact de la Taille des Lots</h3>
         <div class="batch-comparison-grid" id="batchComparisonGrid"></div>
+        <div class="lead-time-comparison" id="leadTimeComparison"></div>
         <div class="batch-insights" id="batchInsights"></div>
     `
 
@@ -1511,6 +1523,9 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
             const batchCard = document.createElement('div')
             batchCard.className = 'batch-comparison-card'
 
+            // Calculate average lead time for this batch size
+            const avgLeadTime = data.leadTimeRounds > 0 ? data.totalLeadTime / data.leadTimeRounds : 0
+
             batchCard.innerHTML = `
                 <div class="batch-size-header">
                     <div class="batch-size-number">${batchSize}</div>
@@ -1519,7 +1534,12 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
                 <div class="batch-metrics">
                     <div class="batch-metric">
                         <div class="metric-value">${TimeUtils.formatTime(data.avgTime)}</div>
-                        <div class="metric-label">Temps moyen</div>
+                        <div class="metric-label">Temps total</div>
+                    </div>
+                    <div class="batch-metric lead-time-metric">
+                        <div class="metric-value">${avgLeadTime > 0 ? TimeUtils.formatTime(avgLeadTime) : '--:--'}</div>
+                        <div class="metric-label">Lead Time</div>
+                        <div class="metric-sublabel">1er flip → 1ère livraison</div>
                     </div>
                     <div class="batch-metric">
                         <div class="metric-value">${data.avgEfficiency.toFixed(1)}</div>
@@ -1536,18 +1556,130 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
         })
     }
 
+    // Add detailed lead time comparison
+    updateLeadTimeComparison(batchSizeImpact)
+
     // Add batch size insights
     const batchInsights = document.getElementById('batchInsights')
     if (batchInsights) {
         const insights = generateBatchSizeInsights(batchSizeImpact)
         batchInsights.innerHTML = `
             <div class="insights-content">
-                <h4>💡 Observations</h4>
+                <h4>💡 Observations sur l'Impact des Lots</h4>
                 <ul>
                     ${insights.map((insight) => `<li>${insight}</li>`).join('')}
                 </ul>
             </div>
         `
+    }
+}
+
+function updateLeadTimeComparison(batchSizeImpact) {
+    const leadTimeComparison = document.getElementById('leadTimeComparison')
+    if (!leadTimeComparison) return
+
+    // Get rounds with lead time data
+    const roundsWithLeadTime = window.gameStatsTracker.roundResults.filter(
+        (round) => round.lead_time_seconds && round.lead_time_seconds > 0
+    )
+
+    if (roundsWithLeadTime.length === 0) {
+        leadTimeComparison.innerHTML = `
+            <div class="lead-time-section">
+                <h4>⏱️ Lead Time par Manche</h4>
+                <div class="no-lead-time-data">
+                    <p>Aucune donnée de Lead Time disponible pour cette partie.</p>
+                    <small>Le Lead Time mesure le temps entre le premier retournement de pièce et la première livraison.</small>
+                </div>
+            </div>
+        `
+        return
+    }
+
+    // Find best and worst lead times
+    const leadTimes = roundsWithLeadTime.map(r => r.lead_time_seconds)
+    const bestLeadTime = Math.min(...leadTimes)
+    const worstLeadTime = Math.max(...leadTimes)
+
+    leadTimeComparison.innerHTML = `
+        <div class="lead-time-section">
+            <h4>⏱️ Lead Time par Manche</h4>
+            <p class="lead-time-description">
+                Le Lead Time mesure le délai entre le premier retournement de pièce et la première livraison.
+                Un Lead Time plus court indique un meilleur flux de production.
+            </p>
+            <div class="lead-time-rounds-grid" id="leadTimeRoundsGrid"></div>
+            <div class="lead-time-summary">
+                <div class="lead-time-stat best">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value">${TimeUtils.formatTime(bestLeadTime)}</div>
+                    <div class="stat-label">Meilleur Lead Time</div>
+                </div>
+                <div class="lead-time-stat worst">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value">${TimeUtils.formatTime(worstLeadTime)}</div>
+                    <div class="stat-label">Lead Time le plus long</div>
+                </div>
+                <div class="lead-time-stat improvement">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value">${((worstLeadTime - bestLeadTime) / worstLeadTime * 100).toFixed(0)}%</div>
+                    <div class="stat-label">Amélioration possible</div>
+                </div>
+            </div>
+        </div>
+    `
+
+    // Populate individual round lead times
+    const leadTimeRoundsGrid = document.getElementById('leadTimeRoundsGrid')
+    if (leadTimeRoundsGrid) {
+        roundsWithLeadTime.forEach((round) => {
+            const isLongest = round.lead_time_seconds === worstLeadTime
+            const isShortest = round.lead_time_seconds === bestLeadTime
+
+            const roundCard = document.createElement('div')
+            roundCard.className = `lead-time-round-card ${isShortest ? 'best' : ''} ${isLongest ? 'worst' : ''}`
+
+            // Calculate performance relative to best
+            const performanceRatio = round.lead_time_seconds / bestLeadTime
+            let performanceClass = 'average'
+            if (performanceRatio <= 1.1) performanceClass = 'excellent'
+            else if (performanceRatio <= 1.3) performanceClass = 'good'
+            else if (performanceRatio >= 2) performanceClass = 'poor'
+
+            roundCard.innerHTML = `
+                <div class="round-header">
+                    <div class="round-badge">Manche ${round.round_number}</div>
+                    ${isShortest ? '<div class="performance-badge best">👑 Meilleur</div>' : ''}
+                    ${isLongest ? '<div class="performance-badge worst">⚠️ Plus long</div>' : ''}
+                </div>
+                <div class="lead-time-main">
+                    <div class="lead-time-value performance-${performanceClass}">
+                        ${TimeUtils.formatTime(round.lead_time_seconds)}
+                    </div>
+                    <div class="batch-info">Lot de ${round.batch_size}</div>
+                </div>
+                <div class="lead-time-details">
+                    <div class="time-detail">
+                        <span class="detail-label">Premier flip:</span>
+                        <span class="detail-value">${round.first_flip_at ? new Date(round.first_flip_at).toLocaleTimeString() : '--'}</span>
+                    </div>
+                    <div class="time-detail">
+                        <span class="detail-label">Première livraison:</span>
+                        <span class="detail-value">${round.first_delivery_at ? new Date(round.first_delivery_at).toLocaleTimeString() : '--'}</span>
+                    </div>
+                </div>
+                <div class="lead-time-comparison-bar">
+                    <div class="comparison-bar">
+                        <div class="comparison-fill" style="width: ${(round.lead_time_seconds / worstLeadTime) * 100}%"></div>
+                    </div>
+                    <div class="comparison-text">
+                        ${performanceRatio > 1 ? `${((performanceRatio - 1) * 100).toFixed(0)}% plus long que le meilleur` : 'Temps optimal'}
+                    </div>
+                </div>
+            `
+
+            leadTimeRoundsGrid.appendChild(roundCard)
+        })
     }
 }
 
@@ -1561,18 +1693,57 @@ function generateBatchSizeInsights(batchSizeImpact) {
         const smallestBatch = batchSizeImpact[batchSizes[0]]
         const largestBatch = batchSizeImpact[batchSizes[batchSizes.length - 1]]
 
+        // Total time comparison
         if (smallestBatch.avgTime < largestBatch.avgTime) {
             const timeDiff = largestBatch.avgTime - smallestBatch.avgTime
             const percentDiff = ((timeDiff / largestBatch.avgTime) * 100).toFixed(0)
-            insights.push(`Les petits lots sont ${percentDiff}% plus rapides que les gros lots`)
+            insights.push(`⏱️ <strong>Temps total:</strong> Les petits lots sont ${percentDiff}% plus rapides que les gros lots`)
         }
 
+        // Lead time comparison - NEW!
+        const smallestLeadTime = smallestBatch.leadTimeRounds > 0 ? smallestBatch.totalLeadTime / smallestBatch.leadTimeRounds : 0
+        const largestLeadTime = largestBatch.leadTimeRounds > 0 ? largestBatch.totalLeadTime / largestBatch.leadTimeRounds : 0
+
+        if (smallestLeadTime > 0 && largestLeadTime > 0) {
+            if (smallestLeadTime < largestLeadTime) {
+                const leadTimeDiff = largestLeadTime - smallestLeadTime
+                const leadTimePercent = ((leadTimeDiff / largestLeadTime) * 100).toFixed(0)
+                insights.push(`🚀 <strong>Lead Time:</strong> Les petits lots réduisent le délai de livraison de ${leadTimePercent}%`)
+            } else if (largestLeadTime < smallestLeadTime) {
+                insights.push(`⚡ <strong>Lead Time:</strong> Contre-intuitivement, les gros lots ont un meilleur Lead Time dans cette simulation`)
+            }
+        }
+
+        // Efficiency comparison
         if (smallestBatch.avgEfficiency > largestBatch.avgEfficiency) {
-            insights.push("Les petits lots améliorent l'efficacité du flux de production")
+            const efficiencyGain = (smallestBatch.avgEfficiency - largestBatch.avgEfficiency).toFixed(1)
+            insights.push(`📈 <strong>Efficacité:</strong> Les petits lots améliorent le débit de ${efficiencyGain} pièces/min`)
         }
 
-        insights.push("Les gros lots créent plus de temps d'attente entre les joueurs")
-        insights.push('Les petits lots permettent un travail plus parallèle')
+        // Flow insights
+        insights.push(`🔄 <strong>Flux:</strong> Les gros lots créent plus de temps d'attente entre les joueurs`)
+        insights.push(`⚡ <strong>Parallélisme:</strong> Les petits lots permettent un travail plus simultané`)
+
+        // Waste identification
+        if (largestBatch.avgTime > smallestBatch.avgTime * 1.5) {
+            insights.push(`🗑️ <strong>Gaspillage:</strong> Les gros lots génèrent du temps d'attente significatif (Muda)`)
+        }
+
+        // Lead time insights based on batch size patterns
+        const roundsWithLeadTime = window.gameStatsTracker.roundResults.filter(r => r.lead_time_seconds > 0)
+        if (roundsWithLeadTime.length >= 2) {
+            const smallestBatchRounds = roundsWithLeadTime.filter(r => r.batch_size === batchSizes[0])
+            const largestBatchRounds = roundsWithLeadTime.filter(r => r.batch_size === batchSizes[batchSizes.length - 1])
+
+            if (smallestBatchRounds.length > 0 && largestBatchRounds.length > 0) {
+                const avgSmallLeadTime = smallestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / smallestBatchRounds.length
+                const avgLargeLeadTime = largestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / largestBatchRounds.length
+
+                if (avgSmallLeadTime < avgLargeLeadTime * 0.8) {
+                    insights.push(`🎯 <strong>Réactivité:</strong> Les petits lots permettent une livraison plus rapide du premier résultat`)
+                }
+            }
+        }
     }
 
     return insights
