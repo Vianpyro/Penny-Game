@@ -1543,7 +1543,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
                     </div>
                     <div class="batch-metric">
                         <div class="metric-value">${data.avgEfficiency.toFixed(1)}</div>
-                        <div class="metric-label">Pièces/min</div>
+                        <div class="metric-label">Débit (pièces/min)</div>
                     </div>
                 </div>
             `
