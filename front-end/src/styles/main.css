@@ -88,3 +88,61 @@ p {
         border: none;
     }
 }
+
+.lean-term {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.lean-term .english {
+    color: #7f8c8d;
+    font-size: 0.9em;
+    font-style: italic;
+    margin-left: 2px;
+}
+
+.bilingual-insight {
+    background: rgba(46, 204, 113, 0.1);
+    border-left: 3px solid #27ae60;
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+    margin: 8px 0;
+}
+
+.bilingual-insight .lean-term {
+    color: #27ae60;
+    font-weight: 700;
+}
+
+.stat-label.bilingual {
+    line-height: 1.3;
+    text-align: center;
+}
+
+@media screen and (max-width: 768px) {
+    .lean-term {
+        font-size: 0.9em;
+    }
+
+    .lean-term .english {
+        display: block;
+        font-size: 0.8em;
+        margin-left: 0;
+        margin-top: 2px;
+    }
+
+    .stat-label.bilingual {
+        font-size: 0.8em;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .lean-term .english {
+        font-size: 0.75em;
+    }
+
+    .bilingual-insight {
+        padding: 6px 10px;
+        font-size: 0.9em;
+    }
+}

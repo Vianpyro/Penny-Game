@@ -2,27 +2,28 @@
 import '../styles/main.css'
 import '../styles/round-selector.css'
 import { TOTAL_COINS, VALID_BATCH_SIZES, DEFAULT_BATCH_SIZES } from '../config.js'
+import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
 
 const roundOptions = [
     {
         number: 1,
-        title: '1 Manche',
-        description: `L'hôte choisit quelle manche jouer (${VALID_BATCH_SIZES.join(', ')})`,
+        title: '1 Manche (1 Round)',
+        description: `L'hôte choisit la ${LEAN_TERMS.BATCH_SIZE} pour analyser l'impact sur le ${LEAN_TERMS.FLOW}`,
         type: 'single',
     },
     {
         number: 2,
-        title: '2 Manches',
-        description: `Jouer les manches extrêmes : Lot de ${TOTAL_COINS} puis Lot de 1`,
+        title: '2 Manches (2 Rounds)',
+        description: `Comparer les ${LEAN_TERMS.BATCH_SIZE} extrêmes: ${LEAN_TERMS.PUSH_SYSTEM} vs ${LEAN_TERMS.PULL_SYSTEM}`,
         type: 'two_rounds',
     },
     {
         number: 3,
-        title: '3 Manches',
-        description: `Jouer toutes les manches : ${DEFAULT_BATCH_SIZES.join(', puis ')} (par défaut)`,
+        title: '3 Manches (3 Rounds)',
+        description: `Analyse complète de l'impact du ${LEAN_TERMS.BATCH_SIZE} sur le ${LEAN_TERMS.THROUGHPUT}`,
         type: 'three_rounds',
     },
-]
+];
 
 const batchOptions = VALID_BATCH_SIZES.map((size) => {
     let title = `Lot de ${size}`

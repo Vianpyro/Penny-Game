@@ -5,6 +5,7 @@ import { showNotification } from './utility.js'
 import { ViewManager } from './view-manager.js'
 import { TimeUtils } from './time-utils.js'
 import { GameActions } from './game-actions.js'
+import { LEAN_TERMS, generateBilingualInsights } from './bilingual-terms.js';
 
 const DEFAULT_BATCH_SIZES = [15, 5, 1]
 const TOTAL_COINS = DEFAULT_BATCH_SIZES[0]
@@ -127,7 +128,7 @@ window.gameStatsTracker = {
                 if (!timer.player) {
                     fixed.player_timers[playerName] = {
                         ...timer,
-                        player: playerName
+                        player: playerName,
                     }
                 }
             })
@@ -1123,7 +1124,7 @@ function updatePlayerTimersDisplay(roundResult) {
     // Ensure each timer has the player name and sort alphabetically
     const playerTimers = Object.entries(roundResult.player_timers).map(([playerName, timer]) => ({
         ...timer,
-        player: timer.player || playerName
+        player: timer.player || playerName,
     }))
     const sortedTimers = playerTimers.sort((a, b) => {
         return (a.player || '').localeCompare(b.player || '')
@@ -1180,7 +1181,9 @@ function updateRoundStatistics(roundResult) {
     // Update lead time statistic
     const roundLeadTime = document.getElementById('roundLeadTime')
     if (roundLeadTime) {
-        roundLeadTime.textContent = roundResult.lead_time_seconds ? TimeUtils.formatTime(roundResult.lead_time_seconds) : '--:--'
+        roundLeadTime.textContent = roundResult.lead_time_seconds
+            ? TimeUtils.formatTime(roundResult.lead_time_seconds)
+            : '--:--'
     }
 
     // Calculate and update average player time
@@ -1589,7 +1592,7 @@ function updateLeadTimeComparison() {
     }
 
     // Find best and worst lead times
-    const leadTimes = roundsWithLeadTime.map(r => r.lead_time_seconds)
+    const leadTimes = roundsWithLeadTime.map((r) => r.lead_time_seconds)
     const bestLeadTime = Math.min(...leadTimes)
     const worstLeadTime = Math.max(...leadTimes)
 
@@ -1614,7 +1617,7 @@ function updateLeadTimeComparison() {
                 </div>
                 <div class="lead-time-stat improvement">
                     <div class="stat-icon">📈</div>
-                    <div class="stat-value">${((worstLeadTime - bestLeadTime) / worstLeadTime * 100).toFixed(0)}%</div>
+                    <div class="stat-value">${(((worstLeadTime - bestLeadTime) / worstLeadTime) * 100).toFixed(0)}%</div>
                     <div class="stat-label">Amélioration possible</div>
                 </div>
             </div>
@@ -1671,27 +1674,37 @@ function generateBatchSizeInsights(batchSizeImpact) {
         if (smallestBatch.avgTime < largestBatch.avgTime) {
             const timeDiff = largestBatch.avgTime - smallestBatch.avgTime
             const percentDiff = ((timeDiff / largestBatch.avgTime) * 100).toFixed(0)
-            insights.push(`⏱️ <strong>Temps total:</strong> Les petits lots sont ${percentDiff}% plus rapides que les gros lots`)
+            insights.push(
+                `⏱️ <strong>Temps total:</strong> Les petits lots sont ${percentDiff}% plus rapides que les gros lots`
+            )
         }
 
         // Lead time comparison - NEW!
-        const smallestLeadTime = smallestBatch.leadTimeRounds > 0 ? smallestBatch.totalLeadTime / smallestBatch.leadTimeRounds : 0
-        const largestLeadTime = largestBatch.leadTimeRounds > 0 ? largestBatch.totalLeadTime / largestBatch.leadTimeRounds : 0
+        const smallestLeadTime =
+            smallestBatch.leadTimeRounds > 0 ? smallestBatch.totalLeadTime / smallestBatch.leadTimeRounds : 0
+        const largestLeadTime =
+            largestBatch.leadTimeRounds > 0 ? largestBatch.totalLeadTime / largestBatch.leadTimeRounds : 0
 
         if (smallestLeadTime > 0 && largestLeadTime > 0) {
             if (smallestLeadTime < largestLeadTime) {
                 const leadTimeDiff = largestLeadTime - smallestLeadTime
                 const leadTimePercent = ((leadTimeDiff / largestLeadTime) * 100).toFixed(0)
-                insights.push(`🚀 <strong>Lead Time:</strong> Les petits lots réduisent le délai de livraison de ${leadTimePercent}%`)
+                insights.push(
+                    `🚀 <strong>Lead Time:</strong> Les petits lots réduisent le délai de livraison de ${leadTimePercent}%`
+                )
             } else if (largestLeadTime < smallestLeadTime) {
-                insights.push(`⚡ <strong>Lead Time:</strong> Contre-intuitivement, les gros lots ont un meilleur Lead Time dans cette simulation`)
+                insights.push(
+                    `⚡ <strong>Lead Time:</strong> Contre-intuitivement, les gros lots ont un meilleur Lead Time dans cette simulation`
+                )
             }
         }
 
         // Efficiency comparison
         if (smallestBatch.avgEfficiency > largestBatch.avgEfficiency) {
             const efficiencyGain = (smallestBatch.avgEfficiency - largestBatch.avgEfficiency).toFixed(1)
-            insights.push(`📈 <strong>Efficacité:</strong> Les petits lots améliorent le débit de ${efficiencyGain} pièces/min`)
+            insights.push(
+                `📈 <strong>Efficacité:</strong> Les petits lots améliorent le débit de ${efficiencyGain} pièces/min`
+            )
         }
 
         // Flow insights
@@ -1700,21 +1713,29 @@ function generateBatchSizeInsights(batchSizeImpact) {
 
         // Waste identification
         if (largestBatch.avgTime > smallestBatch.avgTime * 1.5) {
-            insights.push(`🗑️ <strong>Gaspillage:</strong> Les gros lots génèrent du temps d'attente significatif (Muda)`)
+            insights.push(
+                `🗑️ <strong>Gaspillage:</strong> Les gros lots génèrent du temps d'attente significatif (Muda)`
+            )
         }
 
         // Lead time insights based on batch size patterns
-        const roundsWithLeadTime = window.gameStatsTracker.roundResults.filter(r => r.lead_time_seconds > 0)
+        const roundsWithLeadTime = window.gameStatsTracker.roundResults.filter((r) => r.lead_time_seconds > 0)
         if (roundsWithLeadTime.length >= 2) {
-            const smallestBatchRounds = roundsWithLeadTime.filter(r => r.batch_size === batchSizes[0])
-            const largestBatchRounds = roundsWithLeadTime.filter(r => r.batch_size === batchSizes[batchSizes.length - 1])
+            const smallestBatchRounds = roundsWithLeadTime.filter((r) => r.batch_size === batchSizes[0])
+            const largestBatchRounds = roundsWithLeadTime.filter(
+                (r) => r.batch_size === batchSizes[batchSizes.length - 1]
+            )
 
             if (smallestBatchRounds.length > 0 && largestBatchRounds.length > 0) {
-                const avgSmallLeadTime = smallestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / smallestBatchRounds.length
-                const avgLargeLeadTime = largestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / largestBatchRounds.length
+                const avgSmallLeadTime =
+                    smallestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / smallestBatchRounds.length
+                const avgLargeLeadTime =
+                    largestBatchRounds.reduce((sum, r) => sum + r.lead_time_seconds, 0) / largestBatchRounds.length
 
                 if (avgSmallLeadTime < avgLargeLeadTime * 0.8) {
-                    insights.push(`🎯 <strong>Réactivité:</strong> Les petits lots permettent une livraison plus rapide du premier résultat`)
+                    insights.push(
+                        `🎯 <strong>Réactivité:</strong> Les petits lots permettent une livraison plus rapide du premier résultat`
+                    )
                 }
             }
         }
@@ -1769,68 +1790,42 @@ function updateLeanInsights(gameSummary) {
 }
 
 function generateDynamicInsights(gameSummary) {
-    const insights = []
+    const bilingualInsights = generateBilingualInsights({
+        batchSizeImpact: gameSummary.batchSizeImpact,
+        totalTime: gameSummary.totalGameTime,
+        averageTime: gameSummary.averageRoundTime,
+        playerCount: Object.keys(gameSummary.playerSummary).length
+    });
 
-    // Batch size insights
-    if (Object.keys(gameSummary.batchSizeImpact).length > 1) {
-        insights.push(
-            '<strong>Batch Size:</strong> Vous avez testé différentes tailles de lots et observé leur impact sur les temps de cycle'
-        )
-    } else {
-        insights.push(
-            '<strong>Batch Size:</strong> Essayez différentes tailles de lots pour observer leur impact sur le temps de cycle'
-        )
-    }
+    return [
+        ...bilingualInsights,
 
-    // Flow insights
-    const playerCount = Object.keys(gameSummary.playerSummary).length
-    if (playerCount > 2) {
-        insights.push(
-            '<strong>Flow:</strong> Plus il y a de joueurs dans la chaîne, plus la coordination devient importante'
-        )
-    } else {
-        insights.push(
-            "<strong>Flow:</strong> Analysez les goulots d'étranglement et les temps d'attente dans votre processus"
-        )
-    }
+        // Specific insights based on data
+        gameSummary.totalRounds > 1
+            ? `<strong>${LEAN_TERMS.BATCH_SIZE}</strong>: Vous avez testé différentes tailles de lots et observé leur impact sur le ${LEAN_TERMS.CYCLE_TIME}`
+            : `<strong>${LEAN_TERMS.BATCH_SIZE}</strong>: Essayez différentes tailles de lots pour observer leur impact sur le ${LEAN_TERMS.CYCLE_TIME}`,
 
-    // Lead time insights
-    const avgRoundTime = gameSummary.averageRoundTime
-    const avgPlayerTime =
-        Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) /
-        Object.keys(gameSummary.playerSummary).length
+        `<strong>${LEAN_TERMS.FLOW}</strong>: Analysez les ${LEAN_TERMS.BOTTLENECK} et les temps d'attente dans votre ${LEAN_TERMS.VALUE_STREAM}`,
+        `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Comparez le temps individuel vs. temps total du processus pour identifier les ${LEAN_TERMS.IMPROVEMENT_OPPORTUNITIES}`,
+        `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Discutez des ${LEAN_TERMS.OPTIMIZATION} possibles pour les prochaines itérations`,
 
-    if (avgRoundTime > avgPlayerTime * 1.5) {
-        insights.push(
-            "<strong>Lead Time:</strong> Le temps total est significativement plus long que le temps individuel - signe de temps d'attente"
-        )
-    } else {
-        insights.push(
-            '<strong>Lead Time:</strong> Comparez le temps individuel vs. temps total du processus pour identifier les inefficacités'
-        )
-    }
+        // Flow insights
+        Object.keys(gameSummary.playerSummary).length > 2
+            ? `<strong>${LEAN_TERMS.FLOW}</strong>: Plus il y a de joueurs dans la chaîne, plus la coordination devient importante`
+            : `<strong>${LEAN_TERMS.FLOW}</strong>: Analysez les ${LEAN_TERMS.BOTTLENECK} et les temps d'attente dans votre ${LEAN_TERMS.VALUE_STREAM}`,
 
-    // Improvement insights
-    if (gameSummary.totalRounds > 1) {
-        const firstRound = gameSummary.roundResults[0]
-        const lastRound = gameSummary.roundResults[gameSummary.roundResults.length - 1]
+        // Lead time insights
+        gameSummary.averageRoundTime > Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) / Object.keys(gameSummary.playerSummary).length * 1.5
+            ? `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Le temps total est significativement plus long que le temps individuel - signe de ${LEAN_TERMS.WAITING_TIME}`
+            : `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Comparez le temps individuel vs. temps total du processus pour identifier les inefficacités`,
 
-        if (lastRound.game_duration_seconds < firstRound.game_duration_seconds) {
-            insights.push(
-                "<strong>Amélioration Continue:</strong> Votre équipe s'est améliorée au fil des manches - excellent travail d'équipe !"
-            )
-        } else {
-            insights.push(
-                '<strong>Amélioration Continue:</strong> Discutez des optimisations possibles pour les prochaines itérations'
-            )
-        }
-    } else {
-        insights.push(
-            "<strong>Amélioration Continue:</strong> Jouez plusieurs manches pour voir l'évolution de votre performance"
-        )
-    }
-
-    return insights
+        // Continuous improvement insights
+        gameSummary.totalRounds > 1
+            ? gameSummary.roundResults[gameSummary.roundResults.length - 1] < gameSummary.roundResults[0]
+                ? `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Votre équipe s'est améliorée au fil des manches - excellent travail d'équipe !`
+                : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Discutez des ${LEAN_TERMS.OPTIMIZATION} possibles pour les prochaines itérations`
+            : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Jouez plusieurs manches pour voir l'évolution de votre performance`
+    ]
 }
 
 export function connectWebSocket(apiUrl, roomId, username) {

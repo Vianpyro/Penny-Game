@@ -1,6 +1,7 @@
 ---
 import '../styles/main.css'
 import '../styles/round-complete.css'
+import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
 ---
 
 <div class="round-complete" id="roundComplete" style="display: none;">
@@ -31,24 +32,23 @@ import '../styles/round-complete.css'
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="totalCoinsCompleted">12</div>
-                    <div class="stat-label">Pièces terminées</div>
+                    <div class="stat-label">Pièces terminées (Coins Completed)</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="participantCount">5</div>
-                    <div class="stat-label">Participants</div>
+                    <div class="stat-label">Participants (Participants)</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="roundEfficiency">--</div>
-                    <div class="stat-label">Pièces/min</div>
+                    <div class="stat-label">${LEAN_TERMS.EFFICIENCY}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="avgPlayerTime">--:--</div>
-                    <div class="stat-label">Temps moyen</div>
+                    <div class="stat-label">Temps moyen (Average Time)</div>
                 </div>
                 <div class="stat-card highlight">
-                    <!-- ADD THIS ENTIRE STAT CARD -->
                     <div class="stat-value" id="roundLeadTime">--:--</div>
-                    <div class="stat-label">Lead Time</div>
+                    <div class="stat-label">${LEAN_TERMS.LEAD_TIME}</div>
                     <div class="stat-sublabel">1er flip → 1ère livraison</div>
                 </div>
             </div>

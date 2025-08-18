@@ -196,8 +196,8 @@ export class TimeUtils {
      * @returns {string} Formatted efficiency string
      */
     static formatEfficiency(totalCoins, durationSeconds) {
-        const efficiency = TimeUtils.calculateEfficiency(totalCoins, durationSeconds)
-        return efficiency > 0 ? `${efficiency} pièces/min` : '--'
+        const efficiency = TimeUtils.calculateEfficiency(totalCoins, durationSeconds);
+        return efficiency > 0 ? `${efficiency} pièces/min (coins/min)` : '--';
     }
 
     /**
