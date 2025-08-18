@@ -79,6 +79,43 @@ export class ViewManager {
         if (roundComplete) roundComplete.style.display = 'none'
 
         ViewManager.currentView = 'results'
+
+        if (typeof window.updateResultsDisplay === 'function') {
+            console.log('📊 Updating results display...')
+            window.updateResultsDisplay()
+        } else {
+            console.warn('⚠️ updateResultsDisplay function not available')
+            // Show fallback message
+            const title = results?.querySelector('h2')
+            if (title && !results.querySelector('.results-loading')) {
+                const loadingMessage = document.createElement('div')
+                loadingMessage.className = 'results-loading'
+                loadingMessage.textContent = 'Chargement des résultats...'
+                title.after(loadingMessage)
+            }
+        }
+    }
+
+    /**
+     * Show a basic results message when data loading fails
+     */
+    static showBasicResultsMessage() {
+        const results = document.getElementById('results')
+        if (results) {
+            const existingEmpty = results.querySelector('.results-empty')
+            if (!existingEmpty) {
+                const emptyMessage = document.createElement('div')
+                emptyMessage.className = 'results-empty'
+                emptyMessage.innerHTML = `
+                <h3>Résultats en cours de chargement...</h3>
+                <p>Si ce message persiste, les données de la partie ne sont pas disponibles.</p>
+            `
+                const title = results.querySelector('h2')
+                if (title) {
+                    title.after(emptyMessage)
+                }
+            }
+        }
     }
 
     /**

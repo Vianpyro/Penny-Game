@@ -1229,7 +1229,7 @@ function getTotalRounds(roundType) {
     }
 }
 
-function updateResultsDisplay() {
+export function updateResultsDisplay() {
     const gameSummary = window.gameStatsTracker.getGameSummary()
 
     // Debug logging
@@ -1287,6 +1287,9 @@ function updateResultsDisplay() {
         GameActions.setupStandardButtons()
     }
 }
+
+// Make updateResultsDisplay available globally for ViewManager
+window.updateResultsDisplay = updateResultsDisplay
 
 function updateMainGameStats(gameSummary) {
     // Update total game time
