@@ -1438,7 +1438,7 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                     <div class="mini-stat">
                         <div class="mini-stat-value">${efficiency}</div>
-                        <div class="mini-stat-label">Pièces/min</div>
+                        <div class="mini-stat-label">Débit (pièces/min)</div>
                     </div>
                 </div>
                 <div class="round-rankings">
@@ -1545,10 +1545,6 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
                         <div class="metric-value">${data.avgEfficiency.toFixed(1)}</div>
                         <div class="metric-label">Pièces/min</div>
                     </div>
-                    <div class="batch-metric">
-                        <div class="metric-value">${data.rounds}</div>
-                        <div class="metric-label">Manche${data.rounds > 1 ? 's' : ''}</div>
-                    </div>
                 </div>
             `
 
@@ -1557,7 +1553,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
     }
 
     // Add detailed lead time comparison
-    updateLeadTimeComparison(batchSizeImpact)
+    updateLeadTimeComparison()
 
     // Add batch size insights
     const batchInsights = document.getElementById('batchInsights')
@@ -1574,7 +1570,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
     }
 }
 
-function updateLeadTimeComparison(batchSizeImpact) {
+function updateLeadTimeComparison() {
     const leadTimeComparison = document.getElementById('leadTimeComparison')
     if (!leadTimeComparison) return
 
@@ -1657,24 +1653,6 @@ function updateLeadTimeComparison(batchSizeImpact) {
                         ${TimeUtils.formatTime(round.lead_time_seconds)}
                     </div>
                     <div class="batch-info">Lot de ${round.batch_size}</div>
-                </div>
-                <div class="lead-time-details">
-                    <div class="time-detail">
-                        <span class="detail-label">Premier flip:</span>
-                        <span class="detail-value">${round.first_flip_at ? new Date(round.first_flip_at).toLocaleTimeString() : '--'}</span>
-                    </div>
-                    <div class="time-detail">
-                        <span class="detail-label">Première livraison:</span>
-                        <span class="detail-value">${round.first_delivery_at ? new Date(round.first_delivery_at).toLocaleTimeString() : '--'}</span>
-                    </div>
-                </div>
-                <div class="lead-time-comparison-bar">
-                    <div class="comparison-bar">
-                        <div class="comparison-fill" style="width: ${(round.lead_time_seconds / worstLeadTime) * 100}%"></div>
-                    </div>
-                    <div class="comparison-text">
-                        ${performanceRatio > 1 ? `${((performanceRatio - 1) * 100).toFixed(0)}% plus long que le meilleur` : 'Temps optimal'}
-                    </div>
                 </div>
             `
 

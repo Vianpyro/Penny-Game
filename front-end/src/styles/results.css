@@ -495,59 +495,6 @@
     font-weight: 600;
 }
 
-.lead-time-details {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 10px;
-    background: rgb(52 152 219 / 5%);
-    border-radius: 8px;
-}
-
-.time-detail {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    font-size: 0.85em;
-}
-
-.detail-label {
-    color: #7f8c8d;
-    font-weight: 600;
-}
-
-.detail-value {
-    color: #2c3e50;
-    font-family: 'Courier New', monospace;
-    font-weight: 700;
-}
-
-.lead-time-comparison-bar {
-    text-align: center;
-}
-
-.comparison-bar {
-    background: #ecf0f1;
-    height: 8px;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 5px;
-}
-
-.comparison-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #27ae60, #3498db, #f39c12, #e74c3c);
-    border-radius: 4px;
-    transition: width 0.8s ease;
-}
-
-.comparison-text {
-    font-size: 0.8em;
-    color: #7f8c8d;
-    font-weight: 600;
-}
-
 /* Lead Time Summary */
 .lead-time-summary {
     display: grid;
