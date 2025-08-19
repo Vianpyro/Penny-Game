@@ -1,4 +1,4 @@
-import { ENHANCED_FRENCH_LOCALE } from "../scripts/bilingual-terms.js";
+import { ENHANCED_FRENCH_LOCALE } from '../scripts/bilingual-terms.js'
 
 export function updateGameCode(code) {
     const gameCodeSpan = document.getElementById('game-code')
@@ -59,7 +59,7 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
         spectatorList.appendChild(li)
     }
 
-    ; (spectators || [])
+    ;(spectators || [])
         .filter((spectator) => spectator !== host)
         .forEach((spectator) => {
             const li = document.createElement('li')

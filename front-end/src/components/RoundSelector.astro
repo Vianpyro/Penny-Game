@@ -2,8 +2,8 @@
 import '../styles/main.css'
 import '../styles/round-selector.css'
 import { TOTAL_COINS, VALID_BATCH_SIZES, DEFAULT_BATCH_SIZES } from '../config.js'
-import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
-import { ACTION_ERROR_CODES } from 'astro:actions';
+import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js'
+import { ACTION_ERROR_CODES } from 'astro:actions'
 
 const roundOptions = [
     {
@@ -24,7 +24,7 @@ const roundOptions = [
         description: `Analyse complète de l'impact du ${LEAN_TERMS.BATCH_SIZE} sur le ${LEAN_TERMS.THROUGHPUT}`,
         type: 'three_rounds',
     },
-];
+]
 
 const batchOptions = VALID_BATCH_SIZES.map((size) => {
     let title = `Lot de ${size}`

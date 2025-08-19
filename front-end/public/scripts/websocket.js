@@ -5,7 +5,7 @@ import { showNotification } from './utility.js'
 import { ViewManager } from './view-manager.js'
 import { TimeUtils } from './time-utils.js'
 import { GameActions } from './game-actions.js'
-import { ENHANCED_FRENCH_LOCALE, LEAN_TERMS, generateBilingualInsights } from './bilingual-terms.js';
+import { ENHANCED_FRENCH_LOCALE, LEAN_TERMS, generateBilingualInsights } from './bilingual-terms.js'
 
 const DEFAULT_BATCH_SIZES = [15, 5, 1]
 const TOTAL_COINS = DEFAULT_BATCH_SIZES[0]
@@ -1441,19 +1441,20 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${hasValidOrder
-                    ? result.playerOrder
-                        .map(
-                            (ranking) => `
+                    ${
+                        hasValidOrder
+                            ? result.playerOrder
+                                  .map(
+                                      (ranking) => `
                             <div class="mini-ranking">
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${ranking.time ? TimeUtils.formatTime(ranking.time) : '--:--'}</span>
                             </div>
                         `
-                        )
-                        .join('')
-                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                }
+                                  )
+                                  .join('')
+                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                    }
                 </div>
             `
 
@@ -1708,7 +1709,9 @@ function generateBatchSizeInsights(batchSizeImpact) {
         }
 
         // Flow insights
-        insights.push(`🔄 <strong>${LEAN_TERMS.FLOW}:</strong> Les gros lots créent plus de ${LEAN_TERMS.QUEUE_TIME} entre les joueurs`)
+        insights.push(
+            `🔄 <strong>${LEAN_TERMS.FLOW}:</strong> Les gros lots créent plus de ${LEAN_TERMS.QUEUE_TIME} entre les joueurs`
+        )
         insights.push(`⚡ <strong>Parallélisme:</strong> Les petits lots permettent un travail plus simultané`)
 
         // Waste identification
@@ -1794,8 +1797,8 @@ function generateDynamicInsights(gameSummary) {
         batchSizeImpact: gameSummary.batchSizeImpact,
         totalTime: gameSummary.totalGameTime,
         averageTime: gameSummary.averageRoundTime,
-        playerCount: Object.keys(gameSummary.playerSummary).length
-    });
+        playerCount: Object.keys(gameSummary.playerSummary).length,
+    })
 
     return [
         ...bilingualInsights,
@@ -1815,7 +1818,10 @@ function generateDynamicInsights(gameSummary) {
             : `<strong>${LEAN_TERMS.FLOW}</strong>: Analysez les ${LEAN_TERMS.BOTTLENECK} et les ${LEAN_TERMS.QUEUE_TIME} dans votre ${LEAN_TERMS.VALUE_STREAM}`,
 
         // Lead time insights
-        gameSummary.averageRoundTime > Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) / Object.keys(gameSummary.playerSummary).length * 1.5
+        gameSummary.averageRoundTime >
+        (Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) /
+            Object.keys(gameSummary.playerSummary).length) *
+            1.5
             ? `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Le ${LEAN_TERMS.TOTAL_TIME} est significativement plus long que le temps individuel - signe de ${LEAN_TERMS.WAITING_TIME}`
             : `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Comparez le temps individuel vs. temps total du processus pour identifier les inefficacités`,
 
@@ -1824,7 +1830,7 @@ function generateDynamicInsights(gameSummary) {
             ? gameSummary.roundResults[gameSummary.roundResults.length - 1] < gameSummary.roundResults[0]
                 ? `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Votre équipe s'est améliorée au fil des manches - excellent ${LEAN_TERMS.TEAMWORK} !`
                 : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Discutez des ${LEAN_TERMS.OPTIMIZATION} possibles pour les prochaines itérations`
-            : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Jouez plusieurs manches pour voir l'évolution de votre ${LEAN_TERMS.PERFORMANCE}`
+            : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Jouez plusieurs manches pour voir l'évolution de votre ${LEAN_TERMS.PERFORMANCE}`,
     ]
 }
 

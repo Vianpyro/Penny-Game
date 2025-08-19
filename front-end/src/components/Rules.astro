@@ -2,7 +2,7 @@
 import '../styles/main.css'
 import '../styles/rules.css'
 import { TOTAL_COINS, VALID_BATCH_SIZES } from '../config.js'
-import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
+import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js'
 
 // Generate batch size examples based on valid sizes
 const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS && size !== 1).map((size) => ({
@@ -25,8 +25,8 @@ const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS &&
     <div class="rules-content">
         <div class="rules-overview">
             <p>
-                <strong>Le Penny Game</strong> est une {LEAN_TERMS.SIMULATION} Lean <strong>coopérative</strong> qui visualise l'impact
-                de la {LEAN_TERMS.BATCH_SIZE} sur l'{LEAN_TERMS.EFFICIENCY} du {LEAN_TERMS.FLOW} de production.
+                <strong>Le Penny Game</strong> est une {LEAN_TERMS.SIMULATION} Lean <strong>coopérative</strong> qui visualise
+                l'impact de la {LEAN_TERMS.BATCH_SIZE} sur l'{LEAN_TERMS.EFFICIENCY} du {LEAN_TERMS.FLOW} de production.
             </p>
             <div class="coin-info-banner">
                 🪙 Cette version utilise <strong>{TOTAL_COINS} pièces</strong> au total
@@ -93,11 +93,19 @@ const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS &&
             <div class="insights-grid">
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.BATCH_SIZE}</strong>
-                    <p>Impact de la {LEAN_TERMS.BATCH_SIZE} sur les {LEAN_TERMS.QUEUE_TIME} et le {LEAN_TERMS.THROUGHPUT}</p>
+                    <p>
+                        Impact de la {LEAN_TERMS.BATCH_SIZE} sur les {LEAN_TERMS.QUEUE_TIME} et le {
+                            LEAN_TERMS.THROUGHPUT
+                        }
+                    </p>
                 </div>
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.FLOW}</strong>
-                    <p>Visualisation des {LEAN_TERMS.BOTTLENECK} et ${LEAN_TERMS.OPTIMIZATION} du {LEAN_TERMS.VALUE_STREAM}</p>
+                    <p>
+                        Visualisation des {LEAN_TERMS.BOTTLENECK} et ${LEAN_TERMS.OPTIMIZATION} du {
+                            LEAN_TERMS.VALUE_STREAM
+                        }
+                    </p>
                 </div>
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.LEAD_TIME}</strong>
@@ -105,7 +113,11 @@ const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS &&
                 </div>
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.WASTE}</strong>
-                    <p>Identification des {LEAN_TERMS.QUEUE_TIME} inutiles et des {LEAN_TERMS.IMPROVEMENT_OPPORTUNITIES}</p>
+                    <p>
+                        Identification des {LEAN_TERMS.QUEUE_TIME} inutiles et des {
+                            LEAN_TERMS.IMPROVEMENT_OPPORTUNITIES
+                        }
+                    </p>
                 </div>
             </div>
         </div>

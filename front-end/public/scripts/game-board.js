@@ -1,7 +1,7 @@
 // Game board logic for Penny Game with cooperative mechanics and timers
 import { flipCoin } from './api.js'
 import { showNotification } from './utility.js'
-import { LEAN_TERMS, updateElementWithBilingualTerm } from './bilingual-terms.js';
+import { LEAN_TERMS, updateElementWithBilingualTerm } from './bilingual-terms.js'
 
 const TOTAL_COINS = 15
 const FLIP_HOLD_DURATION = 1000

@@ -13,7 +13,9 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms'
                 const count = i + 1
                 return (
                     <div class="board-player" id={`player${count}`} {...(count === 1 ? { active: true } : {})}>
-                        <p>{LEAN_TERMS.PLAYER} {count}</p>
+                        <p>
+                            {LEAN_TERMS.PLAYER} {count}
+                        </p>
                         <div class="penny-container" id={`pennyContainer${count}`}>
                             {count === 1 && Array.from({ length: TOTAL_COINS }).map(() => <div class="flip">🪙</div>)}
                         </div>
