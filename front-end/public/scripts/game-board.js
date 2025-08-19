@@ -1,6 +1,7 @@
 // Game board logic for Penny Game with cooperative mechanics and timers
 import { flipCoin } from './api.js'
 import { showNotification } from './utility.js'
+import { LEAN_TERMS, updateElementWithBilingualTerm } from './bilingual-terms.js';
 
 const TOTAL_COINS = 15
 const FLIP_HOLD_DURATION = 1000
@@ -324,8 +325,8 @@ function updateStationStats(station, playerCoins) {
         if (statsContainer) {
             statsContainer.innerHTML = `
                 <span class="stat">🪙 ${totalCoins} pièces</span>
-                <span class="stat">⚫ ${tailsCount} à retourner</span>
-                <span class="stat">🟡 ${headsCount} prêtes</span>
+                <span class="stat"><div class="flip grayscale">🪙</div> ${tailsCount} à retourner</span>
+                <span class="stat">🪙 ${headsCount} prêtes</span>
             `
         }
     } catch (error) {
@@ -673,13 +674,14 @@ function createRulesReminderElement(gameState) {
     const rulesReminder = document.createElement('div')
     rulesReminder.className = 'rules-reminder'
     rulesReminder.innerHTML = `
-        <h4>📋 Rappel des règles :</h4>
+        <h4>📋 Rappel des règles (Game Rules):</h4>
         <ul>
-            <li>🔄 Retournez les pièces de pile (⚫) vers face (🪙)</li>
-            <li>📦 Envoyez par lots de ${gameState.batch_size} pièce${gameState.batch_size > 1 ? 's' : ''}</li>
-            <li>⚡ Travaillez en parallèle - pas de tour de rôle !</li>
-            <li>🎯 Objectif : terminer le plus vite possible ensemble</li>
+            <li>🔄 Retournez les pièces de pile (<div class="flip grayscale">🪙</div>) vers face (🪙)</li>
+            <li>📦 Envoyez par ${LEAN_TERMS.BATCH_SIZE} de ${gameState.batch_size} pièce${gameState.batch_size > 1 ? 's' : ''}</li>
+            <li>⚡ Travaillez en parallèle pour optimiser le ${LEAN_TERMS.FLOW} !</li>
+            <li>🎯 Objectif : minimiser le ${LEAN_TERMS.LEAD_TIME} ensemble</li>
             <li>🪙 ${TOTAL_COINS} pièces au total à traiter</li>
+            <li>💡 Identifiez les ${LEAN_TERMS.BOTTLENECK} et réduisez le ${LEAN_TERMS.WASTE} !</li>
         </ul>
     `
 
@@ -714,7 +716,7 @@ function createPlayerStation(player, gameState, playerIndex) {
         <div class="station-header">
             <h3>${isCurrentPlayer ? '⭐' : '👤'} ${player}</h3>
             <div class="player-status">
-                ${isCurrentPlayer ? 'Votre station' : 'Station partenaire'}
+                ${isCurrentPlayer ? `Votre ${LEAN_TERMS.STATION}` : `${LEAN_TERMS.STATION} partenaire`}
                 ${!canInteract && isCurrentPlayer ? ' (Hôte - observation seulement)' : ''}
             </div>
             <div class="player-timer ${timerInfo.status}">
@@ -725,8 +727,8 @@ function createPlayerStation(player, gameState, playerIndex) {
         </div>
         <div class="station-stats">
             <span class="stat">🪙 ${totalCoins} pièces</span>
-            <span class="stat">⚫ ${tailsCount} à retourner</span>
-            <span class="stat">🟡 ${headsCount} prêtes</span>
+            <span class="stat"><div class="flip grayscale ">🪙</div> ${tailsCount} à retourner</span>
+            <span class="stat">🪙 ${headsCount} prêtes</span>
         </div>
     `
 
@@ -799,7 +801,7 @@ function createCoinElement(player, index, isHeads, canInteract) {
     const coin = document.createElement('div')
     coin.className = `flip coin ${isHeads ? 'heads' : 'tails'}`
     coin.textContent = '🪙'
-    coin.title = isHeads ? 'Face - Prête à envoyer' : 'Maintenez pendant 1.5s pour retourner'
+    coin.title = isHeads ? 'Face - Prête à envoyer' : `Maintenez pendant ${FLIP_HOLD_DURATION / 1000}s pour retourner`
     coin.dataset.coinIndex = index
     coin.dataset.player = player
 
@@ -1071,7 +1073,7 @@ async function performCoinFlip(coinIndex, coinElement) {
         newCoin.classList.remove('flipped', 'heads')
         newCoin.classList.add('grayscale', 'tails')
         newCoin.style.cursor = 'grab'
-        newCoin.title = 'Maintenez pendant 1.5s pour retourner'
+        newCoin.title = `Maintenez pendant ${FLIP_HOLD_DURATION / 1000}s pour retourner`
 
         // Re-setup hold events for retry
         const progressRing = newCoin.parentElement.querySelector('.coin-progress-ring')

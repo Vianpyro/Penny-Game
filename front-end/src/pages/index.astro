@@ -13,6 +13,7 @@ import GameControls from '../components/GameControls.astro'
 import Results from '../components/Results.astro'
 import RoundComplete from '../components/RoundComplete.astro'
 import { SITE_NAME } from '../config.js'
+import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
 
 let showJoinRole = true
 ---
@@ -21,7 +22,7 @@ let showJoinRole = true
     <JoinRole visible={showJoinRole} />
     <div class="container">
         <h1><span class="flip" id="coinFlip">🪙</span> Penny Game</h1>
-        <p class="subtitle">Simulation Lean - Mesure du Flow et du Lead Time</p>
+        <p class="subtitle">{LEAN_TERMS.SIMULATION} Lean - Mesure du {LEAN_TERMS.FLOW} et du {LEAN_TERMS.LEAD_TIME}</p>
 
         <div class="game-setup">
             <div class="setup-controls">

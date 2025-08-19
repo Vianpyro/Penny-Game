@@ -1,5 +1,3 @@
-// Enhanced main.js with fixed drag & drop and self-role switching
-
 import { joinRoom, fetchGameState, changeRole, setRoundConfig } from './api.js'
 import { updateGameCode, renderPlayers, renderSpectators, updatePlayerCountDisplay } from './dom.js'
 import { connectWebSocket } from './websocket.js'
@@ -187,7 +185,6 @@ window.addEventListener('DOMContentLoaded', () => {
         })
     }
 
-    // ENHANCED: Fixed Drag & Drop with proper event handling
     function handleDrop(e, targetList) {
         e.preventDefault()
         e.stopPropagation()
@@ -372,7 +369,6 @@ window.addEventListener('DOMContentLoaded', () => {
         })
     }
 
-    // ENHANCED: Setup drag and drop with proper event binding and null checks
     function setupDragAndDrop() {
         try {
             const playerList = document.getElementById('playerList')

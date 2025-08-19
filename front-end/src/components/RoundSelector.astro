@@ -2,27 +2,29 @@
 import '../styles/main.css'
 import '../styles/round-selector.css'
 import { TOTAL_COINS, VALID_BATCH_SIZES, DEFAULT_BATCH_SIZES } from '../config.js'
+import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
+import { ACTION_ERROR_CODES } from 'astro:actions';
 
 const roundOptions = [
     {
         number: 1,
-        title: '1 Manche',
-        description: `L'hôte choisit quelle manche jouer (${VALID_BATCH_SIZES.join(', ')})`,
+        title: '1 Manche (1 Round)',
+        description: `L'hôte choisit la ${LEAN_TERMS.BATCH_SIZE} pour analyser l'impact sur le ${LEAN_TERMS.FLOW}`,
         type: 'single',
     },
     {
         number: 2,
-        title: '2 Manches',
-        description: `Jouer les manches extrêmes : Lot de ${TOTAL_COINS} puis Lot de 1`,
+        title: '2 Manches (2 Rounds)',
+        description: `Comparer les ${LEAN_TERMS.BATCH_SIZE} extrêmes: ${LEAN_TERMS.PUSH_SYSTEM} vs ${LEAN_TERMS.PULL_SYSTEM}`,
         type: 'two_rounds',
     },
     {
         number: 3,
-        title: '3 Manches',
-        description: `Jouer toutes les manches : ${DEFAULT_BATCH_SIZES.join(', puis ')} (par défaut)`,
+        title: '3 Manches (3 Rounds)',
+        description: `Analyse complète de l'impact du ${LEAN_TERMS.BATCH_SIZE} sur le ${LEAN_TERMS.THROUGHPUT}`,
         type: 'three_rounds',
     },
-]
+];
 
 const batchOptions = VALID_BATCH_SIZES.map((size) => {
     let title = `Lot de ${size}`
@@ -32,10 +34,6 @@ const batchOptions = VALID_BATCH_SIZES.map((size) => {
         description = 'Une pièce à la fois'
     } else if (size === TOTAL_COINS) {
         description = "Toutes les pièces d'un coup"
-    } else if (size === 5) {
-        description = 'Par groupes de 5'
-    } else if (size === 3) {
-        description = 'Par groupes de 3'
     } else {
         description = `Par groupes de ${size}`
     }
@@ -45,9 +43,9 @@ const batchOptions = VALID_BATCH_SIZES.map((size) => {
 ---
 
 <div class="round-selector-container">
-    <h3>🎯 Configuration des Manches</h3>
+    <h3>🎯 Configuration des {LEAN_TERMS.ROUNDS}</h3>
     <p class="round-description">
-        Choisissez combien de manches jouer pour comparer l'impact des différentes tailles de lot.
+        Choisissez combien de {LEAN_TERMS.ROUNDS} jouer pour comparer l'impact des différentes tailles de lot.
     </p>
 
     <!-- Round count selection -->
@@ -69,7 +67,7 @@ const batchOptions = VALID_BATCH_SIZES.map((size) => {
 
     <!-- Single round batch size selection (hidden by default) -->
     <div class="single-batch-selector" id="singleBatchSelector" style="display: none;">
-        <h4>📦 Choisir la Taille de Lot</h4>
+        <h4>📦 Choisir la {LEAN_TERMS.BATCH_SIZE}</h4>
         <div class="batch-size-options">
             {
                 batchOptions.map((opt, idx) => (
