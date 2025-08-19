@@ -325,8 +325,8 @@ function updateStationStats(station, playerCoins) {
         if (statsContainer) {
             statsContainer.innerHTML = `
                 <span class="stat">🪙 ${totalCoins} pièces</span>
-                <span class="stat"><div class="flip">🪙</div> ${tailsCount} à retourner</span>
-                <span class="stat">🟡 ${headsCount} prêtes</span>
+                <span class="stat"><div class="flip grayscale">🪙</div> ${tailsCount} à retourner</span>
+                <span class="stat">🪙 ${headsCount} prêtes</span>
             `
         }
     } catch (error) {
@@ -676,7 +676,7 @@ function createRulesReminderElement(gameState) {
     rulesReminder.innerHTML = `
         <h4>📋 Rappel des règles (Game Rules):</h4>
         <ul>
-            <li>🔄 Retournez les pièces de pile (<div class="flip">🪙</div>) vers face (🪙)</li>
+            <li>🔄 Retournez les pièces de pile (<div class="flip grayscale">🪙</div>) vers face (🪙)</li>
             <li>📦 Envoyez par ${LEAN_TERMS.BATCH_SIZE} de ${gameState.batch_size} pièce${gameState.batch_size > 1 ? 's' : ''}</li>
             <li>⚡ Travaillez en parallèle pour optimiser le ${LEAN_TERMS.FLOW} !</li>
             <li>🎯 Objectif : minimiser le ${LEAN_TERMS.LEAD_TIME} ensemble</li>
@@ -727,8 +727,8 @@ function createPlayerStation(player, gameState, playerIndex) {
         </div>
         <div class="station-stats">
             <span class="stat">🪙 ${totalCoins} pièces</span>
-            <span class="stat"><div class="flip">🪙</div> ${tailsCount} à retourner</span>
-            <span class="stat">🟡 ${headsCount} prêtes</span>
+            <span class="stat"><div class="flip grayscale ">🪙</div> ${tailsCount} à retourner</span>
+            <span class="stat">🪙 ${headsCount} prêtes</span>
         </div>
     `
 

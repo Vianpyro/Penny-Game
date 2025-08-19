@@ -12,9 +12,9 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
             <div class="round-info-card">
                 <div class="round-number" id="completedRoundNumber">1</div>
                 <div class="round-details">
-                    <div class="batch-info">Lot de <span id="completedBatchSize">12</span></div>
-                    <div class="round-time">Temps total: <span id="completedRoundTime">--:--</span></div>
-                    <div class="lead-time">Lead Time: <span id="completedLeadTime">--:--</span></div>
+                    <div class="batch-info">{LEAN_TERMS.BATCH_SIZE}: <span id="completedBatchSize">15</span></div>
+                    <div class="round-time">{LEAN_TERMS.TOTAL_TIME}: <span id="completedRoundTime">--:--</span></div>
+                    <div class="lead-time">{LEAN_TERMS.LEAD_TIME}: <span id="completedLeadTime">--:--</span></div>
                 </div>
             </div>
         </div>
@@ -31,24 +31,24 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
         <div class="round-stats" id="roundStats">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value" id="totalCoinsCompleted">12</div>
-                    <div class="stat-label">Pièces terminées (Coins Completed)</div>
+                    <div class="stat-value" id="totalCoinsCompleted">15</div>
+                    <div class="stat-label">{LEAN_TERMS.COINS_PROCESSED}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="participantCount">5</div>
-                    <div class="stat-label">Participants (Participants)</div>
+                    <div class="stat-label">Participants</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="roundEfficiency">--</div>
-                    <div class="stat-label">${LEAN_TERMS.EFFICIENCY}</div>
+                    <div class="stat-label">{LEAN_TERMS.EFFICIENCY}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="avgPlayerTime">--:--</div>
-                    <div class="stat-label">Temps moyen (Average Time)</div>
+                    <div class="stat-label">${LEAN_TERMS.AVERAGE_TIME}</div>
                 </div>
                 <div class="stat-card highlight">
                     <div class="stat-value" id="roundLeadTime">--:--</div>
-                    <div class="stat-label">${LEAN_TERMS.LEAD_TIME}</div>
+                    <div class="stat-label">{LEAN_TERMS.LEAD_TIME}</div>
                     <div class="stat-sublabel">1er flip → 1ère livraison</div>
                 </div>
             </div>

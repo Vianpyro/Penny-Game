@@ -59,7 +59,7 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
         spectatorList.appendChild(li)
     }
 
-    ;(spectators || [])
+    ; (spectators || [])
         .filter((spectator) => spectator !== host)
         .forEach((spectator) => {
             const li = document.createElement('li')
@@ -198,10 +198,10 @@ export function updateRoundConfiguration(roundType, requiredPlayers, selectedBat
                 infoText = `1 manche - Lot de ${selectedBatchSize}`
                 break
             case 'two_rounds':
-                infoText = '2 manches - Lots de 12 puis 1'
+                infoText = '2 manches - Lots de 15 puis 1'
                 break
             case 'three_rounds':
-                infoText = '3 manches - Lots de 12, 4, puis 1'
+                infoText = '3 manches - Lots de 15, 5, puis 1'
                 break
         }
         element.textContent = infoText

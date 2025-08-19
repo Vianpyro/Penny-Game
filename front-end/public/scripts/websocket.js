@@ -225,7 +225,7 @@ window.gameStatsTracker = {
     calculatePlayerEfficiency(durationSeconds) {
         if (!durationSeconds || durationSeconds === 0) return 0
         // Assume each player processes roughly the same amount of coins
-        const coinsPerPlayer = 12 / (window.gameState?.players?.length || 5)
+        const coinsPerPlayer = 15 / (window.gameState?.players?.length || 5)
         return Math.round((coinsPerPlayer / durationSeconds) * 60 * 100) / 100
     },
 
