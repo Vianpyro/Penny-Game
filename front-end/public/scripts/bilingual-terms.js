@@ -22,11 +22,11 @@ export const LEAN_TERMS = {
     PRODUCTIVITY: "Productivité (Productivity)",
 
     // Metrics and Measurements
-    PERFORMANCE: "Performance (Performance)",
+    PERFORMANCE: "Performance",
     METRICS: "Métriques (Metrics)",
     KEY_PERFORMANCE_INDICATOR: "Indicateur Clé de Performance (Key Performance Indicator/KPI)",
     VELOCITY: "Vélocité (Velocity)",
-    CADENCE: "Cadence (Cadence)",
+    CADENCE: "Cadence",
 
     // Process Improvement
     OPTIMIZATION: "Optimisation (Optimization)",
@@ -39,21 +39,22 @@ export const LEAN_TERMS = {
     COLLABORATION: "Collaboration (Collaboration)",
     TEAMWORK: "Travail d'Équipe (Teamwork)",
     SYNCHRONIZATION: "Synchronisation (Synchronization)",
-    COMMUNICATION: "Communication (Communication)",
-    COORDINATION: "Coordination (Coordination)",
+    COMMUNICATION: "Communication",
+    COORDINATION: "Coordination",
 
     // Quality and Control
     QUALITY: "Qualité (Quality)",
     DEFECT: "Défaut (Defect)",
     ERROR: "Erreur (Error)",
-    INSPECTION: "Inspection (Inspection)",
-    VALIDATION: "Validation (Validation)",
+    INSPECTION: "Inspection",
+    VALIDATION: "Validation",
 
     // Game-Specific Terms
-    SIMULATION: "Simulation (Simulation)",
+    SIMULATION: "Simulation",
     ROUND: "Manche (Round)",
+    ROUNDS: "Manches (Rounds)",
     PLAYER: "Joueur (Player)",
-    STATION: "Station (Station)",
+    STATION: "Station",
     PRODUCTION_LINE: "Chaîne de Production (Production Line)",
     COINS_PROCESSED: "Pièces Traitées (Coins Processed)",
     COMPLETION_RATE: "Taux de Finalisation (Completion Rate)",
@@ -110,7 +111,7 @@ export const UI_REPLACEMENTS = {
  */
 export const ENHANCED_FRENCH_LOCALE = {
     title: 'Penny Game',
-    subtitle: `Simulation Lean - Mesure du ${LEAN_TERMS.FLOW} et du ${LEAN_TERMS.LEAD_TIME}`,
+    subtitle: `${LEAN_TERMS.SIMULATION} Lean - Mesure du ${LEAN_TERMS.FLOW} et du ${LEAN_TERMS.LEAD_TIME}`,
     players: 'Joueurs (Players)',
     playerCount: 'Nombre de Joueurs (Player Count)',
     round: 'Manche (Round)',
@@ -121,7 +122,7 @@ export const ENHANCED_FRENCH_LOCALE = {
         {
             number: 'Manche 1 (Round 1)',
             title: `${LEAN_TERMS.BATCH_SIZE} de 20`,
-            description: 'Passer TOUTES les 20 pièces d\'un coup - Système en Flux Poussé (Push System)',
+            description: `Passer TOUTES les 20 pièces d\'un coup - ${LEAN_TERMS.PUSH_SYSTEM}`,
         },
         {
             number: 'Manche 2 (Round 2)',
@@ -135,14 +136,14 @@ export const ENHANCED_FRENCH_LOCALE = {
     start: 'Démarrer la Manche (Start Round)',
     reset: 'Réinitialiser (Reset)',
     resultsTitle: 'Résultats de la Simulation (Simulation Results)',
-    leanTitle: `Enseignements Lean (Lean ${LEAN_TERMS.INSIGHTS})`,
+    leanTitle: `${LEAN_TERMS.INSIGHTS.split(' ')[0]} Lean (Lean ${LEAN_TERMS.INSIGHTS.split(' ')[1]})`,
 
     // Enhanced insights with bilingual terminology
     insights: [
-        `${LEAN_TERMS.BATCH_SIZE}: Observer l'impact de la taille des lots sur le temps de cycle`,
-        `${LEAN_TERMS.FLOW}: Analyser les ${LEAN_TERMS.BOTTLENECK} et les temps d'attente`,
+        `${LEAN_TERMS.BATCH_SIZE}: Observer l'impact de la ${LEAN_TERMS.BATCH_SIZE} sur le ${LEAN_TERMS.CYCLE_TIME}`,
+        `${LEAN_TERMS.FLOW}: Analyser les ${LEAN_TERMS.BOTTLENECK} et les ${LEAN_TERMS.QUEUE_TIME}`,
         `${LEAN_TERMS.LEAD_TIME}: Comparer le temps individuel vs. temps total du processus`,
-        `${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}: Discuter des optimisations possibles`,
+        `${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}: Discuter des ${LEAN_TERMS.OPTIMIZATION}s possibles`,
     ],
 
     // Game mechanics with Lean terms
@@ -244,7 +245,7 @@ export function generateBilingualInsights(gameData) {
         const waitTime = totalTime - averageTime;
         if (waitTime > averageTime * 0.5) {
             insights.push(
-                `${LEAN_TERMS.LEAD_TIME}: Important temps d'attente détecté - optimiser le ${LEAN_TERMS.FLOW} pour réduire le ${LEAN_TERMS.WASTE}`
+                `${LEAN_TERMS.LEAD_TIME}: Important ${LEAN_TERMS.QUEUE_TIME} détecté - optimiser le ${LEAN_TERMS.FLOW} pour réduire le ${LEAN_TERMS.WASTE}`
             );
         }
     }

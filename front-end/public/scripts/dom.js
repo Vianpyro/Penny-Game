@@ -1,4 +1,4 @@
-// DOM manipulation helpers for Penny Game
+import { ENHANCED_FRENCH_LOCALE } from "../scripts/bilingual-terms.js";
 
 export function updateGameCode(code) {
     const gameCodeSpan = document.getElementById('game-code')
@@ -18,7 +18,7 @@ export function renderPlayers(players, host, spectators, activity, addDnDEvents)
         const li = document.createElement('li')
         li.className = 'waiting'
         li.title = 'En attente'
-        li.innerHTML = '<span class="status-indicator">⏳</span> En attente de joueurs'
+        li.innerHTML = `<span class="status-indicator">⏳</span> En attente de ${ENHANCED_FRENCH_LOCALE.players}`
         playerList.appendChild(li)
 
         // Update player count display
@@ -225,9 +225,9 @@ export function updateConfigurationDisplayForNonHosts(roundType, requiredPlayers
 
     const roundTypeText =
         {
-            single: '1 manche',
-            two_rounds: '2 manches',
-            three_rounds: '3 manches',
+            single: '1 ${LEAN_TERMS.ROUND}',
+            two_rounds: '2 ${LEAN_TERMS.ROUNDS}',
+            three_rounds: '3 ${LEAN_TERMS.ROUNDS}',
         }[roundType] || 'Configuration par défaut'
 
     let batchInfo = ''

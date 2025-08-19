@@ -5,7 +5,7 @@ import { showNotification } from './utility.js'
 import { ViewManager } from './view-manager.js'
 import { TimeUtils } from './time-utils.js'
 import { GameActions } from './game-actions.js'
-import { LEAN_TERMS, generateBilingualInsights } from './bilingual-terms.js';
+import { ENHANCED_FRENCH_LOCALE, LEAN_TERMS, generateBilingualInsights } from './bilingual-terms.js';
 
 const DEFAULT_BATCH_SIZES = [15, 5, 1]
 const TOTAL_COINS = DEFAULT_BATCH_SIZES[0]
@@ -1327,15 +1327,15 @@ function updateMainGameStats(gameSummary) {
             </div>
             <div class="stat-card ${validRounds.length < gameSummary.totalRounds ? 'incomplete' : ''}">
                 <div class="stat-value">${validRounds.length > 0 ? TimeUtils.formatTime(avgTime) : 'N/A'}</div>
-                <div class="stat-label">Temps moyen/manche</div>
+                <div class="stat-label">${LEAN_TERMS.AVERAGE_TIME}/manche</div>
             </div>
             <div class="stat-card ${validRounds.length === 0 ? 'incomplete' : ''}">
                 <div class="stat-value">${validRounds.length > 0 ? TimeUtils.formatTime(bestTime) : 'N/A'}</div>
-                <div class="stat-label">Meilleur temps</div>
+                <div class="stat-label">${LEAN_TERMS.BEST_TIME}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">${Object.keys(gameSummary.playerSummary).length}</div>
-                <div class="stat-label">Joueurs</div>
+                <div class="stat-label">${ENHANCED_FRENCH_LOCALE.players}</div>
             </div>
         `
 
@@ -1433,11 +1433,11 @@ function updateRoundBreakdown(roundResults) {
                 <div class="round-stats-mini">
                     <div class="mini-stat">
                         <div class="mini-stat-value">${gameTime}</div>
-                        <div class="mini-stat-label">Temps total</div>
+                        <div class="mini-stat-label">${LEAN_TERMS.TOTAL_TIME}</div>
                     </div>
                     <div class="mini-stat">
                         <div class="mini-stat-value">${efficiency}</div>
-                        <div class="mini-stat-label">Débit (pièces/min)</div>
+                        <div class="mini-stat-label">${LEAN_TERMS.THROUGHPUT} (pièces/min)</div>
                     </div>
                 </div>
                 <div class="round-rankings">
@@ -1496,7 +1496,7 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
     const batchAnalysisSection = document.createElement('div')
     batchAnalysisSection.className = 'batch-analysis-section'
     batchAnalysisSection.innerHTML = `
-        <h3>📦 Impact de la Taille des Lots</h3>
+        <h3>📦 Impact de la ${LEAN_TERMS.BATCH_SIZE}</h3>
         <div class="batch-comparison-grid" id="batchComparisonGrid"></div>
         <div class="lead-time-comparison" id="leadTimeComparison"></div>
         <div class="batch-insights" id="batchInsights"></div>
@@ -1533,16 +1533,16 @@ function updateBatchSizeAnalysis(batchSizeImpact) {
                 <div class="batch-metrics">
                     <div class="batch-metric">
                         <div class="metric-value">${TimeUtils.formatTime(data.avgTime)}</div>
-                        <div class="metric-label">Temps total</div>
+                        <div class="metric-label">${LEAN_TERMS.TOTAL_TIME}</div>
                     </div>
                     <div class="batch-metric lead-time-metric">
                         <div class="metric-value">${avgLeadTime > 0 ? TimeUtils.formatTime(avgLeadTime) : '--:--'}</div>
-                        <div class="metric-label">Lead Time</div>
+                        <div class="metric-label">${LEAN_TERMS.LEAD_TIME}</div>
                         <div class="metric-sublabel">1er flip → 1ère livraison</div>
                     </div>
                     <div class="batch-metric">
                         <div class="metric-value">${data.avgEfficiency.toFixed(1)}</div>
-                        <div class="metric-label">Débit (pièces/min)</div>
+                        <div class="metric-label">${LEAN_TERMS.THROUGHPUT} (pièces/min)</div>
                     </div>
                 </div>
             `
@@ -1581,10 +1581,10 @@ function updateLeadTimeComparison() {
     if (roundsWithLeadTime.length === 0) {
         leadTimeComparison.innerHTML = `
             <div class="lead-time-section">
-                <h4>⏱️ Lead Time par Manche</h4>
+                <h4>⏱️ ${LEAN_TERMS.LEAD_TIME} par Manche</h4>
                 <div class="no-lead-time-data">
-                    <p>Aucune donnée de Lead Time disponible pour cette partie.</p>
-                    <small>Le Lead Time mesure le temps entre le premier retournement de pièce et la première livraison.</small>
+                    <p>Aucune donnée de ${LEAN_TERMS.LEAD_TIME} disponible pour cette partie.</p>
+                    <small>Le ${LEAN_TERMS.LEAD_TIME} mesure le temps entre le premier retournement de pièce et la première livraison.</small>
                 </div>
             </div>
         `
@@ -1600,20 +1600,20 @@ function updateLeadTimeComparison() {
         <div class="lead-time-section">
             <h4>⏱️ Lead Time par Manche</h4>
             <p class="lead-time-description">
-                Le Lead Time mesure le délai entre le premier retournement de pièce et la première livraison.
-                Un Lead Time plus court indique un meilleur flux de production.
+                Le ${LEAN_TERMS.LEAD_TIME} mesure le délai entre le premier retournement de pièce et la première livraison.
+                Un ${LEAN_TERMS.LEAD_TIME} plus court indique un meilleur ${LEAN_TERMS.FLOW} de production.
             </p>
             <div class="lead-time-rounds-grid" id="leadTimeRoundsGrid"></div>
             <div class="lead-time-summary">
                 <div class="lead-time-stat best">
                     <div class="stat-icon">🏆</div>
                     <div class="stat-value">${TimeUtils.formatTime(bestLeadTime)}</div>
-                    <div class="stat-label">Meilleur Lead Time</div>
+                    <div class="stat-label">Meilleur ${LEAN_TERMS.LEAD_TIME}</div>
                 </div>
                 <div class="lead-time-stat worst">
                     <div class="stat-icon">⏳</div>
                     <div class="stat-value">${TimeUtils.formatTime(worstLeadTime)}</div>
-                    <div class="stat-label">Lead Time le plus long</div>
+                    <div class="stat-label">${LEAN_TERMS.LEAD_TIME} le plus long</div>
                 </div>
                 <div class="lead-time-stat improvement">
                     <div class="stat-icon">📈</div>
@@ -1675,7 +1675,7 @@ function generateBatchSizeInsights(batchSizeImpact) {
             const timeDiff = largestBatch.avgTime - smallestBatch.avgTime
             const percentDiff = ((timeDiff / largestBatch.avgTime) * 100).toFixed(0)
             insights.push(
-                `⏱️ <strong>Temps total:</strong> Les petits lots sont ${percentDiff}% plus rapides que les gros lots`
+                `⏱️ <strong>${LEAN_TERMS.TOTAL_TIME}:</strong> Les petits lots sont ${percentDiff}% plus rapides que les gros lots`
             )
         }
 
@@ -1690,11 +1690,11 @@ function generateBatchSizeInsights(batchSizeImpact) {
                 const leadTimeDiff = largestLeadTime - smallestLeadTime
                 const leadTimePercent = ((leadTimeDiff / largestLeadTime) * 100).toFixed(0)
                 insights.push(
-                    `🚀 <strong>Lead Time:</strong> Les petits lots réduisent le délai de livraison de ${leadTimePercent}%`
+                    `🚀 <strong>Lead Time:</strong> Les petits lots réduisent le ${LEAN_TERMS.LEAD_TIME} de ${leadTimePercent}%`
                 )
             } else if (largestLeadTime < smallestLeadTime) {
                 insights.push(
-                    `⚡ <strong>Lead Time:</strong> Contre-intuitivement, les gros lots ont un meilleur Lead Time dans cette simulation`
+                    `⚡ <strong>Lead Time:</strong> Contre-intuitivement, les gros lots ont un meilleur ${LEAN_TERMS.LEAD_TIME} dans cette ${LEAN_TERMS.SIMULATION}`
                 )
             }
         }
@@ -1703,18 +1703,18 @@ function generateBatchSizeInsights(batchSizeImpact) {
         if (smallestBatch.avgEfficiency > largestBatch.avgEfficiency) {
             const efficiencyGain = (smallestBatch.avgEfficiency - largestBatch.avgEfficiency).toFixed(1)
             insights.push(
-                `📈 <strong>Efficacité:</strong> Les petits lots améliorent le débit de ${efficiencyGain} pièces/min`
+                `📈 <strong>${LEAN_TERMS.EFFICIENCY}:</strong> Les petits lots améliorent le ${LEAN_TERMS.THROUGHPUT} de ${efficiencyGain} pièces/min`
             )
         }
 
         // Flow insights
-        insights.push(`🔄 <strong>Flux:</strong> Les gros lots créent plus de temps d'attente entre les joueurs`)
+        insights.push(`🔄 <strong>${LEAN_TERMS.FLOW}:</strong> Les gros lots créent plus de ${LEAN_TERMS.QUEUE_TIME} entre les joueurs`)
         insights.push(`⚡ <strong>Parallélisme:</strong> Les petits lots permettent un travail plus simultané`)
 
         // Waste identification
         if (largestBatch.avgTime > smallestBatch.avgTime * 1.5) {
             insights.push(
-                `🗑️ <strong>Gaspillage:</strong> Les gros lots génèrent du temps d'attente significatif (Muda)`
+                `🗑️ <strong>${LEAN_TERMS.WASTE}:</strong> Les gros lots génèrent du ${LEAN_TERMS.QUEUE_TIME} significatif`
             )
         }
 
@@ -1769,7 +1769,7 @@ function updatePlayerPerformanceSummary(playerSummary) {
                     <span class="detail-value">${TimeUtils.formatTime(playerStats.bestTime)}</span>
                 </div>
                 <div class="player-detail">
-                    <span class="detail-label">Efficacité:</span>
+                    <span class="detail-label">${LEAN_TERMS.EFFICIENCY}:</span>
                     <span class="detail-value">${playerStats.avgEfficiency.toFixed(1)} p/min</span>
                 </div>
             </div>
@@ -1805,26 +1805,26 @@ function generateDynamicInsights(gameSummary) {
             ? `<strong>${LEAN_TERMS.BATCH_SIZE}</strong>: Vous avez testé différentes tailles de lots et observé leur impact sur le ${LEAN_TERMS.CYCLE_TIME}`
             : `<strong>${LEAN_TERMS.BATCH_SIZE}</strong>: Essayez différentes tailles de lots pour observer leur impact sur le ${LEAN_TERMS.CYCLE_TIME}`,
 
-        `<strong>${LEAN_TERMS.FLOW}</strong>: Analysez les ${LEAN_TERMS.BOTTLENECK} et les temps d'attente dans votre ${LEAN_TERMS.VALUE_STREAM}`,
+        `<strong>${LEAN_TERMS.FLOW}</strong>: Analysez les ${LEAN_TERMS.BOTTLENECK} et les ${LEAN_TERMS.QUEUE_TIME} dans votre ${LEAN_TERMS.VALUE_STREAM}`,
         `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Comparez le temps individuel vs. temps total du processus pour identifier les ${LEAN_TERMS.IMPROVEMENT_OPPORTUNITIES}`,
         `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Discutez des ${LEAN_TERMS.OPTIMIZATION} possibles pour les prochaines itérations`,
 
         // Flow insights
         Object.keys(gameSummary.playerSummary).length > 2
-            ? `<strong>${LEAN_TERMS.FLOW}</strong>: Plus il y a de joueurs dans la chaîne, plus la coordination devient importante`
-            : `<strong>${LEAN_TERMS.FLOW}</strong>: Analysez les ${LEAN_TERMS.BOTTLENECK} et les temps d'attente dans votre ${LEAN_TERMS.VALUE_STREAM}`,
+            ? `<strong>${LEAN_TERMS.FLOW}</strong>: Plus il y a de joueurs dans la chaîne, plus la ${LEAN_TERMS.COORDINATION} devient importante`
+            : `<strong>${LEAN_TERMS.FLOW}</strong>: Analysez les ${LEAN_TERMS.BOTTLENECK} et les ${LEAN_TERMS.QUEUE_TIME} dans votre ${LEAN_TERMS.VALUE_STREAM}`,
 
         // Lead time insights
         gameSummary.averageRoundTime > Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) / Object.keys(gameSummary.playerSummary).length * 1.5
-            ? `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Le temps total est significativement plus long que le temps individuel - signe de ${LEAN_TERMS.WAITING_TIME}`
+            ? `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Le ${LEAN_TERMS.TOTAL_TIME} est significativement plus long que le temps individuel - signe de ${LEAN_TERMS.WAITING_TIME}`
             : `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Comparez le temps individuel vs. temps total du processus pour identifier les inefficacités`,
 
         // Continuous improvement insights
         gameSummary.totalRounds > 1
             ? gameSummary.roundResults[gameSummary.roundResults.length - 1] < gameSummary.roundResults[0]
-                ? `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Votre équipe s'est améliorée au fil des manches - excellent travail d'équipe !`
+                ? `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Votre équipe s'est améliorée au fil des manches - excellent ${LEAN_TERMS.TEAMWORK} !`
                 : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Discutez des ${LEAN_TERMS.OPTIMIZATION} possibles pour les prochaines itérations`
-            : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Jouez plusieurs manches pour voir l'évolution de votre performance`
+            : `<strong>${LEAN_TERMS.CONTINUOUS_IMPROVEMENT}</strong>: Jouez plusieurs manches pour voir l'évolution de votre ${LEAN_TERMS.PERFORMANCE}`
     ]
 }
 

@@ -7,7 +7,7 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
 // Generate batch size examples based on valid sizes
 const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS && size !== 1).map((size) => ({
     size,
-    description: size === 5 ? 'Par groupes de 5 (compromis)' : `Par groupes de ${size}`,
+    description: size === 5 ? `Par groupes de ${size} (compromis)` : `Par groupes de ${size}`,
 }))
 ---
 
@@ -25,8 +25,8 @@ const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS &&
     <div class="rules-content">
         <div class="rules-overview">
             <p>
-                <strong>Le Penny Game</strong> est une simulation Lean <strong>coopérative</strong> qui visualise l'impact
-                de la taille des lots sur l'efficacité du flux de production.
+                <strong>Le Penny Game</strong> est une {LEAN_TERMS.SIMULATION} Lean <strong>coopérative</strong> qui visualise l'impact
+                de la {LEAN_TERMS.BATCH_SIZE} sur l'{LEAN_TERMS.EFFICIENCY} du {LEAN_TERMS.FLOW} de production.
             </p>
             <div class="coin-info-banner">
                 🪙 Cette version utilise <strong>{TOTAL_COINS} pièces</strong> au total
@@ -37,7 +37,7 @@ const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS &&
             <div class="rule-section">
                 <h4>👥 Joueurs</h4>
                 <ul>
-                    <li>2 à 5 joueurs forment une <strong>chaîne de production</strong></li>
+                    <li>2 à 5 joueurs forment une <strong>{LEAN_TERMS.PRODUCTION_LINE}</strong></li>
                     <li>Le premier joueur reçoit toutes les {TOTAL_COINS} pièces au début</li>
                     <li>Chaque joueur traite puis passe au suivant</li>
                     <li>L'hôte démarre la partie mais ne joue pas</li>
@@ -82,22 +82,22 @@ const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS &&
                 <ul>
                     <li><strong>Pas de tours :</strong> Agissez dès que possible</li>
                     <li><strong>Parallélisme :</strong> Tous peuvent agir simultanément</li>
-                    <li><strong>Objectif commun :</strong> Optimiser le temps total</li>
-                    <li><strong>Communication :</strong> Coordonnez-vous !</li>
+                    <li><strong>Objectif commun :</strong> Optimiser le {LEAN_TERMS.TOTAL_TIME}</li>
+                    <li><strong>${LEAN_TERMS.COMMUNICATION} :</strong> Coordonnez-vous !</li>
                 </ul>
             </div>
         </div>
 
         <div class="lean-insights">
-            <h4>💡 Enseignements Lean (Lean {LEAN_TERMS.INSIGHTS.split(' ')[2]})</h4>
+            <h4>💡 {LEAN_TERMS.INSIGHTS.split(' ')[0]} Lean (Lean {LEAN_TERMS.INSIGHTS.split(' ')[1]})</h4>
             <div class="insights-grid">
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.BATCH_SIZE}</strong>
-                    <p>Impact de la taille des lots sur les temps d'attente et le {LEAN_TERMS.THROUGHPUT}</p>
+                    <p>Impact de la {LEAN_TERMS.BATCH_SIZE} sur les {LEAN_TERMS.QUEUE_TIME} et le {LEAN_TERMS.THROUGHPUT}</p>
                 </div>
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.FLOW}</strong>
-                    <p>Visualisation des {LEAN_TERMS.BOTTLENECK} et optimisation du {LEAN_TERMS.VALUE_STREAM}</p>
+                    <p>Visualisation des {LEAN_TERMS.BOTTLENECK} et ${LEAN_TERMS.OPTIMIZATION} du {LEAN_TERMS.VALUE_STREAM}</p>
                 </div>
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.LEAD_TIME}</strong>
@@ -105,7 +105,7 @@ const batchExamples = VALID_BATCH_SIZES.filter((size) => size !== TOTAL_COINS &&
                 </div>
                 <div class="insight-card">
                     <strong>{LEAN_TERMS.WASTE}</strong>
-                    <p>Identification des temps d'attente inutiles et des {LEAN_TERMS.IMPROVEMENT_OPPORTUNITIES}</p>
+                    <p>Identification des {LEAN_TERMS.QUEUE_TIME} inutiles et des {LEAN_TERMS.IMPROVEMENT_OPPORTUNITIES}</p>
                 </div>
             </div>
         </div>

@@ -5,14 +5,14 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
 ---
 
 <div class="results" id="results" style="display: none;">
-    <h2>🏆 Résultats Complets de la Simulation</h2>
+    <h2>🏆 Résultats Complets de la {LEAN_TERMS.SIMULATION}</h2>
 
     <!-- Game Timer Section -->
     <div class="game-time-section" id="gameTimeSection">
         <div class="game-time-card">
             <div class="game-time-icon">⏱️</div>
             <div class="game-time-value" id="gameTimeValue">--:--</div>
-            <div class="game-time-label">Temps total de toutes les manches</div>
+            <div class="game-time-label">${LEAN_TERMS.TOTAL_TIME} de toutes les manches</div>
         </div>
     </div>
 
@@ -26,8 +26,8 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
 
     <!-- Player Performance Summary Section -->
     <div class="player-timers-section" id="playerTimersSection">
-        <h3>👥 Performance Globale des Joueurs</h3>
-        <p class="section-description">Classement basé sur la performance moyenne sur toutes les manches</p>
+        <h3>👥 {LEAN_TERMS.PERFORMANCE} Globale des Joueurs</h3>
+        <p class="section-description">Classement basé sur la {LEAN_TERMS.PERFORMANCE} moyenne sur toutes les manches</p>
         <div class="player-timers-grid" id="playerTimersGrid">
             <!-- Player summary cards will be dynamically generated -->
         </div>
@@ -41,14 +41,14 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
 
     <!-- Insights Section with Dynamic Content -->
     <div class="insights">
-        <h3>💡 Enseignements Lean (Lean {LEAN_TERMS.INSIGHTS.split(' ')[2]})</h3>
-        <p class="insights-description">Basés sur vos résultats de simulation</p>
+        <h3>💡 {LEAN_TERMS.INSIGHTS.split(' ')[0]} Lean (Lean {LEAN_TERMS.INSIGHTS.split(' ')[1]})</h3>
+        <p class="insights-description">Basés sur vos résultats de {LEAN_TERMS.SIMULATION}</p>
         <ul id="insightsList">
             <li>
-                <strong>{LEAN_TERMS.BATCH_SIZE}:</strong> Observer l'impact de la taille des lots sur le {LEAN_TERMS.CYCLE_TIME}
+                <strong>{LEAN_TERMS.BATCH_SIZE}:</strong> Observer l'impact de la {LEAN_TERMS.BATCH_SIZE} sur le {LEAN_TERMS.CYCLE_TIME}
             </li>
             <li>
-                <strong>{LEAN_TERMS.FLOW}:</strong> Analyser les {LEAN_TERMS.BOTTLENECK} et les temps d'attente
+                <strong>{LEAN_TERMS.FLOW}:</strong> Analyser les {LEAN_TERMS.BOTTLENECK} et les {LEAN_TERMS.QUEUE_TIME}
             </li>
             <li>
                 <strong>{LEAN_TERMS.LEAD_TIME}:</strong> Comparer le temps individuel vs. temps total du processus

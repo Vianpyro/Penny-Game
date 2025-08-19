@@ -44,7 +44,7 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="avgPlayerTime">--:--</div>
-                    <div class="stat-label">${LEAN_TERMS.AVERAGE_TIME}</div>
+                    <div class="stat-label">{LEAN_TERMS.AVERAGE_TIME}</div>
                 </div>
                 <div class="stat-card highlight">
                     <div class="stat-value" id="roundLeadTime">--:--</div>
@@ -94,7 +94,7 @@ import { LEAN_TERMS } from '../../public/scripts/bilingual-terms.js';
         <!-- Game complete section -->
         <div class="game-complete-section" id="gameCompleteSection" style="display: none;">
             <h3>🏆 Toutes les Manches Terminées !</h3>
-            <p>Félicitations ! Vous avez terminé toutes les manches de la simulation.</p>
+            <p>Félicitations ! Vous avez terminé toutes les manches de la {LEAN_TERMS.SIMULATION}.</p>
             <div class="final-actions">
                 <button class="btn btn-success" id="viewResultsBtn"> 📊 Voir les Résultats Complets </button>
             </div>
