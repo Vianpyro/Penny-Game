@@ -1,15 +1,15 @@
 export function supportsEmoji(emoji) {
-    const ctx = document.createElement("canvas").getContext("2d");
-    ctx.canvas.width = ctx.canvas.height = 20;
-    ctx.textBaseline = "top";
-    ctx.font = "16px Arial";
+    const ctx = document.createElement('canvas').getContext('2d')
+    ctx.canvas.width = ctx.canvas.height = 20
+    ctx.textBaseline = 'top'
+    ctx.font = '16px Arial'
 
-    ctx.clearRect(0, 0, 20, 20);
-    ctx.fillText(emoji, 0, 0);
+    ctx.clearRect(0, 0, 20, 20)
+    ctx.fillText(emoji, 0, 0)
 
     // Get pixel data to check if something was drawn
-    const pixels = ctx.getImageData(0, 0, 20, 20).data;
-    return [...pixels].some(channel => channel !== 0);
+    const pixels = ctx.getImageData(0, 0, 20, 20).data
+    return [...pixels].some((channel) => channel !== 0)
 }
 
 /**
