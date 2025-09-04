@@ -1,7 +1,10 @@
 // Game board logic for Penny Game with cooperative mechanics and timers
 import { flipCoin } from './api.js'
 import { showNotification } from './utility.js'
-import { LEAN_TERMS, updateElementWithBilingualTerm } from './bilingual-terms.js'
+import { LEAN_TERMS } from './bilingual-terms.js'
+import { supportsEmoji } from './utility.js'
+
+const coinEmoji = supportsEmoji('🪙') ? '🪙' : '💰'
 
 const TOTAL_COINS = 15
 const FLIP_HOLD_DURATION = 1000
@@ -155,8 +158,8 @@ function fullRenderGameBoard(gameBoard, gameState) {
     // Fix coin display
     setTimeout(() => {
         document.querySelectorAll('.coin.flip').forEach((coin) => {
-            if (!coin.textContent.includes('🪙')) {
-                coin.innerHTML = '🪙'
+            if (!coin.textContent.includes(coinEmoji)) {
+                coin.innerHTML = coinEmoji
             }
         })
     }, 0)
@@ -426,7 +429,7 @@ function updateStationCoins(station, player, playerCoins, gameState, isCurrentPl
                         const progressRing = existingWrapper.querySelector('.coin-progress-ring')
                         // Clone to remove old event listeners
                         const newCoin = coin.cloneNode(true)
-                        newCoin.textContent = '🪙'
+                        newCoin.textContent = coinEmoji
                         coin.parentNode.replaceChild(newCoin, coin)
                         setupCoinHoldEvents(newCoin, index, progressRing)
                     }
@@ -469,7 +472,7 @@ function updateCoinState(coin, isHeads, canInteract) {
         }
     }
 
-    coin.textContent = '🪙'
+    coin.textContent = coinEmoji
 }
 
 function updateStationActions(station, player, playerCoins, gameState, isCurrentPlayer, playerIndex) {
@@ -563,7 +566,7 @@ function updateCompletionArea(gameState) {
         const totalCompleted = gameState.total_completed || 0
 
         if (completedCoinsContainer) {
-            completedCoinsContainer.innerHTML = Array(totalCompleted).fill('🪙').join('')
+            completedCoinsContainer.innerHTML = Array(totalCompleted).fill(coinEmoji).join('')
         }
 
         if (completionCount) {
@@ -660,7 +663,7 @@ function createProductionLineElement(gameState) {
         <div class="completion-station">
             <h3>✅ Terminé</h3>
             <div class="completed-coins">
-                ${Array(gameState.total_completed).fill('🪙').join('')}
+                ${Array(gameState.total_completed).fill(coinEmoji).join('')}
             </div>
             <div class="completion-count">${gameState.total_completed}/${TOTAL_COINS}</div>
         </div>
@@ -800,7 +803,7 @@ function createCoinElement(player, index, isHeads, canInteract) {
 
     const coin = document.createElement('div')
     coin.className = `flip coin ${isHeads ? 'heads' : 'tails'}`
-    coin.textContent = '🪙'
+    coin.textContent = coinEmoji
     coin.title = isHeads ? 'Face - Prête à envoyer' : `Maintenez pendant ${FLIP_HOLD_DURATION / 1000}s pour retourner`
     coin.dataset.coinIndex = index
     coin.dataset.player = player
@@ -1061,7 +1064,7 @@ async function performCoinFlip(coinIndex, coinElement) {
 
     // Remove event listeners
     const newCoin = coinElement.cloneNode(true)
-    newCoin.textContent = '🪙'
+    newCoin.textContent = coinEmoji
     coinElement.parentNode.replaceChild(newCoin, coinElement)
 
     try {

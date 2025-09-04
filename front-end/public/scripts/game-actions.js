@@ -62,7 +62,7 @@ export class GameActions {
      * Setup coin flip actions for game board
      */
     static setupCoinActions() {
-        console.log('🪙 Setting up coin flip actions')
+        console.log('💰 Setting up coin flip actions')
 
         document.addEventListener('click', (event) => {
             if (event.target.classList.contains('send-batch-btn')) {
