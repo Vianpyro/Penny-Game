@@ -29,7 +29,7 @@ online_users: Dict[str, set] = {}
 
 def create_new_game() -> tuple[str, str]:
     """Create a new game and return room ID and host secret."""
-    room_id = str(uuid4())[:8]
+    room_id = str(uuid4())[:5]
     now = datetime.now()
     host_secret = str(uuid4())
 
