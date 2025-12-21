@@ -58,7 +58,7 @@ def create_new_game() -> tuple[str, str, str]:
     # Generate a short, unique room code
     max_attempts = 100
     for _ in range(max_attempts):
-        room_id = _generate_room_code(4)
+        room_id = _generate_room_code()
         if room_id not in games:
             break
     else:
