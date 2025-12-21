@@ -4,6 +4,8 @@ Handles all game mechanics including coin flipping, batch sending, and round man
 """
 
 import logging
+import random
+import string
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import uuid4
@@ -44,9 +46,25 @@ def validate_session_token(game: PennyGame, username: str, token: str) -> bool:
     return expected is not None and expected == token
 
 
+def _generate_room_code(length: int = 4) -> str:
+    """Generate a short, human-friendly room code."""
+    # Use uppercase letters and digits, excluding ambiguous characters (0, O, I, 1, l)
+    chars = string.ascii_uppercase.replace("O", "").replace("I", "") + string.digits.replace("0", "").replace("1", "")
+    return "".join(random.choices(chars, k=length))
+
+
 def create_new_game() -> tuple[str, str, str]:
     """Create a new game and return room ID, host secret, and CSRF token."""
-    room_id = str(uuid4())
+    # Generate a short, unique room code
+    max_attempts = 100
+    for _ in range(max_attempts):
+        room_id = _generate_room_code(4)
+        if room_id not in games:
+            break
+    else:
+        # Fallback to UUID if we somehow can't find a unique code
+        room_id = str(uuid4())[:8].upper()
+
     now = datetime.now()
     host_secret = str(uuid4())
     host_csrf_token = str(uuid4())
@@ -73,12 +91,13 @@ def create_new_game() -> tuple[str, str, str]:
 
 
 def get_game(room_id: str) -> Optional[PennyGame]:
-    """Get a game by room ID."""
-    return games.get(room_id)
+    """Get a game by room ID (case-insensitive)."""
+    return games.get(room_id.upper())
 
 
 def remove_game(room_id: str) -> None:
-    """Remove a game and its associated data."""
+    """Remove a game and its associated data (case-insensitive)."""
+    room_id = room_id.upper()
     games.pop(room_id, None)
     rooms.pop(room_id, None)
     online_users.pop(room_id, None)

@@ -174,6 +174,7 @@ def create_game(request: Request):
 @router.post("/game/join/{room_id}")
 async def join_game(room_id: str, join: JoinRequest, request: Request, spectator: bool = False):
     """Join a game as a player or spectator."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     _enforce_rate_limit(request, "join_game")
     game = get_game(room_id)
     username = join.username
@@ -275,6 +276,7 @@ async def _handle_player_join(game, username: str, room_id: str):
 @router.post("/game/round_config/{room_id}")
 async def set_round_configuration(room_id: str, req: RoundConfigRequest, request: Request):
     """Set round configuration for the game (host only, lobby only)."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     game = get_game(room_id)
 
     # Validate request
@@ -325,6 +327,7 @@ async def set_round_configuration(room_id: str, req: RoundConfigRequest, request
 @router.post("/game/start/{room_id}")
 async def start_game(room_id: str, request: Request):
     """Start the first round of the game (host only)."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     game = get_game(room_id)
 
     # Validate request
@@ -380,6 +383,7 @@ async def _broadcast_game_started(room_id: str, game, total_rounds: int):
 @router.post("/game/next_round/{room_id}")
 async def start_next_round_endpoint(room_id: str, request: Request):
     """Start the next round (host only, round_complete state only)."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     game = get_game(room_id)
 
     # Validate request
@@ -454,6 +458,7 @@ async def _broadcast_round_started(room_id: str, game, total_rounds: int):
 @router.post("/game/flip/{room_id}")
 async def flip_coin(room_id: str, flip: FlipRequest, request: Request):
     """Flip a coin in the game."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     _enforce_rate_limit(request, "flip")
     game = get_game(room_id)
 
@@ -500,6 +505,7 @@ async def flip_coin(room_id: str, flip: FlipRequest, request: Request):
 @router.post("/game/send/{room_id}")
 async def send_batch_endpoint(room_id: str, send: SendRequest, request: Request):
     """Send a batch of coins to the next player."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     try:
         _enforce_rate_limit(request, "send")
         game = get_game(room_id)
@@ -622,6 +628,7 @@ async def _handle_round_complete(room_id: str, game):
 @router.post("/game/reset/{room_id}")
 async def reset_game_endpoint(room_id: str, request: Request):
     """Reset the game to lobby state (host only)."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     game = get_game(room_id)
 
     # Validate request
@@ -670,6 +677,7 @@ async def _broadcast_game_reset(room_id: str, game):
 @router.get("/game/state/{room_id}")
 def get_game_state(room_id: str):
     """Get the current game state."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     game = get_game(room_id)
 
     is_valid, error = GameValidator.validate_game_exists(game)
@@ -682,6 +690,7 @@ def get_game_state(room_id: str):
 @router.post("/game/change_role/{room_id}")
 async def change_role(room_id: str, req: ChangeRoleRequest = Body(...), request: Request = None):
     """Change a user's role between player and spectator."""
+    room_id = room_id.upper()  # Normalize for case-insensitive lookup
     game = get_game(room_id)
 
     is_valid, error = GameValidator.validate_game_exists(game)
