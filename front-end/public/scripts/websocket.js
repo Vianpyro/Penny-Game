@@ -1428,19 +1428,20 @@ function updateRoundBreakdown(roundResults) {
                     </div>
                 </div>
                 <div class="round-rankings">
-                    ${hasValidOrder
-                    ? result.playerOrder
-                        .map(
-                            (ranking) => `
+                    ${
+                        hasValidOrder
+                            ? result.playerOrder
+                                  .map(
+                                      (ranking) => `
                             <div class="mini-ranking">
                                 <span class="ranking-player">${ranking.player}</span>
                                 <span class="ranking-time">${ranking.time ? TimeUtils.formatTime(ranking.time) : '--:--'}</span>
                             </div>
                         `
-                        )
-                        .join('')
-                    : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
-                }
+                                  )
+                                  .join('')
+                            : '<div class="mini-ranking incomplete"><span class="ranking-position">⚠️</span><span class="ranking-player">Données de timers manquantes</span></div>'
+                    }
                 </div>
             `
 
@@ -1805,8 +1806,8 @@ function generateDynamicInsights(gameSummary) {
 
         // Lead time insights
         gameSummary.averageRoundTime >
-            (Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) /
-                Object.keys(gameSummary.playerSummary).length) *
+        (Object.values(gameSummary.playerSummary).reduce((sum, p) => sum + p.avgTime, 0) /
+            Object.keys(gameSummary.playerSummary).length) *
             1.5
             ? `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Le ${LEAN_TERMS.TOTAL_TIME} est significativement plus long que le temps individuel - signe de ${LEAN_TERMS.WAITING_TIME}`
             : `<strong>${LEAN_TERMS.LEAD_TIME}</strong>: Comparez le temps individuel vs. temps total du processus pour identifier les inefficacités`,
@@ -1840,7 +1841,11 @@ export function connectWebSocket(apiUrl, roomId, username) {
 
     const tokenQuery = `?token=${encodeURIComponent(sessionToken)}`
     const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}${tokenQuery}`
-    console.log('🔌 Connecting to WebSocket:', wsUrl.replace(sessionToken, '***'), { roomId, username, tokenLength: sessionToken.length })
+    console.log('🔌 Connecting to WebSocket:', wsUrl.replace(sessionToken, '***'), {
+        roomId,
+        username,
+        tokenLength: sessionToken.length,
+    })
 
     const ws = new WebSocket(wsUrl)
 

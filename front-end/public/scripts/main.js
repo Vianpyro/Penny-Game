@@ -86,35 +86,37 @@ if (nextRoundBtn) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
-
-        // Dev-mode banner: show when backend reports non-production environment
-        (async () => {
-            try {
-                if (!apiUrl) return
-                const res = await fetch(`${apiUrl}/health`, { credentials: 'include' })
-                if (!res.ok) return
-                const info = await res.json()
-                if (info && info.environment && info.environment !== 'production') {
-                    const banner = document.createElement('div')
-                    banner.style.position = 'fixed'
-                    banner.style.top = '8px'
-                    banner.style.right = '8px'
-                    banner.style.zIndex = '9999'
-                    banner.style.padding = '6px 10px'
-                    banner.style.borderRadius = '6px'
-                    banner.style.background = '#2c3e50'
-                    banner.style.color = '#ecf0f1'
-                    banner.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'
-                    banner.style.fontSize = '12px'
-                    banner.style.opacity = '0.9'
-                    banner.textContent = `Dev Mode: CSRF header-only enabled (${info.environment})`
-                    document.body.appendChild(banner)
+    const apiUrl =
+        document.getElementById('joinRoleModal')?.getAttribute('data-api-url') ||
+        ''(
+            // Dev-mode banner: show when backend reports non-production environment
+            async () => {
+                try {
+                    if (!apiUrl) return
+                    const res = await fetch(`${apiUrl}/health`, { credentials: 'include' })
+                    if (!res.ok) return
+                    const info = await res.json()
+                    if (info && info.environment && info.environment !== 'production') {
+                        const banner = document.createElement('div')
+                        banner.style.position = 'fixed'
+                        banner.style.top = '8px'
+                        banner.style.right = '8px'
+                        banner.style.zIndex = '9999'
+                        banner.style.padding = '6px 10px'
+                        banner.style.borderRadius = '6px'
+                        banner.style.background = '#2c3e50'
+                        banner.style.color = '#ecf0f1'
+                        banner.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'
+                        banner.style.fontSize = '12px'
+                        banner.style.opacity = '0.9'
+                        banner.textContent = `Dev Mode: CSRF header-only enabled (${info.environment})`
+                        document.body.appendChild(banner)
+                    }
+                } catch (e) {
+                    // Silent failure; banner is non-critical
                 }
-            } catch (e) {
-                // Silent failure; banner is non-critical
             }
-        })()
+        )()
 
     // Copy code to clipboard
     const copyBtn = document.getElementById('copyCodeBtn')

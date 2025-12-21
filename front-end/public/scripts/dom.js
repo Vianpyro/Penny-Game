@@ -59,7 +59,7 @@ export function renderSpectators(spectators, host, activity, addDnDEvents) {
         spectatorList.appendChild(li)
     }
 
-    ; (spectators || [])
+    ;(spectators || [])
         .filter((spectator) => spectator !== host)
         .forEach((spectator) => {
             const li = document.createElement('li')
