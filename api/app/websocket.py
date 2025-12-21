@@ -288,7 +288,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str) 
     """Main websocket endpoint for handling client connections."""
     # Normalize room_id to uppercase for case-insensitive lookup
     room_id = room_id.upper()
-    
+
     client_ip = websocket.client.host if websocket.client else "unknown"
 
     # Check connection limits
