@@ -5,9 +5,12 @@ Handles all HTTP endpoints for game management and player actions.
 
 import json
 import logging
+import os
+import time
+from collections import defaultdict
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Body, Cookie, HTTPException, Response
+from fastapi import APIRouter, Body, HTTPException, Request, Response
 
 from .game_logic import (
     cleanup,
@@ -16,12 +19,14 @@ from .game_logic import (
     get_game,
     get_total_rounds,
     initialize_player_coins,
+    issue_session_token,
     process_flip,
     process_send,
     reset_game,
     rooms,
     set_round_config,
     start_next_round,
+    validate_session_token,
 )
 from .models import ChangeRoleRequest, FlipRequest, GameState, JoinRequest, RoundConfigRequest, RoundType, SendRequest
 from .response_builder import GameResponseBuilder
@@ -33,22 +38,131 @@ logger = logging.getLogger(__name__)
 
 # Constants
 COOKIE_MAX_AGE = int(timedelta(minutes=30).total_seconds())
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_MAX_REQUESTS = 90
+rate_limit_store = defaultdict(list)
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+
+
+def _extract_session_token(request: Request) -> str:
+    """Retrieve the caller's session token from headers or cookies."""
+    return request.headers.get("X-Session-Token") or request.cookies.get("session_token")
+
+
+def _assert_valid_session(game, username: str, token: str):
+    """Ensure the provided session token matches the stored token for the user."""
+    if not validate_session_token(game, username, token):
+        raise HTTPException(status_code=403, detail="Invalid or missing session token")
+
+
+def _assert_host_credentials(game, request: Request):
+    """Validate host secret and CSRF token using headers and cookies."""
+    host_secret = request.headers.get("X-Host-Secret") or request.cookies.get("host_secret")
+    csrf_header = request.headers.get("X-CSRF-Token")
+    csrf_cookie = request.cookies.get("csrf_token")
+
+    # Log presence of credentials (masked)
+    def _mask(val: str | None) -> str:
+        if not val:
+            return "None"
+        return f"{val[:6]}..."
+
+    logger.info(
+        "Host creds check: secret=%s csrf_header=%s csrf_cookie=%s",
+        _mask(host_secret),
+        _mask(csrf_header),
+        _mask(csrf_cookie),
+    )
+
+    is_valid, error = GameValidator.validate_host_action(game, host_secret)
+    if not is_valid:
+        raise HTTPException(status_code=403, detail=error)
+
+    # Accept either header-only match (dev/local) or strict header+cookie match
+    header_matches = bool(csrf_header) and csrf_header == game.host_csrf_token
+    both_match = (
+        bool(csrf_header and csrf_cookie) and csrf_header == csrf_cookie and csrf_header == game.host_csrf_token
+    )
+    if not (header_matches or both_match):
+        # Provide more diagnostic detail
+        if not csrf_header:
+            detail = "Missing CSRF header"
+        elif csrf_cookie and csrf_header != csrf_cookie:
+            detail = "CSRF header/cookie mismatch"
+        elif csrf_header != game.host_csrf_token:
+            detail = "Invalid CSRF header value"
+        else:
+            detail = "Invalid CSRF token"
+        logger.info("CSRF validation failed: %s", detail)
+        raise HTTPException(status_code=403, detail=detail)
+
+
+def _has_valid_host_credentials(game, request: Request) -> bool:
+    """Check host credentials if provided; return True when valid and provided, False if absent."""
+    host_secret = request.headers.get("X-Host-Secret") or request.cookies.get("host_secret")
+    csrf_header = request.headers.get("X-CSRF-Token")
+    csrf_cookie = request.cookies.get("csrf_token")
+
+    # If nothing is provided, caller is likely a player; defer to session token auth
+    if not host_secret and not csrf_header and not csrf_cookie:
+        return False
+
+    # Validate using strict helper (raises on failure)
+    _assert_host_credentials(game, request)
+    return True
+
+
+def _enforce_rate_limit(request: Request, bucket: str) -> None:
+    """Simple sliding-window rate limiter keyed by client IP and bucket."""
+    client_ip = request.client.host if request.client else "unknown"
+    key = f"{client_ip}:{bucket}"
+    now = time.time()
+
+    # Drop stale entries and check current rate
+    recent = [ts for ts in rate_limit_store[key] if now - ts < RATE_LIMIT_WINDOW_SECONDS]
+    rate_limit_store[key] = recent
+
+    if len(recent) >= RATE_LIMIT_MAX_REQUESTS:
+        raise HTTPException(status_code=429, detail="Too many requests")
+
+    rate_limit_store[key].append(now)
+
+
+def _assert_admin(request: Request) -> None:
+    """Require an admin token for maintenance endpoints."""
+    if not ADMIN_TOKEN:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    token = request.headers.get("X-Admin-Token")
+    if not token or token != ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 @router.post("/game/create")
-def create_game():
+def create_game(request: Request):
     """Create a new game room."""
-    room_id, host_secret = create_new_game()
+    _enforce_rate_limit(request, "create_game")
+    room_id, host_secret, host_csrf_token = create_new_game()
 
-    response_data = {"room_id": room_id}
+    response_data = {"room_id": room_id, "host_secret": host_secret, "csrf_token": host_csrf_token}
     response = Response(content=json.dumps(response_data), media_type="application/json")
 
     response.set_cookie(
         key="host_secret",
         value=host_secret,
         httponly=True,
-        samesite="none",
-        secure=True,
+        samesite="lax",
+        secure=False,  # Allow HTTP in dev environment
+        max_age=COOKIE_MAX_AGE,
+        path="/",
+    )
+
+    response.set_cookie(
+        key="csrf_token",
+        value=host_csrf_token,
+        httponly=False,
+        samesite="lax",
+        secure=False,  # Allow HTTP in dev environment
         max_age=COOKIE_MAX_AGE,
         path="/",
     )
@@ -58,8 +172,9 @@ def create_game():
 
 
 @router.post("/game/join/{room_id}")
-async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
+async def join_game(room_id: str, join: JoinRequest, request: Request, spectator: bool = False):
     """Join a game as a player or spectator."""
+    _enforce_rate_limit(request, "join_game")
     game = get_game(room_id)
     username = join.username
 
@@ -82,9 +197,12 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
     # Handle host joining
     if game.host is None:
         game.host = username
+        session_token = issue_session_token(game, username)
         await broadcast_activity(room_id)
         logger.info(f"Host {username} joined game {room_id}")
-        return GameResponseBuilder.build_join_response(game, note="Host created the room and does not play.")
+        return GameResponseBuilder.build_join_response(
+            game, note="Host created the room and does not play.", session_token=session_token
+        )
 
     # Handle spectator joining
     if spectator:
@@ -96,6 +214,7 @@ async def join_game(room_id: str, join: JoinRequest, spectator: bool = False):
 
 async def _handle_spectator_join(game, username: str, room_id: str):
     """Handle a user joining as a spectator."""
+    session_token = issue_session_token(game, username)
     game.spectators.append(username)
     await broadcast_activity(room_id)
     await broadcast_game_update(
@@ -109,7 +228,7 @@ async def _handle_spectator_join(game, username: str, room_id: str):
         },
     )
     logger.info(f"Spectator {username} joined game {room_id}")
-    return GameResponseBuilder.build_join_response(game)
+    return GameResponseBuilder.build_join_response(game, session_token=session_token)
 
 
 async def _handle_player_join(game, username: str, room_id: str):
@@ -136,6 +255,7 @@ async def _handle_player_join(game, username: str, room_id: str):
 
     # Add player to the game
     game.players.append(username)
+    session_token = issue_session_token(game, username)
     await broadcast_activity(room_id)
     await broadcast_game_update(
         room_id,
@@ -149,18 +269,17 @@ async def _handle_player_join(game, username: str, room_id: str):
     )
 
     logger.info(f"Player {username} joined game {room_id}")
-    return GameResponseBuilder.build_join_response(game)
+    return GameResponseBuilder.build_join_response(game, session_token=session_token)
 
 
 @router.post("/game/round_config/{room_id}")
-async def set_round_configuration(room_id: str, req: RoundConfigRequest, host_secret: str = Cookie(None)):
+async def set_round_configuration(room_id: str, req: RoundConfigRequest, request: Request):
     """Set round configuration for the game (host only, lobby only)."""
     game = get_game(room_id)
 
     # Validate request
     validations = [
         GameValidator.validate_game_exists(game),
-        GameValidator.validate_host_action(game, host_secret),
         GameValidator.validate_lobby_state(game),
     ]
 
@@ -168,6 +287,8 @@ async def set_round_configuration(room_id: str, req: RoundConfigRequest, host_se
     if not is_valid:
         status_code = _get_error_status_code(error)
         raise HTTPException(status_code=status_code, detail=error)
+
+    _assert_host_credentials(game, request)
 
     # Validate round configuration
     try:
@@ -202,7 +323,7 @@ async def set_round_configuration(room_id: str, req: RoundConfigRequest, host_se
 
 
 @router.post("/game/start/{room_id}")
-async def start_game(room_id: str, host_secret: str = Cookie(None)):
+async def start_game(room_id: str, request: Request):
     """Start the first round of the game (host only)."""
     game = get_game(room_id)
 
@@ -210,7 +331,6 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
     validations = [
         GameValidator.validate_game_exists(game),
         GameValidator.validate_game_not_started(game),
-        GameValidator.validate_host_action(game, host_secret),
         GameValidator.validate_required_player_count(game),
     ]
 
@@ -218,6 +338,8 @@ async def start_game(room_id: str, host_secret: str = Cookie(None)):
     if not is_valid:
         status_code = _get_error_status_code(error)
         raise HTTPException(status_code=status_code, detail=error)
+
+    _assert_host_credentials(game, request)
 
     # Start the first round
     if not start_next_round(game):
@@ -256,20 +378,21 @@ async def _broadcast_game_started(room_id: str, game, total_rounds: int):
 
 
 @router.post("/game/next_round/{room_id}")
-async def start_next_round_endpoint(room_id: str, host_secret: str = Cookie(None)):
+async def start_next_round_endpoint(room_id: str, request: Request):
     """Start the next round (host only, round_complete state only)."""
     game = get_game(room_id)
 
     # Validate request
     validations = [
         GameValidator.validate_game_exists(game),
-        GameValidator.validate_host_action(game, host_secret),
     ]
 
     is_valid, error = GameValidator.validate_multiple(validations)
     if not is_valid:
         status_code = _get_error_status_code(error)
         raise HTTPException(status_code=status_code, detail=error)
+
+    _assert_host_credentials(game, request)
 
     # Check if we're in the right state
     if game.state != GameState.ROUND_COMPLETE:
@@ -329,8 +452,9 @@ async def _broadcast_round_started(room_id: str, game, total_rounds: int):
 
 
 @router.post("/game/flip/{room_id}")
-async def flip_coin(room_id: str, flip: FlipRequest):
+async def flip_coin(room_id: str, flip: FlipRequest, request: Request):
     """Flip a coin in the game."""
+    _enforce_rate_limit(request, "flip")
     game = get_game(room_id)
 
     # Validate request
@@ -344,6 +468,9 @@ async def flip_coin(room_id: str, flip: FlipRequest):
     if not is_valid:
         status_code = _get_error_status_code(error)
         raise HTTPException(status_code=status_code, detail=error)
+
+    token = _extract_session_token(request)
+    _assert_valid_session(game, flip.username, token)
 
     # Process the flip
     result = process_flip(game, flip.username, flip.coin_index)
@@ -371,9 +498,10 @@ async def flip_coin(room_id: str, flip: FlipRequest):
 
 
 @router.post("/game/send/{room_id}")
-async def send_batch_endpoint(room_id: str, send: SendRequest):
+async def send_batch_endpoint(room_id: str, send: SendRequest, request: Request):
     """Send a batch of coins to the next player."""
     try:
+        _enforce_rate_limit(request, "send")
         game = get_game(room_id)
 
         # Validate request
@@ -387,6 +515,9 @@ async def send_batch_endpoint(room_id: str, send: SendRequest):
         if not is_valid:
             status_code = _get_error_status_code(error)
             raise HTTPException(status_code=status_code, detail=error)
+
+        token = _extract_session_token(request)
+        _assert_valid_session(game, send.username, token)
 
         if send.username not in game.players:
             raise HTTPException(status_code=400, detail="User is not a player in this game")
@@ -489,20 +620,21 @@ async def _handle_round_complete(room_id: str, game):
 
 
 @router.post("/game/reset/{room_id}")
-async def reset_game_endpoint(room_id: str, host_secret: str = Cookie(None)):
+async def reset_game_endpoint(room_id: str, request: Request):
     """Reset the game to lobby state (host only)."""
     game = get_game(room_id)
 
     # Validate request
     validations = [
         GameValidator.validate_game_exists(game),
-        GameValidator.validate_host_action(game, host_secret),
     ]
 
     is_valid, error = GameValidator.validate_multiple(validations)
     if not is_valid:
         status_code = _get_error_status_code(error)
         raise HTTPException(status_code=status_code, detail=error)
+
+    _assert_host_credentials(game, request)
 
     # Reset the game
     reset_game(game)
@@ -548,7 +680,7 @@ def get_game_state(room_id: str):
 
 
 @router.post("/game/change_role/{room_id}")
-async def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
+async def change_role(room_id: str, req: ChangeRoleRequest = Body(...), request: Request = None):
     """Change a user's role between player and spectator."""
     game = get_game(room_id)
 
@@ -558,6 +690,11 @@ async def change_role(room_id: str, req: ChangeRoleRequest = Body(...)):
 
     username = req.username
     new_role = req.role
+
+    # AuthZ: host can change anyone with valid host credentials; otherwise require target's session token
+    if not _has_valid_host_credentials(game, request):
+        token = _extract_session_token(request)
+        _assert_valid_session(game, username, token)
 
     # Validate role change
     is_valid, error = GameValidator.validate_role_change(game, username, new_role)
@@ -587,8 +724,9 @@ def _execute_role_change(game, username: str, new_role: str):
 
 
 @router.post("/cleanup")
-def cleanup_inactive_games():
-    """Clean up inactive games and players."""
+def cleanup_inactive_games(request: Request):
+    """Clean up inactive games and players (admin only)."""
+    _assert_admin(request)
     return cleanup()
 
 
@@ -599,5 +737,4 @@ def _get_error_status_code(error: str) -> int:
     elif "invalid host" in error.lower():
         return 403
     else:
-        return 400
         return 400

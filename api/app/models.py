@@ -107,6 +107,8 @@ class PennyGame(BaseModel):
     first_flip_at: Optional[datetime] = None
     first_delivery_at: Optional[datetime] = None
     lead_time_seconds: Optional[float] = None
+    session_tokens: Dict[str, str] = Field(default_factory=dict)
+    host_csrf_token: Optional[str] = None
 
     class Config:
         use_enum_values = True

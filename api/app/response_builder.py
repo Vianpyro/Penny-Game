@@ -68,13 +68,16 @@ class GameResponseBuilder:
         }
 
     @staticmethod
-    def build_join_response(game: PennyGame, note: Optional[str] = None) -> Dict[str, Any]:
+    def build_join_response(
+        game: PennyGame, note: Optional[str] = None, session_token: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Build a response for joining a game.
 
         Args:
             game: Game instance
             note: Optional note to include in the response
+            session_token: Optional session token to bind actions/websocket connections
 
         Returns:
             Dict containing the join response
@@ -83,6 +86,9 @@ class GameResponseBuilder:
 
         if note:
             response["note"] = note
+
+        if session_token:
+            response["session_token"] = session_token
 
         return response
 

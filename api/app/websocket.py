@@ -9,15 +9,29 @@ from datetime import datetime
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from .game_logic import get_game, get_tails_count, get_total_completed_coins, online_users, remove_game, rooms
+from .game_logic import (
+    get_game,
+    get_tails_count,
+    get_total_completed_coins,
+    online_users,
+    remove_game,
+    rooms,
+    validate_session_token,
+)
 
 logger = logging.getLogger(__name__)
 
 # Configuration constants
 MAX_CONNECTIONS = 50
+MAX_CONNECTIONS_PER_IP = 5
+MAX_MESSAGE_SIZE = 8192
 CLOSE_CODE_TOO_MANY_CONNECTIONS = 4000
 CLOSE_CODE_ROOM_NOT_EXISTS = 4001
 CLOSE_CODE_HOST_LEFT = 4002
+CLOSE_CODE_UNAUTHORIZED = 4403
+CLOSE_CODE_MESSAGE_TOO_LARGE = 4400
+
+connections_by_ip: dict = {}
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -133,10 +147,11 @@ class ConnectionManager:
     """Manages individual WebSocket connections."""
 
     @staticmethod
-    def validate_connection_limit() -> bool:
-        """Check if connection limit is reached."""
+    def validate_connection_limit(client_ip: str) -> bool:
+        """Check global and per-IP connection limits."""
         total_connections = sum(len(clients) for clients in rooms.values())
-        return total_connections < MAX_CONNECTIONS
+        per_ip = connections_by_ip.get(client_ip, 0)
+        return total_connections < MAX_CONNECTIONS and per_ip < MAX_CONNECTIONS_PER_IP
 
     @staticmethod
     def add_client_to_room(room_id: str, websocket: WebSocket, username: str) -> None:
@@ -145,6 +160,9 @@ class ConnectionManager:
             rooms[room_id] = []
 
         rooms[room_id].append(websocket)
+
+        client_ip = websocket.client.host if websocket.client else "unknown"
+        connections_by_ip[client_ip] = connections_by_ip.get(client_ip, 0) + 1
 
         # Track online user
         if room_id not in online_users:
@@ -157,6 +175,10 @@ class ConnectionManager:
         # Remove client from room
         if room_id in rooms and websocket in rooms[room_id]:
             rooms[room_id].remove(websocket)
+
+        client_ip = websocket.client.host if websocket.client else "unknown"
+        if client_ip in connections_by_ip:
+            connections_by_ip[client_ip] = max(connections_by_ip.get(client_ip, 1) - 1, 0)
 
         # Remove from online users
         if room_id in online_users and username in online_users[room_id]:
@@ -264,17 +286,36 @@ async def _broadcast_user_connect(room_id: str, username: str, is_reconnection: 
 
 async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str) -> None:
     """Main websocket endpoint for handling client connections."""
+    client_ip = websocket.client.host if websocket.client else "unknown"
+
     # Check connection limits
-    if not ConnectionManager.validate_connection_limit():
+    if not ConnectionManager.validate_connection_limit(client_ip):
         await websocket.close(code=CLOSE_CODE_TOO_MANY_CONNECTIONS, reason="Too many connections")
         return
 
-    await websocket.accept()
-
-    # Check if room exists
-    if room_id not in rooms:
+    game = get_game(room_id)
+    if not game:
         await websocket.close(code=CLOSE_CODE_ROOM_NOT_EXISTS, reason="Room does not exist")
         return
+
+    session_token = websocket.headers.get("x-session-token")
+    if not session_token and websocket.query_params:
+        session_token = websocket.query_params.get("token")
+
+    if not session_token:
+        logger.warning(f"No session token provided for {username} in room {room_id}")
+        await websocket.close(code=CLOSE_CODE_UNAUTHORIZED, reason="Missing session token")
+        return
+
+    if not validate_session_token(game, username, session_token):
+        logger.warning(f"Invalid session token for {username} in room {room_id}")
+        await websocket.close(code=CLOSE_CODE_UNAUTHORIZED, reason="Invalid session token")
+        return
+
+    if room_id not in rooms:
+        rooms[room_id] = []
+
+    await websocket.accept()
 
     # Add client to room
     ConnectionManager.add_client_to_room(room_id, websocket, username)
@@ -296,6 +337,12 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, username: str) 
         while True:
             try:
                 data = await websocket.receive_text()
+                if len(data) > MAX_MESSAGE_SIZE:
+                    logger.warning(
+                        f"Closing connection for {username} in {room_id}: message too large ({len(data)} bytes)"
+                    )
+                    await websocket.close(code=CLOSE_CODE_MESSAGE_TOO_LARGE, reason="Message too large")
+                    break
                 await handle_client_message(room_id, username, data)
             except Exception as e:
                 logger.warning(f"Error receiving message from {username} in room {room_id}: {e}")

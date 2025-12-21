@@ -30,7 +30,8 @@ ALLOWED_ORIGINS = [
 ]
 
 # Environment configuration
-ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+# Default to 'development' locally to ease testing; set ENVIRONMENT=production in prod
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 
 def create_app() -> FastAPI:
@@ -56,7 +57,14 @@ def _configure_cors(app: FastAPI) -> None:
     allowed_origins = ALLOWED_ORIGINS.copy()
     if os.getenv("ADDITIONAL_ORIGINS"):
         additional_origins = os.getenv("ADDITIONAL_ORIGINS").split(",")
-        allowed_origins.extend([origin.strip() for origin in additional_origins])
+        sanitized = []
+        for origin in additional_origins:
+            origin = origin.strip()
+            if not origin or origin == "*":
+                logger.warning("Ignoring unsafe CORS origin entry: '*' or empty value")
+                continue
+            sanitized.append(origin)
+        allowed_origins.extend(sanitized)
 
     app.add_middleware(
         CORSMiddleware,

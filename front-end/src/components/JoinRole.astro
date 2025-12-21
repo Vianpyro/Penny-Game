@@ -112,7 +112,21 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
                 showSpinner(true)
                 try {
                     const res = await fetch(`${apiUrl}/game/create`, { method: 'POST', credentials: 'include' })
-                    createdRoomId = (await res.json()).room_id
+                    const data = await res.json()
+                    // Capture host credentials for subsequent host actions
+                    try {
+                        if (data.host_secret) {
+                            window.hostSecret = data.host_secret
+                            sessionStorage.setItem('penny_host_secret', data.host_secret)
+                        }
+                        if (data.csrf_token) {
+                            window.csrfToken = data.csrf_token
+                            sessionStorage.setItem('penny_csrf_token', data.csrf_token)
+                        }
+                    } catch (e) {
+                        console.warn('Unable to persist host credentials', e)
+                    }
+                    createdRoomId = data.room_id
                     showSpinner(false)
                     hideModal()
                 } catch (err) {

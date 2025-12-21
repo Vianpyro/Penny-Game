@@ -27,11 +27,29 @@ rooms: Dict[str, List] = {}
 online_users: Dict[str, set] = {}
 
 
-def create_new_game() -> tuple[str, str]:
-    """Create a new game and return room ID and host secret."""
-    room_id = str(uuid4())[:5]
+def issue_session_token(game: PennyGame, username: str) -> str:
+    """Create or rotate a per-user session token tied to the game."""
+    token = str(uuid4())
+    if not hasattr(game, "session_tokens") or game.session_tokens is None:
+        game.session_tokens = {}
+    game.session_tokens[username] = token
+    return token
+
+
+def validate_session_token(game: PennyGame, username: str, token: str) -> bool:
+    """Check if a provided token matches the stored session token for the user."""
+    if not token:
+        return False
+    expected = (game.session_tokens or {}).get(username)
+    return expected is not None and expected == token
+
+
+def create_new_game() -> tuple[str, str, str]:
+    """Create a new game and return room ID, host secret, and CSRF token."""
+    room_id = str(uuid4())
     now = datetime.now()
     host_secret = str(uuid4())
+    host_csrf_token = str(uuid4())
 
     games[room_id] = PennyGame(
         room_id=room_id,
@@ -48,9 +66,10 @@ def create_new_game() -> tuple[str, str]:
         required_players=DEFAULT_REQUIRED_PLAYERS,
         current_round=0,
         round_results=[],
+        host_csrf_token=host_csrf_token,
     )
     rooms[room_id] = []
-    return room_id, host_secret
+    return room_id, host_secret, host_csrf_token
 
 
 def get_game(room_id: str) -> Optional[PennyGame]:
