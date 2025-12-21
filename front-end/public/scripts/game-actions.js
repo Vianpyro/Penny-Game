@@ -3,6 +3,8 @@
  * Manages all user-initiated game actions like coin flipping, batch sending, and game management
  */
 
+import { buildHostHeaders, buildSessionHeaders } from './api.js'
+
 // Configuration constants
 const GAME_CONFIG = {
     API_TIMEOUT: 5000,
@@ -105,6 +107,7 @@ export class GameActions {
             // Reset the game first
             await fetch(`${apiUrl}/game/reset/${gameCode}`, {
                 method: 'POST',
+                headers: buildHostHeaders(),
                 credentials: 'include',
             })
 
@@ -112,6 +115,7 @@ export class GameActions {
             setTimeout(async () => {
                 await fetch(`${apiUrl}/game/start/${gameCode}`, {
                     method: 'POST',
+                    headers: buildHostHeaders(),
                     credentials: 'include',
                 })
             }, GAME_CONFIG.BUTTON_DISABLE_TIMEOUT)
@@ -154,6 +158,7 @@ export class GameActions {
 
             await fetch(`${apiUrl}/game/reset/${gameCode}`, {
                 method: 'POST',
+                headers: buildHostHeaders(),
                 credentials: 'include',
             })
 
@@ -226,6 +231,7 @@ export class GameActions {
 
             const response = await fetch(`${apiUrl}/game/next_round/${gameCode}`, {
                 method: 'POST',
+                headers: buildHostHeaders(),
                 credentials: 'include',
             })
 
@@ -285,6 +291,7 @@ export class GameActions {
 
             const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
                 method: 'POST',
+                headers: buildHostHeaders(),
                 credentials: 'include',
             })
 
@@ -331,7 +338,7 @@ export class GameActions {
 
             const response = await fetch(`${apiUrl}/game/send/${gameCode}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: buildSessionHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ username: player }),
                 credentials: 'include',
             })

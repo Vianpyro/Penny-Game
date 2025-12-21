@@ -6,6 +6,7 @@ import { ViewManager } from './view-manager.js'
 import { TimeUtils } from './time-utils.js'
 import { GameActions } from './game-actions.js'
 import { ENHANCED_FRENCH_LOCALE, LEAN_TERMS, generateBilingualInsights } from './bilingual-terms.js'
+import { getSessionToken } from './api.js'
 
 const DEFAULT_BATCH_SIZES = [15, 5, 1]
 const TOTAL_COINS = DEFAULT_BATCH_SIZES[0]
@@ -537,14 +538,7 @@ function handleWelcomeMessage(msg) {
 
             // Show configuration info notification for joining players
             if (!window.isHost) {
-                const roundTypeText =
-                    {
-                        single: '1 manche',
-                        two_rounds: '2 manches',
-                        three_rounds: '3 manches',
-                    }[gameState.round_type] || gameState.round_type
-
-                showNotification(`⚙️ Configuration: ${roundTypeText}, ${gameState.required_players} joueurs`, 'info')
+                showNotification(`⚙️ Configuration mise à jour, ${gameState.required_players} joueurs`, 'info')
             }
         }
 
@@ -641,14 +635,7 @@ function handleRoundConfigUpdate(msg) {
     updatePlayerCountDisplay()
 
     // Show notification
-    const roundTypeText =
-        {
-            single: '1 manche',
-            two_rounds: '2 manches',
-            three_rounds: '3 manches',
-        }[msg.round_type] || msg.round_type
-
-    showNotification(`⚙️ Configuration: ${roundTypeText}, ${msg.required_players} joueurs`, 'info')
+    showNotification(`⚙️ Configuration mise à jour, ${msg.required_players} joueurs`, 'info')
 }
 
 function handleGameStateChange(msg) {
@@ -1843,7 +1830,22 @@ export function connectWebSocket(apiUrl, roomId, username) {
     // Store username globally for later use
     window.currentUsername = username
 
-    const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}`
+    const sessionToken = getSessionToken()
+    console.log('📋 Token lookup result:', { hasToken: !!sessionToken, tokenLength: sessionToken?.length || 0 })
+
+    if (!sessionToken) {
+        console.error('❌ No session token found - user may not have joined the room yet')
+        showNotification('Session invalide: reconnectez-vous', 'error')
+        return
+    }
+
+    const tokenQuery = `?token=${encodeURIComponent(sessionToken)}`
+    const wsUrl = apiUrl.replace(/^http/, 'ws') + `/ws/${roomId}/${encodeURIComponent(username)}${tokenQuery}`
+    console.log('🔌 Connecting to WebSocket:', wsUrl.replace(sessionToken, '***'), {
+        roomId,
+        username,
+        tokenLength: sessionToken.length,
+    })
 
     const ws = new WebSocket(wsUrl)
 

@@ -1,4 +1,4 @@
-import { joinRoom, fetchGameState, changeRole, setRoundConfig } from './api.js'
+import { joinRoom, fetchGameState, changeRole, setRoundConfig, startGame, startNextRound, resetGame } from './api.js'
 import { updateGameCode, renderPlayers, renderSpectators, updatePlayerCountDisplay } from './dom.js'
 import { connectWebSocket } from './websocket.js'
 
@@ -30,28 +30,8 @@ if (startBtn && gameSetup && gameControls && gameBoard) {
         startBtn.textContent = 'Démarrage...'
 
         try {
-            const response = await fetch(`${apiUrl}/game/start/${gameCode}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                },
-                credentials: 'include',
-            })
-
-            if (!response.ok) {
-                const errorText = await response.text()
-                let errorData
-                try {
-                    errorData = JSON.parse(errorText)
-                } catch (e) {
-                    errorData = { detail: `Server error: ${response.status}` }
-                }
-                throw new Error(errorData.detail || 'Erreur lors du démarrage de la partie')
-            }
-
-            const data = await response.json()
-            console.log('Game start successful:', data)
+            const data = await startGame(apiUrl, gameCode)
+            console.log('Game start successful:', data || {})
         } catch (error) {
             console.error('Error starting game:', error)
 
@@ -93,18 +73,8 @@ if (nextRoundBtn) {
         nextRoundBtn.textContent = 'Démarrage...'
 
         try {
-            const response = await fetch(`${apiUrl}/game/next_round/${gameCode}`, {
-                method: 'POST',
-                credentials: 'include',
-            })
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.detail || 'Erreur lors du démarrage de la manche suivante')
-            }
-
-            const data = await response.json()
-            console.log('Next round started:', data)
+            const data = await startNextRound(apiUrl, gameCode)
+            console.log('Next round started:', data || {})
         } catch (error) {
             console.error('Error starting next round:', error)
             alert(error.message || 'Impossible de démarrer la manche suivante')
@@ -116,7 +86,37 @@ if (nextRoundBtn) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+    const apiUrl =
+        document.getElementById('joinRoleModal')?.getAttribute('data-api-url') ||
+        ''(
+            // Dev-mode banner: show when backend reports non-production environment
+            async () => {
+                try {
+                    if (!apiUrl) return
+                    const res = await fetch(`${apiUrl}/health`, { credentials: 'include' })
+                    if (!res.ok) return
+                    const info = await res.json()
+                    if (info && info.environment && info.environment !== 'production') {
+                        const banner = document.createElement('div')
+                        banner.style.position = 'fixed'
+                        banner.style.top = '8px'
+                        banner.style.right = '8px'
+                        banner.style.zIndex = '9999'
+                        banner.style.padding = '6px 10px'
+                        banner.style.borderRadius = '6px'
+                        banner.style.background = '#2c3e50'
+                        banner.style.color = '#ecf0f1'
+                        banner.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)'
+                        banner.style.fontSize = '12px'
+                        banner.style.opacity = '0.9'
+                        banner.textContent = `Dev Mode: CSRF header-only enabled (${info.environment})`
+                        document.body.appendChild(banner)
+                    }
+                } catch (e) {
+                    // Silent failure; banner is non-critical
+                }
+            }
+        )()
 
     // Copy code to clipboard
     const copyBtn = document.getElementById('copyCodeBtn')
@@ -164,17 +164,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 resetBtn.disabled = true
                 resetBtn.textContent = 'Réinitialisation...'
 
-                const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
-                    method: 'POST',
-                    credentials: 'include',
-                })
-
-                if (!response.ok) {
-                    const errorData = await response.json()
-                    throw new Error(errorData.detail || 'Erreur lors de la réinitialisation')
-                }
-
-                console.log('Game reset successful')
+                const data = await resetGame(apiUrl, gameCode)
+                console.log('Game reset successful', data || {})
             } catch (error) {
                 console.error('Error resetting game:', error)
                 alert(error.message || 'Impossible de réinitialiser la partie')
@@ -624,20 +615,13 @@ window.addEventListener('DOMContentLoaded', () => {
                 // Show configuration for non-hosts
                 configDisplay.style.display = 'block'
 
-                const roundTypeText =
-                    {
-                        single: '1 manche',
-                        two_rounds: '2 manches',
-                        three_rounds: '3 manches',
-                    }[gameState.round_type] || 'Configuration par défaut'
-
                 let batchInfo = ''
                 if (gameState.round_type === 'single' && gameState.selected_batch_size) {
-                    batchInfo = ` - Lot de ${gameState.selected_batch_size}`
+                    batchInfo = `Lot de ${gameState.selected_batch_size}`
                 }
 
                 configInfo.innerHTML = `
-                    <span class="config-badge">${roundTypeText}${batchInfo}</span>
+                    ${batchInfo ? `<span class="config-badge">${batchInfo}</span>` : ''}
                     <span class="config-badge">${gameState.required_players || 5} joueurs requis</span>
                 `
             } else {
@@ -779,9 +763,10 @@ window.addEventListener('DOMContentLoaded', () => {
                     renderPlayers(players, host, spectators, actions, setupDragAndDrop),
                 (spectators, host, actions) => renderSpectators(spectators, host, actions, setupDragAndDrop)
             )
-        })
 
-        connectWebSocket(apiUrl, gameRoomId, username)
+            // Connect WebSocket AFTER session token is stored
+            connectWebSocket(apiUrl, gameRoomId, username)
+        })
 
         fetchGameState(
             apiUrl,

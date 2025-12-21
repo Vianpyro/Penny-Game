@@ -195,7 +195,7 @@ export function updateRoundConfiguration(roundType, requiredPlayers, selectedBat
         let infoText = ''
         switch (roundType) {
             case 'single':
-                infoText = `1 manche - Lot de ${selectedBatchSize}`
+                infoText = `Lot de ${selectedBatchSize}`
                 break
             case 'two_rounds':
                 infoText = '2 manches - Lots de 15 puis 1'
@@ -223,22 +223,15 @@ export function updateConfigurationDisplayForNonHosts(roundType, requiredPlayers
     const configDisplay = document.createElement('div')
     configDisplay.className = 'current-config-display'
 
-    const roundTypeText =
-        {
-            single: '1 ${LEAN_TERMS.ROUND}',
-            two_rounds: '2 ${LEAN_TERMS.ROUNDS}',
-            three_rounds: '3 ${LEAN_TERMS.ROUNDS}',
-        }[roundType] || 'Configuration par défaut'
-
     let batchInfo = ''
     if (roundType === 'single' && selectedBatchSize) {
-        batchInfo = ` - Lot de ${selectedBatchSize}`
+        batchInfo = `Lot de ${selectedBatchSize}`
     }
 
     configDisplay.innerHTML = `
         <h4>⚙️ Configuration Actuelle</h4>
         <div class="config-info">
-            <span class="config-badge">${roundTypeText}${batchInfo}</span>
+            ${batchInfo ? `<span class="config-badge">${batchInfo}</span>` : ''}
             <span class="config-badge">${requiredPlayers || 5} joueurs requis</span>
         </div>
         <p style="margin: 10px 0 0; font-size: 0.85em; color: #7f8c8d; font-style: italic;">

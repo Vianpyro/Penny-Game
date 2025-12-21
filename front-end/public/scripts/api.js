@@ -1,6 +1,93 @@
 // API-related functions for Penny Game
 import { showNotification } from './utility.js'
 
+const SESSION_TOKEN_KEY = 'penny_session_token'
+const HOST_SECRET_KEY = 'penny_host_secret'
+const CSRF_TOKEN_KEY = 'penny_csrf_token'
+
+function setSessionToken(token) {
+    if (!token) return
+    window.sessionToken = token
+    try {
+        sessionStorage.setItem(SESSION_TOKEN_KEY, token)
+    } catch (e) {
+        console.warn('Unable to persist session token', e)
+    }
+}
+
+function getSessionToken() {
+    return (
+        window.sessionToken ||
+        (() => {
+            try {
+                return sessionStorage.getItem(SESSION_TOKEN_KEY)
+            } catch (e) {
+                return null
+            }
+        })()
+    )
+}
+
+function setHostAuth(hostSecret, csrfToken) {
+    if (hostSecret) {
+        window.hostSecret = hostSecret
+        try {
+            sessionStorage.setItem(HOST_SECRET_KEY, hostSecret)
+        } catch (e) {
+            console.warn('Unable to persist host secret', e)
+        }
+    }
+    if (csrfToken) {
+        window.csrfToken = csrfToken
+        try {
+            sessionStorage.setItem(CSRF_TOKEN_KEY, csrfToken)
+        } catch (e) {
+            console.warn('Unable to persist CSRF token', e)
+        }
+    }
+}
+
+function getHostSecret() {
+    return (
+        window.hostSecret ||
+        (() => {
+            try {
+                return sessionStorage.getItem(HOST_SECRET_KEY)
+            } catch (e) {
+                return null
+            }
+        })()
+    )
+}
+
+function getCsrfToken() {
+    return (
+        window.csrfToken ||
+        (() => {
+            try {
+                return sessionStorage.getItem(CSRF_TOKEN_KEY)
+            } catch (e) {
+                return null
+            }
+        })()
+    )
+}
+
+function buildSessionHeaders(headers = {}) {
+    const token = getSessionToken()
+    return token ? { ...headers, 'X-Session-Token': token } : headers
+}
+
+function buildHostHeaders(headers = {}) {
+    const hostSecret = getHostSecret()
+    const csrfToken = getCsrfToken()
+    return {
+        ...headers,
+        ...(hostSecret ? { 'X-Host-Secret': hostSecret } : {}),
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+    }
+}
+
 export async function joinRoom(apiUrl, roomId, username, onSuccess) {
     if (!apiUrl || !roomId || !username) {
         console.error('Missing parameters for joinRoom')
@@ -21,6 +108,14 @@ export async function joinRoom(apiUrl, roomId, username, onSuccess) {
         }
 
         const data = await response.json()
+
+        if (data.session_token) {
+            console.log('✅ Session token received from server:', { tokenLength: data.session_token.length })
+            setSessionToken(data.session_token)
+            console.log('✅ Session token stored - verifying:', {
+                storedToken: getSessionToken()?.substring(0, 8) + '...',
+            })
+        }
 
         // Store user role and host status
         window.isHost = data.host === username
@@ -100,9 +195,14 @@ export async function changeRole(apiUrl, roomId, username, newRole, onSuccess) {
     }
 
     try {
+        const isHost = window.isHost === true
+        const headers = isHost
+            ? buildHostHeaders({ 'Content-Type': 'application/json' })
+            : buildSessionHeaders({ 'Content-Type': 'application/json' })
+
         const response = await fetch(`${apiUrl}/game/change_role/${roomId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ username, role: newRole }),
             credentials: 'include',
         })
@@ -139,7 +239,7 @@ export async function setRoundConfig(apiUrl, roomId, config) {
     try {
         const response = await fetch(`${apiUrl}/game/round_config/${roomId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildHostHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(config),
             credentials: 'include',
         })
@@ -183,7 +283,7 @@ export async function startGame(apiUrl, roomId) {
     try {
         const response = await fetch(`${apiUrl}/game/start/${roomId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildHostHeaders({ 'Content-Type': 'application/json' }),
             credentials: 'include',
         })
 
@@ -211,7 +311,7 @@ export async function startNextRound(apiUrl, roomId) {
     try {
         const response = await fetch(`${apiUrl}/game/next_round/${roomId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildHostHeaders({ 'Content-Type': 'application/json' }),
             credentials: 'include',
         })
 
@@ -239,7 +339,7 @@ export async function flipCoin(apiUrl, roomId, username, coinIndex) {
     try {
         const response = await fetch(`${apiUrl}/game/flip/${roomId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildSessionHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
                 username: username,
                 coin_index: coinIndex,
@@ -270,7 +370,7 @@ export async function sendBatch(apiUrl, roomId, username) {
     try {
         const response = await fetch(`${apiUrl}/game/send/${roomId}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: buildSessionHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
                 username: username,
             }),
@@ -300,6 +400,7 @@ export async function resetGame(apiUrl, roomId) {
     try {
         const response = await fetch(`${apiUrl}/game/reset/${roomId}`, {
             method: 'POST',
+            headers: buildHostHeaders(),
             credentials: 'include',
         })
 
@@ -336,6 +437,7 @@ export async function createGame(apiUrl) {
         }
 
         const data = await response.json()
+        setHostAuth(data.host_secret, data.csrf_token)
         showSuccessNotification('🎉 Salle créée avec succès !')
         return data
     } catch (error) {
@@ -358,6 +460,17 @@ export function getCurrentUserRole() {
 // Helper function to get current game state
 export function getCurrentGameState() {
     return window.gameState || null
+}
+
+// Auth helpers for other modules
+export {
+    getSessionToken,
+    getHostSecret,
+    getCsrfToken,
+    buildSessionHeaders,
+    buildHostHeaders,
+    setSessionToken,
+    setHostAuth,
 }
 
 // Notification helper functions
