@@ -1,0 +1,39 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: penny_game_redis
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    expose:
+      - "6379"
+    networks:
+      - penny_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    mem_limit: 96m
+    cpus: 0.5
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: penny_game_api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - ADDITIONAL_ORIGINS=${ADDITIONAL_ORIGINS:-}
+    networks:
+      - penny_net
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 128m
+    cpus: 0.5
+
+networks:
+  penny_net:

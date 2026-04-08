@@ -1,0 +1,18 @@
+[project]
+name = "penny-game-api"
+version = "2.0.0"
+description = "Event-sourced Lean simulation game API"
+requires-python = ">=3.14"
+license = "AGPL-3.0-or-later"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+optional-dependencies = {dev = { file = ["requirements-dev.txt"] }}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mccabe]
+max-complexity = 5
