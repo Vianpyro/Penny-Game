@@ -1,749 +1,175 @@
 """
-API routes for the Penny Game application.
-Handles all HTTP endpoints for game management and player actions.
+HTTP routes for the Penny Game API.
+
+Routes are thin — they validate input, delegate to GameService, and return responses.
+Auth is handled via dependency injection.
 """
 
-import json
 import logging
-import os
-import time
-from collections import defaultdict
-from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Body, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from .game_logic import (
-    cleanup,
-    create_new_game,
-    get_batch_sizes_for_round_type,
-    get_game,
-    get_total_rounds,
-    initialize_player_coins,
-    issue_session_token,
-    process_flip,
-    process_send,
-    reset_game,
-    rooms,
-    set_round_config,
-    start_next_round,
-    validate_session_token,
-)
-from .models import ChangeRoleRequest, FlipRequest, GameState, JoinRequest, RoundConfigRequest, RoundType, SendRequest
-from .response_builder import GameResponseBuilder
-from .validators import GameValidator
-from .websocket import broadcast_activity, broadcast_game_state, broadcast_game_update
+from .application.game_service import GameError, GameService
+from .dependencies import GameServiceDep, require_host
+from .schemas import ChangeRoleRequest, FlipRequest, JoinRequest, RoundConfigRequest, SendRequest
 
-router = APIRouter()
 logger = logging.getLogger(__name__)
-
-# Constants
-COOKIE_MAX_AGE = int(timedelta(minutes=30).total_seconds())
-RATE_LIMIT_WINDOW_SECONDS = 60
-RATE_LIMIT_MAX_REQUESTS = 90
-rate_limit_store = defaultdict(list)
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+router = APIRouter(prefix="/game")
 
 
-def _extract_session_token(request: Request) -> str:
-    """Retrieve the caller's session token from headers or cookies."""
-    return request.headers.get("X-Session-Token") or request.cookies.get("session_token")
+@router.post("/create")
+async def create_game(request: Request, service: GameServiceDep):
+    """Create a new game room. The caller becomes the host."""
+    # Host username will be set when they join
+    result = await service.create_game(host_username="__pending__")
+    logger.info("Game created: %s", result["room_id"])
+    return result
 
 
-def _assert_valid_session(game, username: str, token: str):
-    """Ensure the provided session token matches the stored token for the user."""
-    if not validate_session_token(game, username, token):
-        raise HTTPException(status_code=403, detail="Invalid or missing session token")
-
-
-def _assert_host_credentials(game, request: Request):
-    """Validate host secret and CSRF token using headers and cookies."""
-    host_secret = request.headers.get("X-Host-Secret") or request.cookies.get("host_secret")
-    csrf_header = request.headers.get("X-CSRF-Token")
-    csrf_cookie = request.cookies.get("csrf_token")
-
-    # Log presence of credentials (masked)
-    def _mask(val: str | None) -> str:
-        if not val:
-            return "None"
-        return f"{val[:6]}..."
-
-    logger.info(
-        "Host creds check: secret=%s csrf_header=%s csrf_cookie=%s",
-        _mask(host_secret),
-        _mask(csrf_header),
-        _mask(csrf_cookie),
-    )
-
-    is_valid, error = GameValidator.validate_host_action(game, host_secret)
-    if not is_valid:
-        raise HTTPException(status_code=403, detail=error)
-
-    # Accept either header-only match (dev/local) or strict header+cookie match
-    header_matches = bool(csrf_header) and csrf_header == game.host_csrf_token
-    both_match = (
-        bool(csrf_header and csrf_cookie) and csrf_header == csrf_cookie and csrf_header == game.host_csrf_token
-    )
-    if not (header_matches or both_match):
-        # Provide more diagnostic detail
-        if not csrf_header:
-            detail = "Missing CSRF header"
-        elif csrf_cookie and csrf_header != csrf_cookie:
-            detail = "CSRF header/cookie mismatch"
-        elif csrf_header != game.host_csrf_token:
-            detail = "Invalid CSRF header value"
-        else:
-            detail = "Invalid CSRF token"
-        logger.info("CSRF validation failed: %s", detail)
-        raise HTTPException(status_code=403, detail=detail)
-
-
-def _has_valid_host_credentials(game, request: Request) -> bool:
-    """Check host credentials if provided; return True when valid and provided, False if absent."""
-    host_secret = request.headers.get("X-Host-Secret") or request.cookies.get("host_secret")
-    csrf_header = request.headers.get("X-CSRF-Token")
-    csrf_cookie = request.cookies.get("csrf_token")
-
-    # If nothing is provided, caller is likely a player; defer to session token auth
-    if not host_secret and not csrf_header and not csrf_cookie:
-        return False
-
-    # Validate using strict helper (raises on failure)
-    _assert_host_credentials(game, request)
-    return True
-
-
-def _enforce_rate_limit(request: Request, bucket: str) -> None:
-    """Simple sliding-window rate limiter keyed by client IP and bucket."""
-    client_ip = request.client.host if request.client else "unknown"
-    key = f"{client_ip}:{bucket}"
-    now = time.time()
-
-    # Drop stale entries and check current rate
-    recent = [ts for ts in rate_limit_store[key] if now - ts < RATE_LIMIT_WINDOW_SECONDS]
-    rate_limit_store[key] = recent
-
-    if len(recent) >= RATE_LIMIT_MAX_REQUESTS:
-        raise HTTPException(status_code=429, detail="Too many requests")
-
-    rate_limit_store[key].append(now)
-
-
-def _assert_admin(request: Request) -> None:
-    """Require an admin token for maintenance endpoints."""
-    if not ADMIN_TOKEN:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    token = request.headers.get("X-Admin-Token")
-    if not token or token != ADMIN_TOKEN:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-
-@router.post("/game/create")
-def create_game(request: Request):
-    """Create a new game room."""
-    _enforce_rate_limit(request, "create_game")
-    room_id, host_secret, host_csrf_token = create_new_game()
-
-    response_data = {"room_id": room_id, "host_secret": host_secret, "csrf_token": host_csrf_token}
-    response = Response(content=json.dumps(response_data), media_type="application/json")
-
-    response.set_cookie(
-        key="host_secret",
-        value=host_secret,
-        httponly=True,
-        samesite="lax",
-        secure=False,  # Allow HTTP in dev environment
-        max_age=COOKIE_MAX_AGE,
-        path="/",
-    )
-
-    response.set_cookie(
-        key="csrf_token",
-        value=host_csrf_token,
-        httponly=False,
-        samesite="lax",
-        secure=False,  # Allow HTTP in dev environment
-        max_age=COOKIE_MAX_AGE,
-        path="/",
-    )
-
-    logger.info(f"Game created: {room_id}")
-    return response
-
-
-@router.post("/game/join/{room_id}")
-async def join_game(room_id: str, join: JoinRequest, request: Request, spectator: bool = False):
+@router.post("/join/{room_id}")
+async def join_game(
+    room_id: str,
+    body: JoinRequest,
+    service: GameServiceDep,
+    spectator: bool = False,
+):
     """Join a game as a player or spectator."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    _enforce_rate_limit(request, "join_game")
-    game = get_game(room_id)
-    username = join.username
-
-    # Validate game exists
-    is_valid, error = GameValidator.validate_game_exists(game)
-    if not is_valid:
-        raise HTTPException(status_code=404, detail=error)
-
-    # Validate username availability
-    is_valid, error = GameValidator.validate_username_available(game, username)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=error)
-
-    # Initialize room if needed
-    if room_id not in rooms:
-        rooms[room_id] = []
-
-    game.last_active_at = datetime.now()
-
-    # Handle host joining
-    if game.host is None:
-        game.host = username
-        session_token = issue_session_token(game, username)
-        await broadcast_activity(room_id)
-        logger.info(f"Host {username} joined game {room_id}")
-        return GameResponseBuilder.build_join_response(
-            game, note="Host created the room and does not play.", session_token=session_token
-        )
-
-    # Handle spectator joining
-    if spectator:
-        return await _handle_spectator_join(game, username, room_id)
-
-    # Handle player joining
-    return await _handle_player_join(game, username, room_id)
-
-
-async def _handle_spectator_join(game, username: str, room_id: str):
-    """Handle a user joining as a spectator."""
-    session_token = issue_session_token(game, username)
-    game.spectators.append(username)
-    await broadcast_activity(room_id)
-    await broadcast_game_update(
-        room_id,
-        {
-            "type": "user_joined",
-            "username": username,
-            "role": "spectator",
-            "players": game.players,
-            "spectators": game.spectators,
-        },
-    )
-    logger.info(f"Spectator {username} joined game {room_id}")
-    return GameResponseBuilder.build_join_response(game, session_token=session_token)
-
-
-async def _handle_player_join(game, username: str, room_id: str):
-    """Handle a user joining as a player."""
-    # Check if game is full
-    is_valid, error = GameValidator.validate_player_limit(game)
-    if not is_valid:
-        # Join as spectator if game is full
-        game.spectators.append(username)
-        await broadcast_activity(room_id)
-        await broadcast_game_update(
-            room_id,
-            {
-                "type": "user_joined",
-                "username": username,
-                "role": "spectator",
-                "players": game.players,
-                "spectators": game.spectators,
-                "note": "Joined as spectator (game full)",
-            },
-        )
-        logger.info(f"Player {username} joined as spectator (game full) in {room_id}")
-        return GameResponseBuilder.build_join_response(game, note="Joined as spectator (game full)")
-
-    # Add player to the game
-    game.players.append(username)
-    session_token = issue_session_token(game, username)
-    await broadcast_activity(room_id)
-    await broadcast_game_update(
-        room_id,
-        {
-            "type": "user_joined",
-            "username": username,
-            "role": "player",
-            "players": game.players,
-            "spectators": game.spectators,
-        },
-    )
-
-    logger.info(f"Player {username} joined game {room_id}")
-    return GameResponseBuilder.build_join_response(game, session_token=session_token)
-
-
-@router.post("/game/round_config/{room_id}")
-async def set_round_configuration(room_id: str, req: RoundConfigRequest, request: Request):
-    """Set round configuration for the game (host only, lobby only)."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    game = get_game(room_id)
-
-    # Validate request
-    validations = [
-        GameValidator.validate_game_exists(game),
-        GameValidator.validate_lobby_state(game),
-    ]
-
-    is_valid, error = GameValidator.validate_multiple(validations)
-    if not is_valid:
-        status_code = _get_error_status_code(error)
-        raise HTTPException(status_code=status_code, detail=error)
-
-    _assert_host_credentials(game, request)
-
-    # Validate round configuration
+    room_id = room_id.upper()
     try:
-        round_type = RoundType(req.round_type)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid round type")
-
-    is_valid, error = GameValidator.validate_round_config(req.round_type, req.selected_batch_size, req.required_players)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=error)
-
-    # Apply configuration
-    if not set_round_config(game, round_type, req.required_players, req.selected_batch_size):
-        raise HTTPException(status_code=400, detail="Failed to set round configuration")
-
-    total_rounds = get_total_rounds(round_type)
-
-    # Broadcast update
-    await broadcast_game_update(
-        room_id,
-        {
-            "type": "round_config_update",
-            "round_type": game.round_type.value,
-            "required_players": game.required_players,
-            "selected_batch_size": game.selected_batch_size,
-            "total_rounds": total_rounds,
-        },
-    )
-
-    logger.info(f"Round config updated in game {room_id}: {req.round_type}, {req.required_players} players")
-    return GameResponseBuilder.build_round_config_response(game, total_rounds)
+        result = await service.join_game(room_id, body.username, as_spectator=spectator)
+        logger.info("User %s joined %s", body.username, room_id)
+        return result
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.post("/game/start/{room_id}")
-async def start_game(room_id: str, request: Request):
-    """Start the first round of the game (host only)."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    game = get_game(room_id)
-
-    # Validate request
-    validations = [
-        GameValidator.validate_game_exists(game),
-        GameValidator.validate_game_not_started(game),
-        GameValidator.validate_required_player_count(game),
-    ]
-
-    is_valid, error = GameValidator.validate_multiple(validations)
-    if not is_valid:
-        status_code = _get_error_status_code(error)
-        raise HTTPException(status_code=status_code, detail=error)
-
-    _assert_host_credentials(game, request)
-
-    # Start the first round
-    if not start_next_round(game):
-        raise HTTPException(status_code=400, detail="Failed to start game")
-
-    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
-    total_rounds = len(batch_sizes)
-
-    # Broadcast game start
-    await broadcast_game_state(room_id, state=GameState.ACTIVE)
-    await _broadcast_game_started(room_id, game, total_rounds)
-
-    logger.info(f"Game started: {room_id} with {len(game.players)} players, round {game.current_round}/{total_rounds}")
-    return GameResponseBuilder.build_start_game_response(game)
+@router.post("/round_config/{room_id}")
+async def set_round_config(
+    room_id: str,
+    body: RoundConfigRequest,
+    service: GameServiceDep,
+    _host: None = Depends(require_host),
+):
+    """Configure round settings (host only, lobby only)."""
+    room_id = room_id.upper()
+    try:
+        return await service.set_round_config(room_id, body.round_type, body.required_players, body.selected_batch_size)
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-async def _broadcast_game_started(room_id: str, game, total_rounds: int):
-    """Broadcast game started message."""
-    await broadcast_game_update(
-        room_id,
-        {
-            "type": "game_started",
-            "round_type": game.round_type.value,
-            "current_round": game.current_round,
-            "total_rounds": total_rounds,
-            "batch_size": game.batch_size,
-            "players": game.players,
-            "player_coins": game.player_coins,
-            "total_completed": 0,
-            "tails_remaining": 12,
-            "player_timers": GameResponseBuilder._format_player_timers(game),
-            "game_duration_seconds": game.game_duration_seconds,
-            "lead_time_seconds": None,
-        },
-    )
+@router.post("/start/{room_id}")
+async def start_game(
+    room_id: str,
+    service: GameServiceDep,
+    _host: None = Depends(require_host),
+):
+    """Start the first round (host only)."""
+    room_id = room_id.upper()
+    try:
+        return await service.start_game(room_id)
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.post("/game/next_round/{room_id}")
-async def start_next_round_endpoint(room_id: str, request: Request):
-    """Start the next round (host only, round_complete state only)."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    game = get_game(room_id)
-
-    # Validate request
-    validations = [
-        GameValidator.validate_game_exists(game),
-    ]
-
-    is_valid, error = GameValidator.validate_multiple(validations)
-    if not is_valid:
-        status_code = _get_error_status_code(error)
-        raise HTTPException(status_code=status_code, detail=error)
-
-    _assert_host_credentials(game, request)
-
-    # Check if we're in the right state
-    if game.state != GameState.ROUND_COMPLETE:
-        logger.error(
-            f"Invalid state for next round in room {room_id}: " f"Expected ROUND_COMPLETE, got {game.state.value}"
-        )
-
-        # Check if we're already in active state (double-click protection)
-        if game.state == GameState.ACTIVE:
-            raise HTTPException(status_code=400, detail="La manche est déjà en cours")
-
-        # Check if we're in results (all rounds done)
-        if game.state == GameState.RESULTS:
-            raise HTTPException(status_code=400, detail="Toutes les manches sont terminées")
-
-        # For any other state, provide a helpful error
-        raise HTTPException(
-            status_code=400, detail=f"État invalide pour démarrer la manche suivante. État actuel: {game.state.value}"
-        )
-
-    # Additional validation: check if there are more rounds to play
-    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
-    if game.current_round >= len(batch_sizes):
-        raise HTTPException(status_code=400, detail="Toutes les manches ont déjà été jouées")
-
-    # Start the next round
-    if not start_next_round(game):
-        raise HTTPException(status_code=400, detail="Impossible de démarrer la manche suivante")
-
-    total_rounds = len(batch_sizes)
-
-    # Broadcast round start
-    await broadcast_game_state(room_id, state=GameState.ACTIVE)
-    await _broadcast_round_started(room_id, game, total_rounds)
-
-    logger.info(f"Next round started: {room_id}, round {game.current_round}/{total_rounds}")
-    return GameResponseBuilder.build_next_round_response(game, total_rounds)
+@router.post("/next_round/{room_id}")
+async def next_round(
+    room_id: str,
+    service: GameServiceDep,
+    _host: None = Depends(require_host),
+):
+    """Start the next round (host only)."""
+    room_id = room_id.upper()
+    try:
+        return await service.start_next_round(room_id)
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-async def _broadcast_round_started(room_id: str, game, total_rounds: int):
-    """Broadcast round started message."""
-    await broadcast_game_update(
-        room_id,
-        {
-            "type": "round_started",
-            "current_round": game.current_round,
-            "total_rounds": total_rounds,
-            "batch_size": game.batch_size,
-            "players": game.players,
-            "player_coins": game.player_coins,
-            "total_completed": 0,
-            "tails_remaining": 12,
-            "player_timers": GameResponseBuilder._format_player_timers(game),
-            "game_duration_seconds": None,
-        },
-    )
+@router.post("/flip/{room_id}")
+async def flip_coin(
+    room_id: str,
+    body: FlipRequest,
+    request: Request,
+    service: GameServiceDep,
+):
+    """Flip a coin (player only)."""
+    room_id = room_id.upper()
+    await _validate_session(service, room_id, body.username, request)
+    try:
+        return await service.flip_coin(room_id, body.username, body.coin_index)
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-@router.post("/game/flip/{room_id}")
-async def flip_coin(room_id: str, flip: FlipRequest, request: Request):
-    """Flip a coin in the game."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    _enforce_rate_limit(request, "flip")
-    game = get_game(room_id)
-
-    # Validate request
-    validations = [
-        GameValidator.validate_game_exists(game),
-        GameValidator.validate_required_player_count(game),
-        GameValidator.validate_flip_request(game, flip.username),
-    ]
-
-    is_valid, error = GameValidator.validate_multiple(validations)
-    if not is_valid:
-        status_code = _get_error_status_code(error)
-        raise HTTPException(status_code=status_code, detail=error)
-
-    token = _extract_session_token(request)
-    _assert_valid_session(game, flip.username, token)
-
-    # Process the flip
-    result = process_flip(game, flip.username, flip.coin_index)
-
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=result["error"])
-
-    # Build and broadcast action data
-    action_data = GameResponseBuilder.build_websocket_action_data(
-        flip.username, "flip", result, {"coin_index": flip.coin_index}
-    )
-
-    # Include round_complete flag in the broadcast
-    action_data["round_complete"] = result.get("round_complete", False)
-    action_data["current_round"] = result.get("current_round", game.current_round)
-
-    await broadcast_game_update(room_id, action_data)
-
-    # Handle round completion with proper state broadcasting
-    if result.get("round_complete", False):
-        logger.info(f"Round completed after flip in room {room_id}, broadcasting state change")
-        await _handle_round_completion(room_id, game, result)
-
-    return GameResponseBuilder.build_game_state_response(game)
-
-
-@router.post("/game/send/{room_id}")
-async def send_batch_endpoint(room_id: str, send: SendRequest, request: Request):
+@router.post("/send/{room_id}")
+async def send_batch(
+    room_id: str,
+    body: SendRequest,
+    request: Request,
+    service: GameServiceDep,
+):
     """Send a batch of coins to the next player."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
+    room_id = room_id.upper()
+    await _validate_session(service, room_id, body.username, request)
     try:
-        _enforce_rate_limit(request, "send")
-        game = get_game(room_id)
-
-        # Validate request
-        validations = [
-            GameValidator.validate_game_exists(game),
-            GameValidator.validate_required_player_count(game),
-            GameValidator.validate_send_batch_request(game, send.username),
-        ]
-
-        is_valid, error = GameValidator.validate_multiple(validations)
-        if not is_valid:
-            status_code = _get_error_status_code(error)
-            raise HTTPException(status_code=status_code, detail=error)
-
-        token = _extract_session_token(request)
-        _assert_valid_session(game, send.username, token)
-
-        if send.username not in game.players:
-            raise HTTPException(status_code=400, detail="User is not a player in this game")
-
-        # Process the send
-        result = process_send(game, send.username)
-
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["error"])
-
-        # Calculate batch count
-        batch_count = _get_latest_batch_count(game, send.username)
-
-        # Build and broadcast action data
-        action_data = GameResponseBuilder.build_websocket_action_data(
-            send.username, "send", result, {"batch_count": batch_count}
-        )
-
-        # Include round_complete flag in the broadcast
-        action_data["round_complete"] = result.get("round_complete", False)
-        action_data["current_round"] = result.get("current_round", game.current_round)
-
-        await broadcast_game_update(room_id, action_data)
-
-        # Handle round completion with proper state broadcasting
-        if result.get("round_complete", False):
-            logger.info(f"Round completed after send in room {room_id}, broadcasting state change")
-            await _handle_round_completion(room_id, game, result)
-
-        return GameResponseBuilder.build_send_batch_response(result, batch_count)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in send_batch_endpoint: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        return await service.send_batch(room_id, body.username)
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
 
-def _get_latest_batch_count(game, username: str) -> int:
-    """Get the count of the latest batch sent by a player."""
-    if username in game.sent_coins and game.sent_coins[username]:
-        return game.sent_coins[username][-1]["count"]
-    return 0
-
-
-async def _handle_round_completion(room_id: str, game, result: dict):
-    """Handle round completion logic and broadcasting."""
-    if not result["round_complete"]:
-        return
-
-    if result["game_over"]:
-        await _handle_game_over(room_id, game)
-    else:
-        await _handle_round_complete(room_id, game)
-
-
-async def _handle_game_over(room_id: str, game):
-    """Handle game over state."""
-    await broadcast_game_state(room_id, state=GameState.RESULTS)
-    game_data = GameResponseBuilder.build_game_state_response(game)
-    await broadcast_game_update(room_id, {"type": "game_over", "final_state": game_data})
-    logger.info(f"Game completed: {room_id}")
-
-
-async def _handle_round_complete(room_id: str, game):
-    """Handle round complete state with proper state verification."""
-    # Ensure the game state is properly set
-    if game.state != GameState.ROUND_COMPLETE:
-        logger.warning(f"Expected ROUND_COMPLETE state but got {game.state} for room {room_id}")
-        # Force the state if we know the round is complete
-        game.state = GameState.ROUND_COMPLETE
-
-    await broadcast_game_state(room_id, state=GameState.ROUND_COMPLETE)
-
-    round_result = game.round_results[-1] if game.round_results else None
-
-    if round_result and not round_result.lead_time_seconds and game.lead_time_seconds:
-        round_result.lead_time_seconds = game.lead_time_seconds
-        round_result.first_flip_at = game.first_flip_at
-        round_result.first_delivery_at = game.first_delivery_at
-
-    batch_sizes = get_batch_sizes_for_round_type(game.round_type, game.selected_batch_size)
-    next_round = game.current_round + 1 if game.current_round < len(batch_sizes) else None
-    next_batch_size = batch_sizes[game.current_round] if next_round else None
-
-    await broadcast_game_update(
-        room_id,
-        {
-            "type": "round_complete",
-            "round_number": game.current_round,
-            "next_round": next_round,
-            "batch_size": next_batch_size,
-            "round_result": round_result.dict() if round_result else None,
-            "game_over": False,
-            "game_state": game.state.value,
-            "current_round": game.current_round,
-        },
-    )
-    logger.info(f"Round {game.current_round} completed: {room_id}, state: {game.state.value}")
-
-
-@router.post("/game/reset/{room_id}")
-async def reset_game_endpoint(room_id: str, request: Request):
-    """Reset the game to lobby state (host only)."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    game = get_game(room_id)
-
-    # Validate request
-    validations = [
-        GameValidator.validate_game_exists(game),
-    ]
-
-    is_valid, error = GameValidator.validate_multiple(validations)
-    if not is_valid:
-        status_code = _get_error_status_code(error)
-        raise HTTPException(status_code=status_code, detail=error)
-
-    _assert_host_credentials(game, request)
-
-    # Reset the game
-    reset_game(game)
-
-    # Broadcast reset
-    await broadcast_game_state(room_id, state=GameState.LOBBY)
-    await _broadcast_game_reset(room_id, game)
-
-    logger.info(f"Game reset: {room_id}")
-    return GameResponseBuilder.build_reset_response(game)
-
-
-async def _broadcast_game_reset(room_id: str, game):
-    """Broadcast game reset message."""
-    await broadcast_game_update(
-        room_id,
-        {
-            "type": "game_reset",
-            "round_type": game.round_type.value,
-            "required_players": game.required_players,
-            "selected_batch_size": game.selected_batch_size,
-            "current_round": game.current_round,
-            "state": game.state.value,
-            "player_coins": game.player_coins,
-            "total_completed": 0,
-            "tails_remaining": 12,
-            "player_timers": game.player_timers,
-            "game_duration_seconds": game.game_duration_seconds,
-        },
-    )
-
-
-@router.get("/game/state/{room_id}")
-def get_game_state(room_id: str):
-    """Get the current game state."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    game = get_game(room_id)
-
-    is_valid, error = GameValidator.validate_game_exists(game)
-    if not is_valid:
-        raise HTTPException(status_code=404, detail=error)
-
-    return GameResponseBuilder.build_game_state_response(game)
-
-
-@router.post("/game/change_role/{room_id}")
-async def change_role(room_id: str, req: ChangeRoleRequest = Body(...), request: Request = None):
+@router.post("/change_role/{room_id}")
+async def change_role(
+    room_id: str,
+    body: ChangeRoleRequest,
+    request: Request,
+    service: GameServiceDep,
+):
     """Change a user's role between player and spectator."""
-    room_id = room_id.upper()  # Normalize for case-insensitive lookup
-    game = get_game(room_id)
-
-    is_valid, error = GameValidator.validate_game_exists(game)
-    if not is_valid:
-        raise HTTPException(status_code=404, detail=error)
-
-    username = req.username
-    new_role = req.role
-
-    # AuthZ: host can change anyone with valid host credentials; otherwise require target's session token
-    if not _has_valid_host_credentials(game, request):
-        token = _extract_session_token(request)
-        _assert_valid_session(game, username, token)
-
-    # Validate role change
-    is_valid, error = GameValidator.validate_role_change(game, username, new_role)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=error)
-
-    # Execute role change
-    _execute_role_change(game, username, new_role)
-
-    game.last_active_at = datetime.now()
-    await broadcast_activity(room_id)
-
-    logger.info(f"Role changed: {username} -> {new_role} in game {room_id}")
-    return GameResponseBuilder.build_game_state_response(game)
-
-
-def _execute_role_change(game, username: str, new_role: str):
-    """Execute the role change logic."""
-    if new_role == "player":
-        game.spectators.remove(username)
-        game.players.append(username)
-    elif new_role == "spectator":
-        game.players.remove(username)
-        game.spectators.append(username)
-        if game.state == GameState.ACTIVE:
-            initialize_player_coins(game, is_new_round=False)
-
-
-@router.post("/cleanup")
-def cleanup_inactive_games(request: Request):
-    """Clean up inactive games and players (admin only)."""
-    _assert_admin(request)
-    return cleanup()
-
-
-def _get_error_status_code(error: str) -> int:
-    """Determine appropriate HTTP status code based on error message."""
-    if "not found" in error.lower():
-        return 404
-    elif "invalid host" in error.lower():
-        return 403
+    room_id = room_id.upper()
+    # Either host secret or session token is valid
+    host_secret = request.headers.get("X-Host-Secret", "")
+    if host_secret:
+        valid = await service.validate_host(room_id, host_secret)
+        if not valid:
+            raise HTTPException(status_code=403, detail="Invalid host secret")
     else:
-        return 400
+        await _validate_session(service, room_id, body.username, request)
+    try:
+        return await service.change_role(room_id, body.username, body.role)
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+
+
+@router.post("/reset/{room_id}")
+async def reset_game(
+    room_id: str,
+    service: GameServiceDep,
+    _host: None = Depends(require_host),
+):
+    """Reset the game to lobby (host only)."""
+    room_id = room_id.upper()
+    try:
+        return await service.reset_game(room_id)
+    except GameError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
+
+
+@router.get("/state/{room_id}")
+async def get_state(room_id: str, service: GameServiceDep):
+    """Get current game state."""
+    room_id = room_id.upper()
+    try:
+        return await service.get_state(room_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+
+async def _validate_session(service: GameService, room_id: str, username: str, request: Request) -> None:
+    """Extract and validate session token from request headers."""
+    token = request.headers.get("X-Session-Token", "")
+    if not token:
+        raise HTTPException(status_code=403, detail="Missing session token")
+    valid = await service.validate_session(room_id, username, token)
+    if not valid:
+        raise HTTPException(status_code=403, detail="Invalid session token")
