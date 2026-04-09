@@ -1,5 +1,26 @@
-.rules {
-    background: rgb(230 171 34 / 10%) !important;
-    border: 2px solid #f3b712 !important;
-    grid-area: rules;
+.rules-section {
+    margin-top: 16px;
+}
+
+.rules-section summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1em;
+    padding: 12px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+}
+
+.rules-content {
+    padding: 16px;
+    background: #fff;
+    border-radius: 0 0 10px 10px;
+    border: 1px solid #e0e0e0;
+    border-top: none;
+}
+
+.rules-content ol {
+    padding-left: 20px;
+    line-height: 1.8;
 }

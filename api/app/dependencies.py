@@ -11,9 +11,9 @@ from typing import Annotated
 import redis.asyncio as aioredis
 from fastapi import Depends, Header, HTTPException, Request
 
-from ..application.game_service import GameService
-from ..infrastructure.broadcaster import Broadcaster
-from ..infrastructure.event_store import EventStore
+from .application.game_service import GameService
+from .infrastructure.broadcaster import Broadcaster
+from .infrastructure.event_store import EventStore
 
 # Module-level singletons, initialized at startup
 _redis_client: aioredis.Redis | None = None

@@ -35,5 +35,22 @@ services:
     mem_limit: 128m
     cpus: 0.5
 
+  frontend:
+    build:
+      context: ./front-end
+      dockerfile: Dockerfile
+      args:
+        - PUBLIC_API_URL=${PUBLIC_API_URL:-http://api:8000}
+    container_name: penny_game_frontend
+    ports:
+      - "4321:80"
+    networks:
+      - penny_net
+    restart: unless-stopped
+    depends_on:
+      - api
+    mem_limit: 64m
+    cpus: 0.25
+
 networks:
   penny_net:

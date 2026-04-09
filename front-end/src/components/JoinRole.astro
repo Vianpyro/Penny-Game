@@ -1,6 +1,5 @@
 ---
 import '../styles/main.css'
-
 const apiUrl = import.meta.env.PUBLIC_API_URL
 ---
 
@@ -12,40 +11,24 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
                 <label for="username">Nom :</label>
                 <input type="text" id="username" name="username" required placeholder="Entrez votre nom" />
             </div>
-
             <div class="section" id="roleChoice">
                 <span>Choisissez un rôle :</span>
                 <div class="select-group">
-                    <label class="select-button">
-                        <input type="radio" name="role" value="player" checked />
-                        <span>🎮 Joueur</span>
-                    </label>
-                    <label class="select-button">
-                        <input type="radio" name="role" value="spectator" />
-                        <span>👻 Spectateur</span>
-                    </label>
+                    <label class="select-button"><input type="radio" name="role" value="player" checked /><span>🎮 Joueur</span></label>
+                    <label class="select-button"><input type="radio" name="role" value="spectator" /><span>👻 Spectateur</span></label>
                 </div>
             </div>
-
             <div class="section">
                 <span>Choisissez une salle :</span>
                 <div class="select-group">
-                    <label class="select-button">
-                        <input type="radio" name="roomAction" value="create" />
-                        <span>➕ Créer une salle</span>
-                    </label>
-                    <label class="select-button selected">
-                        <input type="radio" name="roomAction" value="join" checked />
-                        <span>🔑 Rejoindre une salle</span>
-                    </label>
+                    <label class="select-button"><input type="radio" name="roomAction" value="create" /><span>➕ Créer une salle</span></label>
+                    <label class="select-button selected"><input type="radio" name="roomAction" value="join" checked /><span>🔑 Rejoindre une salle</span></label>
                 </div>
             </div>
-
             <div id="roomCodeField" class="input-group">
                 <label for="roomCode">Code de la salle :</label>
-                <input type="text" id="roomCode" name="roomCode" required placeholder="ABCD1234" />
+                <input type="text" id="roomCode" name="roomCode" required placeholder="ABCD" />
             </div>
-
             <button type="submit" class="btn btn-primary">VALIDER</button>
             <div id="loadingSpinner" class="spinner hidden"></div>
         </form>
@@ -54,243 +37,101 @@ const apiUrl = import.meta.env.PUBLIC_API_URL
 <div class="modal-backdrop" id="modalBackdrop"></div>
 
 <script type="module" is:inline>
-    // Utilitaires pour scroll et modale
-    const lockBodyScroll = (lock) => {
-        document.body.style.overflow = lock ? 'hidden' : ''
-        document.body.style.touchAction = lock ? 'none' : ''
-    }
     const hideModal = () => {
         document.getElementById('joinRoleModal')?.classList.add('hidden')
         document.getElementById('modalBackdrop')?.classList.add('hidden')
-        lockBodyScroll(false)
-    }
-    const showSpinner = (show) => {
-        document.getElementById('loadingSpinner')?.classList.toggle('hidden', !show)
+        document.body.style.overflow = ''
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('joinRoleForm')
-        const roomCodeField = document.getElementById('roomCodeField')
         const modal = document.getElementById('joinRoleModal')
-        const title = document.getElementById('join-role-title')
         const apiUrl = modal?.getAttribute('data-api-url') || ''
+        const title = document.getElementById('join-role-title')
+        const roomCodeField = document.getElementById('roomCodeField')
         const roleChoice = document.getElementById('roleChoice')
 
-        if (modal && getComputedStyle(modal).display !== 'none') lockBodyScroll(true)
+        if (modal && getComputedStyle(modal).display !== 'none') document.body.style.overflow = 'hidden'
 
-        // Met à jour la classe 'selected' sur les labels radio
-        function updateSelected(group) {
-            form.querySelectorAll(`[name="${group}"]`).forEach((radio) => {
-                radio.closest('.select-button')?.classList.toggle('selected', radio.checked)
-            })
-        }
+        const updateSelected = (g) => form.querySelectorAll(`[name="${g}"]`).forEach(r =>
+            r.closest('.select-button')?.classList.toggle('selected', r.checked))
         updateSelected('role')
         updateSelected('roomAction')
-        form.querySelectorAll('[name=role]').forEach((radio) => {
-            radio.addEventListener('change', () => updateSelected('role'))
-        })
-        form.querySelectorAll('[name=roomAction]').forEach((radio) => {
-            radio.addEventListener('change', () => {
-                updateSelected('roomAction')
-                const join = form.querySelector('[name=roomAction]:checked')?.value === 'join'
-                roomCodeField.style.display = join ? '' : 'none'
-                roomCodeField.querySelector('input')?.toggleAttribute('required', join)
-                title.textContent = join ? 'Rejoindre une partie' : 'Créer une partie'
-                if (roleChoice) roleChoice.style.display = join ? '' : 'none'
-            })
-        })
+
+        form.querySelectorAll('[name=role]').forEach(r => r.addEventListener('change', () => updateSelected('role')))
+        form.querySelectorAll('[name=roomAction]').forEach(r => r.addEventListener('change', () => {
+            updateSelected('roomAction')
+            const join = form.querySelector('[name=roomAction]:checked')?.value === 'join'
+            roomCodeField.style.display = join ? '' : 'none'
+            roomCodeField.querySelector('input')?.toggleAttribute('required', join)
+            title.textContent = join ? 'Rejoindre une partie' : 'Créer une partie'
+            if (roleChoice) roleChoice.style.display = join ? '' : 'none'
+        }))
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault()
             const username = form.username.value.trim()
             const roomAction = form.roomAction.value
             const roomCode = form.roomCode.value.trim()
-            const role = roomAction === 'create' ? 'host' : form.role.value || 'player'
-            let createdRoomId = ''
             if (!username) return
+
+            let createdRoomId = ''
             if (roomAction === 'create') {
-                showSpinner(true)
+                document.getElementById('loadingSpinner')?.classList.remove('hidden')
                 try {
-                    const res = await fetch(`${apiUrl}/game/create`, { method: 'POST', credentials: 'include' })
+                    const res = await fetch(`${apiUrl}/game/create`, { method: 'POST' })
                     const data = await res.json()
-                    // Capture host credentials for subsequent host actions
-                    try {
-                        if (data.host_secret) {
-                            window.hostSecret = data.host_secret
-                            sessionStorage.setItem('penny_host_secret', data.host_secret)
-                        }
-                        if (data.csrf_token) {
-                            window.csrfToken = data.csrf_token
-                            sessionStorage.setItem('penny_csrf_token', data.csrf_token)
-                        }
-                    } catch (e) {
-                        console.warn('Unable to persist host credentials', e)
+                    if (data.host_secret) {
+                        window.hostSecret = data.host_secret
+                        try { sessionStorage.setItem('penny_host_secret', data.host_secret) } catch(_) {}
+                    }
+                    if (data.session_token) {
+                        window.sessionToken = data.session_token
+                        try { sessionStorage.setItem('penny_session_token', data.session_token) } catch(_) {}
                     }
                     createdRoomId = data.room_id
-                    showSpinner(false)
+                    document.getElementById('loadingSpinner')?.classList.add('hidden')
                     hideModal()
                 } catch (err) {
-                    showSpinner(false)
-                    alert('Erreur lors de la création de la salle: ' + (err?.message || err))
+                    document.getElementById('loadingSpinner')?.classList.add('hidden')
+                    alert('Erreur: ' + (err?.message || err))
                     return
                 }
             } else {
                 hideModal()
             }
-            window.dispatchEvent(
-                new CustomEvent('joinrole', {
-                    detail: { username, role, roomAction, roomCode: roomCode.toLowerCase(), roomId: createdRoomId },
-                })
-            )
+
+            window.dispatchEvent(new CustomEvent('joinrole', {
+                detail: {
+                    username,
+                    role: roomAction === 'create' ? 'host' : form.role.value,
+                    roomAction,
+                    roomCode: roomCode.toUpperCase(),
+                    roomId: createdRoomId,
+                }
+            }))
         })
+
         window.addEventListener('closeJoinRoleModal', hideModal)
     })
 </script>
 
 <style>
-    .join-role-modal {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 1101;
-    }
-
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgb(0 0 0 / 40%);
-        z-index: 1100;
-    }
-
-    .join-role-content {
-        background: #fdf6f0;
-        border-radius: 16px;
-        padding: 32px 24px;
-        min-width: 320px;
-        text-align: center;
-        box-shadow: 0 8px 32px rgb(0 0 0 / 20%);
-    }
-
-    h2 {
-        font-size: 1.6em;
-        font-weight: bold;
-        margin-bottom: 24px;
-        color: #1e1e1e;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        justify-content: center;
-    }
-
-    .input-group,
-    .section {
-        margin-bottom: 18px;
-        text-align: left;
-    }
-
-    label {
-        font-weight: 500;
-        display: block;
-        margin-bottom: 6px;
-        color: #333;
-    }
-
-    input[type='text'] {
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        font-size: 1em;
-        box-sizing: border-box;
-    }
-
-    .select-group {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        width: 100%;
-    }
-
-    .select-button {
-        min-width: 0;
-        width: 100%;
-        box-sizing: border-box;
-        padding: 12px;
-        border-radius: 12px;
-        border: 1px solid #ccc;
-        background: #fff;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 0.95em;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 6px;
-        transition: background 0.2s ease;
-        text-align: center;
-    }
-
-    .select-button > span {
-        width: 100%;
-        text-align: center;
-        display: inline-block;
-    }
-
-    .select-button input {
-        display: none;
-    }
-
-    .select-button:hover,
-    .select-button.selected {
-        background: #dbeafe;
-        border-color: #60a5fa;
-    }
-
-    .btn-primary {
-        width: 100%;
-        padding: 12px;
-        border-radius: 12px;
-        border: none;
-        background: linear-gradient(90deg, #007cf0, #005ecb);
-        color: #fff;
-        font-size: 1em;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.2s ease;
-    }
-
-    .btn-primary:hover {
-        background: linear-gradient(90deg, #005ecb, #007cf0);
-    }
-
-    #roomCode {
-        text-transform: uppercase;
-    }
-
-    .spinner {
-        margin: 18px auto 0;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% {
-            transform: rotate(0deg);
-        }
-        100% {
-            transform: rotate(360deg);
-        }
-    }
-
-    .hidden {
-        display: none !important;
-    }
+    .join-role-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1101; }
+    .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgb(0 0 0 / 40%); z-index: 1100; }
+    .join-role-content { background: #fdf6f0; border-radius: 16px; padding: 32px 24px; min-width: 320px; text-align: center; box-shadow: 0 8px 32px rgb(0 0 0 / 20%); }
+    h2 { font-size: 1.6em; font-weight: bold; margin-bottom: 24px; color: #1e1e1e; display: flex; align-items: center; gap: 8px; justify-content: center; }
+    .input-group, .section { margin-bottom: 18px; text-align: left; }
+    label { font-weight: 500; display: block; margin-bottom: 6px; color: #333; }
+    input[type='text'] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1em; box-sizing: border-box; }
+    .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+    .select-button { padding: 12px; border-radius: 12px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-weight: 600; font-size: 0.95em; display: flex; justify-content: center; align-items: center; gap: 6px; transition: background 0.2s; }
+    .select-button > span { width: 100%; text-align: center; }
+    .select-button input { display: none; }
+    .select-button:hover, .select-button.selected { background: #dbeafe; border-color: #60a5fa; }
+    .btn-primary { width: 100%; padding: 12px; border-radius: 12px; border: none; background: linear-gradient(90deg, #007cf0, #005ecb); color: #fff; font-size: 1em; font-weight: bold; cursor: pointer; }
+    #roomCode { text-transform: uppercase; }
+    .spinner { margin: 18px auto 0; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
 </style>

@@ -1,60 +1,110 @@
-.round-description {
-    color: #7f8c8d;
-    font-size: 0.9em;
-    line-height: 1.4;
+.setup-controls {
+    margin-bottom: 16px;
 }
 
-.round-number {
-    color: #3498db;
-    font-size: 1.2em;
-    font-weight: 700;
-    margin-bottom: 5px;
+.setup-controls.non-host-view {
+    opacity: 0.7;
 }
 
-.round-option {
-    background: rgb(255 255 255 / 90%);
-    border: 2px solid #ecf0f1;
-    border-radius: 12px;
+.round-config h3 {
+    margin-bottom: 12px;
+}
+
+.round-config label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #555;
+}
+
+.player-count-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.player-count-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #ccc;
+    background: #fff;
+    font-weight: bold;
     cursor: pointer;
-    padding: 20px;
-    text-align: center;
-    transition: all 0.3s ease;
+    transition: all 0.2s;
 }
 
-.round-option.active {
-    background: rgb(52 152 219 / 10%);
-    border-color: #3498db;
-    box-shadow: 0 8px 20px rgb(52 152 219 / 30%);
-    transform: translateY(-2px);
+.player-count-btn.active {
+    background: #007cf0;
+    color: #fff;
+    border-color: #007cf0;
 }
 
-.round-option:hover {
-    border-color: #3498db;
-    box-shadow: 0 8px 20px rgb(52 152 219 / 20%);
-    transform: translateY(-2px);
+.player-count-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.round-selector {
+.round-count-selector {
     display: grid;
-    gap: 15px;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
 }
 
-.round-selector-container {
-    grid-area: round-selector-container;
+.round-count-option {
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    background: #fff;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
 }
 
-.round-title {
-    color: #2c3e50;
-    font-size: 1.3em;
+.round-count-option.active {
+    border-color: #007cf0;
+    background: #eef5ff;
+}
+
+.option-label {
+    display: block;
     font-weight: 600;
-    margin-bottom: 10px;
+    margin-bottom: 2px;
 }
 
-@media screen and (width<=850px) {
-    .round-selector {
-        display: grid;
-        gap: 15px;
+.option-desc {
+    display: block;
+    font-size: 0.8em;
+    color: #888;
+}
+
+.batch-selector {
+    margin-top: 12px;
+}
+
+.batch-options {
+    display: flex;
+    gap: 10px;
+}
+
+.batch-option {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.batch-option.active {
+    border-color: #007cf0;
+    background: #eef5ff;
+}
+
+@media (max-width: 600px) {
+    .round-count-selector {
         grid-template-columns: 1fr;
     }
 }

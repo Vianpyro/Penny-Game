@@ -1,17 +1,18 @@
 {
-    "name": "penny_game",
+    "name": "penny-game-frontend",
     "type": "module",
-    "version": "0.2.0",
-    "dependencies": {
-        "astro": "^5.13.2"
-    },
-    "devDependencies": {
-        "prettier": "^3.5.3",
-        "prettier-plugin-astro": "^0.14.1"
-    },
+    "version": "2.0.0",
     "scripts": {
         "dev": "astro dev",
+        "start": "astro dev",
         "build": "astro build",
-        "preview": "astro preview"
+        "preview": "astro preview",
+        "format": "prettier --write ."
+    },
+    "dependencies": {
+        "astro": "^6.1.5"
+    },
+    "devDependencies": {
+        "prettier": "^3.8.1"
     }
 }

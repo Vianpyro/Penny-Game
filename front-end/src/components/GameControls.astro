@@ -1,15 +1,4 @@
----
-import '../styles/main.css'
-import '../styles/game-controls.css'
-
-import { MAX_PLAYERS } from '../config.js'
-import { ENHANCED_FRENCH_LOCALE } from '../../public/scripts/bilingual-terms'
----
-
-<div class="game-controls">
-    <button class="btn btn-primary" id="startBtn">
-        Démarrer avec <span id="playerCount">{MAX_PLAYERS}</span>
-        {ENHANCED_FRENCH_LOCALE.players}
-    </button>
-    <button class="btn btn-success" id="resetBtn">Réinitialiser</button>
+<div class="game-controls" id="gameControls">
+    <button class="btn btn-primary" id="startBtn" style="display: none;">Démarrer la Partie</button>
+    <button class="btn btn-secondary" id="resetBtn" style="display: none;">Réinitialiser</button>
 </div>

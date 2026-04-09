@@ -1,85 +1,66 @@
-.player-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.player-count-btn {
-    background: #fff;
-    border: 2px solid #3498db;
-    border-radius: 8px;
-    color: #3498db;
-    cursor: pointer;
-    flex: 1 1 0;
-    font-weight: 600;
-    min-width: fit-content;
-    padding: 10px 20px;
-    transition: all 0.3s ease;
-}
-
-.player-count-btn:hover,
-.player-count-btn.active {
-    background: #3498db;
-    color: #fff;
-}
-
 .player-selector {
-    grid-area: player-selector;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
-.player-selector h3,
-.round-selector-container h3,
-.insights h3 {
-    color: #2c3e50;
-    font-size: 1.3em;
-    margin-bottom: 15px;
-}
-
-.user-list {
-    background: transparent;
-    border: 2px dotted transparent;
+.player-list-section,
+.spectator-list-section {
+    background: #fff;
     border-radius: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    list-style: none;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+}
+
+.player-list-section h3,
+.spectator-list-section h3 {
     margin-bottom: 12px;
-    min-height: 35px;
+    font-size: 1em;
+}
+
+.player-list,
+.spectator-list {
+    list-style: none;
     padding: 0;
-    place-items: stretch;
-    transition: background 0.2s;
+    min-height: 40px;
 }
 
-.user-list > li {
-    border-color: #ecf0f1;
-    border-radius: 15px;
-    border-width: 2px;
-    flex: 1 1 0;
-    min-width: fit-content;
-    padding: 5px 10px;
+.player-list li,
+.spectator-list li {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    background: #f8f8f8;
+    cursor: grab;
+    transition: all 0.2s;
 }
 
-.user-list > li.offline {
-    border-style: dashed;
-    color: #888;
+.player-list li:hover,
+.spectator-list li:hover {
+    background: #eef5ff;
 }
 
-.user-list > li.online,
-.spectator-list > .user-list > li {
-    border-style: solid;
-    color: inherit;
+.player-list li.dragging,
+.spectator-list li.dragging {
+    opacity: 0.5;
 }
 
-.user-list > li.waiting {
-    border-style: dotted;
+.player-list.drag-over,
+.spectator-list.drag-over {
+    border: 2px dashed #007cf0;
+    background: #f0f7ff;
+}
+
+.empty-message {
     color: #aaa;
+    font-style: italic;
+    cursor: default !important;
+    background: transparent !important;
 }
 
-.user-list > li[draggable] {
-    cursor: pointer;
-}
-
-.user-list.drag-over {
-    background: rgb(0 128 128 / 18%);
-    border-color: #008080;
+@media (max-width: 600px) {
+    .player-selector {
+        grid-template-columns: 1fr;
+    }
 }

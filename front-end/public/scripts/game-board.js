@@ -1,4 +1,5 @@
 // Game board logic for Penny Game with cooperative mechanics and timers
+// Adapted for v2 backend: .state -> .phase, no credentials in fetch
 import { flipCoin } from './api.js'
 import { showNotification } from './utility.js'
 import { LEAN_TERMS } from './bilingual-terms.js'
@@ -9,21 +10,16 @@ const coinEmoji = supportsEmoji('🪙') ? '🪙' : '💰'
 const TOTAL_COINS = 15
 const FLIP_HOLD_DURATION = 1000
 
-// Track active interactions
-const activeHolds = new Map() // coinKey -> { timer, interval, startTime, element }
-const localFlipsInProgress = new Set() // Track coins being flipped locally
+const activeHolds = new Map()
+const localFlipsInProgress = new Set()
 
 export async function fetchBoardGameState(gameCode) {
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     if (!apiUrl || !gameCode) return null
-
     try {
-        const res = await fetch(`${apiUrl}/game/state/${gameCode}`, {
-            credentials: 'include',
-        })
+        const res = await fetch(`${apiUrl}/game/state/${gameCode}`)
         if (!res.ok) return null
-        const data = await res.json()
-        return data
+        return await res.json()
     } catch (error) {
         console.error('Error fetching game state:', error)
         return null
@@ -38,427 +34,187 @@ function formatTime(seconds) {
 }
 
 function formatPlayerTimer(timer) {
-    if (!timer) return { status: 'waiting', time: '--:--', statusText: 'En attente' }
-
-    if (!timer.started_at) {
+    if (!timer || !timer.started_at) {
         return { status: 'waiting', time: '--:--', statusText: 'En attente' }
     }
-
-    if (timer.ended_at && timer.duration_seconds !== null && timer.duration_seconds !== undefined) {
-        return {
-            status: 'completed',
-            time: formatTime(timer.duration_seconds),
-            statusText: 'Terminé',
-        }
+    if (timer.ended_at && timer.duration_seconds != null) {
+        return { status: 'completed', time: formatTime(timer.duration_seconds), statusText: 'Terminé' }
     }
-
-    // Timer is running
     if (timer.started_at && !timer.ended_at) {
         try {
-            const startTime = new Date(timer.started_at)
-            const currentTime = new Date()
-
-            if (isNaN(startTime.getTime())) {
-                console.warn('Invalid start time:', timer.started_at)
-                return { status: 'waiting', time: '--:--', statusText: 'Erreur' }
-            }
-
-            const currentDuration = Math.max(0, (currentTime - startTime) / 1000)
-
-            return {
-                status: 'running',
-                time: formatTime(currentDuration),
-                statusText: 'En cours',
-            }
-        } catch (error) {
-            console.error('Error calculating timer duration:', error)
+            const elapsed = Math.max(0, (new Date() - new Date(timer.started_at)) / 1000)
+            return { status: 'running', time: formatTime(elapsed), statusText: 'En cours' }
+        } catch (_) {
             return { status: 'waiting', time: '--:--', statusText: 'Erreur' }
         }
     }
-
     return { status: 'waiting', time: '--:--', statusText: 'En attente' }
 }
 
-// Store previous game state for comparison
 let previousGameState = null
-
-// Track if a send is in progress to prevent duplicates
 let isSendingBatch = false
 
 export function renderGameBoard(gameState) {
     const gameBoard = document.getElementById('gameBoard')
-    if (!gameBoard || !gameState) return
+    if (!gameBoard || !gameState || !gameState.players || !gameState.player_coins) return
 
     try {
-        // Validate gameState has required properties
-        if (!gameState.players || !gameState.player_coins) {
-            console.error('Invalid game state structure:', gameState)
-            return
-        }
-
-        // Check if this is an incremental update or full render
-        const isIncrementalUpdate = previousGameState !== null
-
-        if (!isIncrementalUpdate) {
-            // Full render on first load
+        if (!previousGameState) {
             fullRenderGameBoard(gameBoard, gameState)
         } else {
-            // Check if we should do incremental or full update
-            // Do full update if players changed or if sending is in progress
             const playersChanged = JSON.stringify(previousGameState.players) !== JSON.stringify(gameState.players)
-
             if (playersChanged || isSendingBatch) {
-                // Do full render for major changes or during send
                 fullRenderGameBoard(gameBoard, gameState)
             } else {
-                // Incremental update to preserve interactions
                 incrementalUpdateGameBoard(gameBoard, gameState)
             }
         }
-
-        // Store state for next comparison (deep clone to avoid reference issues)
         previousGameState = JSON.parse(JSON.stringify(gameState))
     } catch (error) {
         console.error('Error rendering game board:', error)
-        // Try to recover with a full render
         try {
             fullRenderGameBoard(gameBoard, gameState)
             previousGameState = JSON.parse(JSON.stringify(gameState))
-        } catch (fallbackError) {
-            console.error('Failed to recover with full render:', fallbackError)
-        }
+        } catch (_) { }
     }
 }
 
 function fullRenderGameBoard(gameBoard, gameState) {
     gameBoard.innerHTML = ''
-
-    // Add game status header
-    const gameStatus = createGameStatusElement(gameState)
-    gameBoard.appendChild(gameStatus)
-
-    // Add reset button for hosts
-    if (window.isHost) {
-        addResetButton()
-    }
-
-    // Add production line
-    const productionLine = createProductionLineElement(gameState)
-    gameBoard.appendChild(productionLine)
-
-    // Add player timers summary if any exist
-    if (gameState.player_timers && Object.keys(gameState.player_timers).length > 0) {
-        addTimersSummary(gameState)
-    }
-
-    // Add game rules reminder
-    const rulesReminder = createRulesReminderElement(gameState)
-    gameBoard.appendChild(rulesReminder)
-
-    // Fix coin display
+    gameBoard.appendChild(createGameStatusElement(gameState))
+    if (window.isHost) addResetButton()
+    gameBoard.appendChild(createProductionLineElement(gameState))
+    if (gameState.player_timers && Object.keys(gameState.player_timers).length > 0) addTimersSummary(gameState)
+    gameBoard.appendChild(createRulesReminderElement(gameState))
     setTimeout(() => {
         document.querySelectorAll('.coin.flip').forEach((coin) => {
-            if (!coin.textContent.includes(coinEmoji)) {
-                coin.innerHTML = coinEmoji
-            }
+            if (!coin.textContent.includes(coinEmoji)) coin.innerHTML = coinEmoji
         })
     }, 0)
 }
 
 function incrementalUpdateGameBoard(gameBoard, gameState) {
     try {
-        // Update game status
         updateGameStatus(gameState)
-
-        // Update each player station incrementally
-        gameState.players.forEach((player, index) => {
-            try {
-                updatePlayerStation(player, gameState, index)
-            } catch (error) {
-                console.error(`Error updating station for player ${player}:`, error)
-                // If incremental update fails, do a full render for this station
-                const station = document.getElementById(`station-${player}`)
-                if (station && station.parentNode) {
-                    const newStation = createPlayerStation(player, gameState, index)
-                    station.parentNode.replaceChild(newStation, station)
-                }
-            }
-        })
-
-        // Update completion area
+        gameState.players.forEach((player, index) => updatePlayerStation(player, gameState, index))
         updateCompletionArea(gameState)
-
-        // Update timers if needed
-        if (gameState.player_timers && Object.keys(gameState.player_timers).length > 0) {
-            updateTimersSummary(gameState)
-        }
-    } catch (error) {
-        console.error('Error in incremental update, falling back to full render:', error)
-        // Fall back to full render if incremental fails
+        if (gameState.player_timers && Object.keys(gameState.player_timers).length > 0) updateTimersSummary(gameState)
+    } catch (_) {
         fullRenderGameBoard(gameBoard, gameState)
     }
 }
 
 function updateGameStatus(gameState) {
-    try {
-        // Update game timer
-        const gameTimerDisplay = document.getElementById('gameTimerDisplay')
-        if (gameTimerDisplay) {
-            let gameTimer = '--:--'
-            if (gameState.game_duration_seconds !== null && gameState.game_duration_seconds !== undefined) {
-                gameTimer = formatTime(gameState.game_duration_seconds)
-            } else if (gameState.started_at) {
-                const startTime = new Date(gameState.started_at)
-                const currentTime = new Date()
-                if (!isNaN(startTime.getTime())) {
-                    const currentDuration = (currentTime - startTime) / 1000
-                    gameTimer = formatTime(currentDuration)
-                }
-            }
-            gameTimerDisplay.textContent = gameTimer
+    const gameTimerDisplay = document.getElementById('gameTimerDisplay')
+    if (gameTimerDisplay) {
+        let timer = '--:--'
+        if (gameState.round_started_at || gameState.started_at) {
+            const start = new Date(gameState.round_started_at || gameState.started_at)
+            if (!isNaN(start.getTime())) timer = formatTime((new Date() - start) / 1000)
         }
+        gameTimerDisplay.textContent = timer
+    }
 
-        // Update progress stats
-        const progressStats = document.querySelector('.progress-stats')
-        if (progressStats) {
-            // Calculate tails remaining if not provided
-            let tailsRemaining = gameState.tails_remaining
-            if (tailsRemaining === undefined || tailsRemaining === null) {
-                tailsRemaining = 0
-                if (gameState.player_coins) {
-                    Object.values(gameState.player_coins).forEach((coins) => {
-                        if (Array.isArray(coins)) {
-                            tailsRemaining += coins.filter((coin) => !coin).length
-                        }
-                    })
-                }
-            }
-
-            progressStats.innerHTML = `
-                <span class="stat">🪙 Total: ${gameState.total_completed || 0}/${TOTAL_COINS} terminées</span>
-                <span class="stat">⏳ ${tailsRemaining} pièces à traiter</span>
-            `
+    const progressStats = document.querySelector('.progress-stats')
+    if (progressStats) {
+        let tails = gameState.tails_remaining
+        if (tails === undefined) {
+            tails = 0
+            Object.values(gameState.player_coins).forEach((coins) => {
+                if (Array.isArray(coins)) tails += coins.filter((c) => !c).length
+            })
         }
-    } catch (error) {
-        console.error('Error updating game status:', error)
+        progressStats.innerHTML = `
+            <span class="stat">🪙 Total: ${gameState.total_completed || 0}/${TOTAL_COINS} terminées</span>
+            <span class="stat">⏳ ${tails} pièces à traiter</span>
+        `
     }
 }
 
 function updatePlayerStation(player, gameState, playerIndex) {
-    try {
-        const stationId = `station-${player}`
-        let station = document.getElementById(stationId)
+    const station = document.getElementById(`station-${player}`)
+    const playerCoins = gameState.player_coins[player] || []
+    const isCurrentPlayer = player === window.currentUsername
+    const canInteract = isCurrentPlayer && !window.isHost && window.userRole === 'player'
 
-        const currentUsername = window.currentUsername
-        const isCurrentPlayer = player === currentUsername
-        const playerCoins = gameState.player_coins[player] || []
-
-        // If station doesn't exist, create it
-        if (!station) {
-            const productionLine = document.querySelector('.production-line')
-            if (productionLine) {
-                station = createPlayerStation(player, gameState, playerIndex)
-
-                // Find the right position to insert
-                const completionArea = productionLine.querySelector('.completion-area')
-                const allStations = productionLine.querySelectorAll('.player-station')
-
-                // Insert at correct position
-                if (playerIndex === 0 && productionLine.firstChild) {
-                    productionLine.insertBefore(station, productionLine.firstChild)
-                } else if (playerIndex < allStations.length) {
-                    const nextStation = allStations[playerIndex]
-                    if (nextStation && nextStation.parentNode === productionLine) {
-                        productionLine.insertBefore(station, nextStation)
-                    } else if (completionArea) {
-                        productionLine.insertBefore(station, completionArea)
-                    } else {
-                        productionLine.appendChild(station)
-                    }
-                } else if (completionArea) {
-                    productionLine.insertBefore(station, completionArea)
-                } else {
-                    productionLine.appendChild(station)
-                }
-
-                // Add flow arrow if needed
-                if (playerIndex < gameState.players.length - 1) {
-                    const arrow = document.createElement('div')
-                    arrow.className = 'flow-arrow'
-                    arrow.innerHTML = '➡️'
-                    station.parentNode.insertBefore(arrow, station.nextSibling)
-                }
-            }
-            return
-        }
-
-        // Update existing station
-        updateStationStats(station, playerCoins)
-        updateStationTimer(station, player, gameState.player_timers)
-        updateStationCoins(station, player, playerCoins, gameState, isCurrentPlayer)
-        updateStationActions(station, player, playerCoins, gameState, isCurrentPlayer, playerIndex)
-    } catch (error) {
-        console.error(`Error updating player station for ${player}:`, error)
-        // Try to recover by creating a new station
+    if (!station) {
         const productionLine = document.querySelector('.production-line')
         if (productionLine) {
-            const oldStation = document.getElementById(`station-${player}`)
             const newStation = createPlayerStation(player, gameState, playerIndex)
-            if (oldStation && oldStation.parentNode) {
-                oldStation.parentNode.replaceChild(newStation, oldStation)
-            } else {
-                productionLine.appendChild(newStation)
-            }
+            const completionArea = productionLine.querySelector('.completion-area')
+            if (completionArea) productionLine.insertBefore(newStation, completionArea)
+            else productionLine.appendChild(newStation)
         }
+        return
     }
-}
 
-function updateStationStats(station, playerCoins) {
-    try {
-        // Ensure playerCoins is a valid array
-        if (!Array.isArray(playerCoins)) {
-            playerCoins = []
-        }
-
-        const tailsCount = playerCoins.filter((coin) => coin === false).length
-        const headsCount = playerCoins.filter((coin) => coin === true).length
-        const totalCoins = playerCoins.length
-
-        const statsContainer = station.querySelector('.station-stats')
-        if (statsContainer) {
-            statsContainer.innerHTML = `
-                <span class="stat">🪙 ${totalCoins} pièces</span>
-                <span class="stat"><div class="flip grayscale">🪙</div> ${tailsCount} à retourner</span>
-                <span class="stat">🪙 ${headsCount} prêtes</span>
-            `
-        }
-    } catch (error) {
-        console.error('Error updating station stats:', error)
+    // Update stats
+    const statsContainer = station.querySelector('.station-stats')
+    if (statsContainer) {
+        const tails = playerCoins.filter((c) => c === false).length
+        const heads = playerCoins.filter((c) => c === true).length
+        statsContainer.innerHTML = `
+            <span class="stat">🪙 ${playerCoins.length} pièces</span>
+            <span class="stat"><div class="flip grayscale">🪙</div> ${tails} à retourner</span>
+            <span class="stat">🪙 ${heads} prêtes</span>
+        `
     }
-}
 
-function updateStationTimer(station, player, playerTimers) {
-    try {
-        const timerElement = station.querySelector('.player-timer')
-        if (timerElement && playerTimers && playerTimers[player]) {
-            const timerInfo = formatPlayerTimer(playerTimers[player])
-
-            timerElement.className = `player-timer ${timerInfo.status}`
-            const timerTime = timerElement.querySelector('.timer-time')
-            const timerStatus = timerElement.querySelector('.timer-status')
-
-            if (timerTime) timerTime.textContent = timerInfo.time
-            if (timerStatus) timerStatus.textContent = timerInfo.statusText
-        }
-    } catch (error) {
-        console.error(`Error updating timer for player ${player}:`, error)
+    // Update timer
+    const timerElement = station.querySelector('.player-timer')
+    if (timerElement && gameState.player_timers?.[player]) {
+        const info = formatPlayerTimer(gameState.player_timers[player])
+        timerElement.className = `player-timer ${info.status}`
+        const timeEl = timerElement.querySelector('.timer-time')
+        const statusEl = timerElement.querySelector('.timer-status')
+        if (timeEl) timeEl.textContent = info.time
+        if (statusEl) statusEl.textContent = info.statusText
     }
-}
 
-function updateStationCoins(station, player, playerCoins, gameState, isCurrentPlayer) {
-    try {
-        const coinsContainer = station.querySelector('.coins-container')
-        if (!coinsContainer) {
-            console.warn(`No coins container found for player ${player}`)
-            return
-        }
-
-        const isHost = window.isHost
-        const canInteract = isCurrentPlayer && !isHost && window.userRole === 'player'
-
-        // Ensure playerCoins is an array
-        if (!Array.isArray(playerCoins)) {
-            console.warn(`Invalid playerCoins for ${player}:`, playerCoins)
-            playerCoins = []
-        }
-
-        // Get existing coin wrappers as a real array
-        const existingWrappers = Array.from(coinsContainer.querySelectorAll('.coin-wrapper'))
-
-        // Handle empty state
+    // Update coins
+    const coinsContainer = station.querySelector('.coins-container')
+    if (coinsContainer) {
         if (playerCoins.length === 0) {
-            coinsContainer.innerHTML = ''
-            const emptyMessage = document.createElement('div')
-            emptyMessage.className = 'empty-station'
-            emptyMessage.textContent = 'En attente de pièces...'
-            coinsContainer.appendChild(emptyMessage)
-            return
-        }
+            coinsContainer.innerHTML = '<div class="empty-station">En attente de pièces...</div>'
+        } else {
+            const emptyMsg = coinsContainer.querySelector('.empty-station')
+            if (emptyMsg) emptyMsg.remove()
 
-        // Remove empty message if it exists
-        const emptyMessage = coinsContainer.querySelector('.empty-station')
-        if (emptyMessage) {
-            emptyMessage.remove()
-        }
+            const existing = Array.from(coinsContainer.querySelectorAll('.coin-wrapper'))
+            playerCoins.forEach((isHeads, index) => {
+                const coinKey = `${player}-${index}`
+                if (isCurrentPlayer && (activeHolds.has(coinKey) || localFlipsInProgress.has(coinKey))) return
 
-        // Update or create coins
-        playerCoins.forEach((isHeads, index) => {
-            const coinKey = `${player}-${index}`
-
-            // Check if this coin is being held locally
-            const isBeingHeld = activeHolds.has(coinKey)
-            const isLocalFlip = localFlipsInProgress.has(coinKey)
-
-            // Skip update if this is the current player's coin being interacted with
-            if (isCurrentPlayer && (isBeingHeld || isLocalFlip)) {
-                return
-            }
-
-            const existingWrapper = existingWrappers[index]
-
-            if (!existingWrapper) {
-                // Create new coin wrapper
-                const newWrapper = createCoinElement(player, index, isHeads, canInteract)
-                coinsContainer.appendChild(newWrapper)
-            } else {
-                // Update existing coin
-                const coin = existingWrapper.querySelector('.coin')
-                if (!coin) {
-                    console.warn(`No coin element found in wrapper for ${coinKey}`)
-                    return
-                }
-
-                const wasHeads = coin.classList.contains('heads')
-
-                if (wasHeads !== isHeads) {
-                    // State changed - update the coin
-                    updateCoinState(coin, isHeads, canInteract)
-
-                    // Re-setup events if needed
-                    if (canInteract && !isHeads) {
-                        const progressRing = existingWrapper.querySelector('.coin-progress-ring')
-                        // Clone to remove old event listeners
-                        const newCoin = coin.cloneNode(true)
-                        newCoin.textContent = coinEmoji
-                        coin.parentNode.replaceChild(newCoin, coin)
-                        setupCoinHoldEvents(newCoin, index, progressRing)
+                if (!existing[index]) {
+                    coinsContainer.appendChild(createCoinElement(player, index, isHeads, canInteract))
+                } else {
+                    const coin = existing[index].querySelector('.coin')
+                    if (coin && coin.classList.contains('heads') !== isHeads) {
+                        updateCoinState(coin, isHeads, canInteract)
+                        if (canInteract && !isHeads) {
+                            const ring = existing[index].querySelector('.coin-progress-ring')
+                            const newCoin = coin.cloneNode(true)
+                            newCoin.textContent = coinEmoji
+                            coin.parentNode.replaceChild(newCoin, coin)
+                            setupCoinHoldEvents(newCoin, index, ring)
+                        }
                     }
                 }
-            }
-        })
-
-        // Remove extra coin wrappers (from the end)
-        for (let i = existingWrappers.length - 1; i >= playerCoins.length; i--) {
-            const wrapper = existingWrappers[i]
-            if (wrapper && wrapper.parentNode === coinsContainer) {
-                // Clean up any active holds for this coin
-                const coinKey = `${player}-${i}`
-                activeHolds.delete(coinKey)
-                localFlipsInProgress.delete(coinKey)
-
-                wrapper.remove()
+            })
+            for (let i = existing.length - 1; i >= playerCoins.length; i--) {
+                activeHolds.delete(`${player}-${i}`)
+                localFlipsInProgress.delete(`${player}-${i}`)
+                if (existing[i]?.parentNode === coinsContainer) existing[i].remove()
             }
         }
-    } catch (error) {
-        console.error(`Error updating coins for player ${player}:`, error)
     }
+
+    // Update actions
+    updateStationActions(station, player, playerCoins, gameState, canInteract, playerIndex)
 }
 
 function updateCoinState(coin, isHeads, canInteract) {
-    // Clear classes
-    coin.classList.remove('heads', 'tails', 'grayscale', 'interactive', 'holdable', 'clickable')
-
-    // Set new state
+    coin.classList.remove('heads', 'tails', 'grayscale', 'interactive', 'holdable')
     if (isHeads) {
         coin.classList.add('heads')
         coin.title = 'Face - Prête à envoyer'
@@ -468,260 +224,166 @@ function updateCoinState(coin, isHeads, canInteract) {
         if (canInteract) {
             coin.classList.add('interactive', 'holdable')
             coin.style.cursor = 'grab'
-            coin.title = 'Maintenez pendant 1.5s pour retourner'
+            coin.title = 'Maintenez pour retourner'
         }
     }
-
     coin.textContent = coinEmoji
 }
 
-function updateStationActions(station, player, playerCoins, gameState, isCurrentPlayer, playerIndex) {
-    const isHost = window.isHost
-    const canInteract = isCurrentPlayer && !isHost && window.userRole === 'player'
-
+function updateStationActions(station, player, playerCoins, gameState, canInteract, playerIndex) {
     if (!canInteract) {
-        // Remove actions if player can't interact
-        const existingActions = station.querySelector('.station-actions')
-        if (existingActions) {
-            existingActions.remove()
-        }
+        const existing = station.querySelector('.station-actions')
+        if (existing) existing.remove()
+        return
+    }
+    const heads = playerCoins.filter((c) => c).length
+    const total = playerCoins.length
+    const canSend = heads >= gameState.batch_size || (heads > 0 && heads === total)
+
+    if (total === 0) {
+        const existing = station.querySelector('.station-actions')
+        if (existing) existing.remove()
         return
     }
 
-    const headsCount = playerCoins.filter((coin) => coin).length
-    const totalCoins = playerCoins.length
-    const canSend = headsCount >= gameState.batch_size || (headsCount > 0 && headsCount === totalCoins)
+    let actions = station.querySelector('.station-actions')
+    if (isSendingBatch && actions) return
 
-    let actionsContainer = station.querySelector('.station-actions')
-
-    // Check if we're currently sending (don't update while sending)
-    if (isSendingBatch && actionsContainer) {
-        const existingButton = actionsContainer.querySelector('button')
-        if (existingButton && existingButton.disabled && existingButton.textContent === 'Envoi en cours...') {
-            // Don't update while sending
-            return
-        }
+    if (!actions) {
+        actions = document.createElement('div')
+        actions.className = 'station-actions'
+        station.appendChild(actions)
     }
+    actions.innerHTML = ''
 
-    if (totalCoins > 0) {
-        if (!actionsContainer) {
-            actionsContainer = document.createElement('div')
-            actionsContainer.className = 'station-actions'
-            station.appendChild(actionsContainer)
-        }
+    const btn = document.createElement('button')
+    btn.className = `btn ${canSend ? 'btn-primary' : 'btn-disabled'}`
+    btn.textContent = playerIndex === gameState.players.length - 1
+        ? `Terminer ${heads} pièce${heads > 1 ? 's' : ''}`
+        : `Envoyer lot (${heads}/${gameState.batch_size})`
+    btn.disabled = !canSend
 
-        // Clear and recreate button to avoid reference issues
-        actionsContainer.innerHTML = ''
-
-        const sendButton = document.createElement('button')
-        sendButton.className = `btn ${canSend ? 'btn-primary' : 'btn-disabled'}`
-        sendButton.textContent =
-            playerIndex === gameState.players.length - 1
-                ? `Terminer ${headsCount} pièce${headsCount > 1 ? 's' : ''}`
-                : `Envoyer lot (${headsCount}/${gameState.batch_size})`
-        sendButton.disabled = !canSend
-
-        if (canSend) {
-            sendButton.addEventListener('click', async (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-
-                // Get fresh references at click time
-                const btn = e.currentTarget
-                if (!btn || btn.disabled) return
-
-                // Disable button immediately
-                btn.disabled = true
-                const originalText = btn.textContent
-                btn.textContent = 'Envoi en cours...'
-
-                try {
-                    await handleSendBatch()
-                    // Success - the websocket will update the UI
-                } catch (error) {
-                    console.error('Error in send batch handler:', error)
-                    // Re-enable button on error only if it still exists
-                    const currentBtn = station.querySelector('.station-actions button')
-                    if (currentBtn && currentBtn === btn) {
-                        currentBtn.disabled = false
-                        currentBtn.textContent = originalText
-                    }
-                }
-            })
-        } else {
-            sendButton.title = `Retournez ${gameState.batch_size - headsCount} pièce${gameState.batch_size - headsCount > 1 ? 's' : ''} de plus`
-        }
-
-        actionsContainer.appendChild(sendButton)
-    } else if (actionsContainer) {
-        actionsContainer.remove()
+    if (canSend) {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (btn.disabled) return
+            btn.disabled = true
+            const orig = btn.textContent
+            btn.textContent = 'Envoi en cours...'
+            try {
+                await handleSendBatch()
+            } catch (_) {
+                btn.disabled = false
+                btn.textContent = orig
+            }
+        })
     }
+    actions.appendChild(btn)
 }
 
 function updateCompletionArea(gameState) {
-    try {
-        const completedCoinsContainer = document.querySelector('.completed-coins')
-        const completionCount = document.querySelector('.completion-count')
-
-        const totalCompleted = gameState.total_completed || 0
-
-        if (completedCoinsContainer) {
-            completedCoinsContainer.innerHTML = Array(totalCompleted).fill(coinEmoji).join('')
-        }
-
-        if (completionCount) {
-            completionCount.textContent = `${totalCompleted}/${TOTAL_COINS}`
-        }
-    } catch (error) {
-        console.error('Error updating completion area:', error)
-    }
+    const container = document.querySelector('.completed-coins')
+    const count = document.querySelector('.completion-count')
+    const total = gameState.total_completed || 0
+    if (container) container.innerHTML = Array(total).fill(coinEmoji).join('')
+    if (count) count.textContent = `${total}/${TOTAL_COINS}`
 }
 
 function updateTimersSummary(gameState) {
-    try {
-        if (!gameState.players || !Array.isArray(gameState.players)) {
-            return
-        }
-
-        gameState.players.forEach((player) => {
-            const timerElement = document.querySelector(`.timer-value[data-player="${player}"]`)
-            if (timerElement && gameState.player_timers && gameState.player_timers[player]) {
-                const timerInfo = formatPlayerTimer(gameState.player_timers[player])
-                timerElement.textContent = timerInfo.time
-
-                const timerCard = timerElement.closest('.timer-card')
-                if (timerCard) {
-                    timerCard.className = `timer-card ${timerInfo.status}`
-                    const statusElement = timerCard.querySelector('.timer-status')
-                    if (statusElement) {
-                        statusElement.textContent = timerInfo.statusText
-                    }
-                }
+    if (!gameState.players) return
+    gameState.players.forEach((player) => {
+        const el = document.querySelector(`.timer-value[data-player="${player}"]`)
+        if (el && gameState.player_timers?.[player]) {
+            const info = formatPlayerTimer(gameState.player_timers[player])
+            el.textContent = info.time
+            const card = el.closest('.timer-card')
+            if (card) {
+                card.className = `timer-card ${info.status}`
+                const status = card.querySelector('.timer-status')
+                if (status) status.textContent = info.statusText
             }
-        })
-    } catch (error) {
-        console.error('Error updating timers summary:', error)
-    }
+        }
+    })
 }
 
 function createGameStatusElement(gameState) {
-    const gameStatus = document.createElement('div')
-    gameStatus.className = 'game-status'
-
-    let gameTimer = '--:--'
-    if (gameState.game_duration_seconds !== null && gameState.game_duration_seconds !== undefined) {
-        gameTimer = formatTime(gameState.game_duration_seconds)
-    } else if (gameState.started_at) {
-        const startTime = new Date(gameState.started_at)
-        const currentTime = new Date()
-        if (!isNaN(startTime.getTime())) {
-            const currentDuration = (currentTime - startTime) / 1000
-            gameTimer = formatTime(currentDuration)
-        }
+    const el = document.createElement('div')
+    el.className = 'game-status'
+    let timer = '--:--'
+    if (gameState.round_started_at || gameState.started_at) {
+        const start = new Date(gameState.round_started_at || gameState.started_at)
+        if (!isNaN(start.getTime())) timer = formatTime((new Date() - start) / 1000)
     }
-
-    gameStatus.innerHTML = `
+    el.innerHTML = `
         <div class="status-header">
             <h2>🎲 Partie en cours - Lot de ${gameState.batch_size}</h2>
-            <div class="game-timer">
-                <span class="timer-label">⏱️ Temps de jeu:</span>
-                <span class="timer-value" id="gameTimerDisplay">${gameTimer}</span>
-            </div>
-            <div class="game-progress">
-                <div class="progress-stats">
-                    <span class="stat">🪙 Total: ${gameState.total_completed}/${TOTAL_COINS} terminées</span>
-                    <span class="stat">⏳ ${gameState.tails_remaining} pièces à traiter</span>
-                </div>
-            </div>
+            <div class="game-timer"><span class="timer-label">⏱️ Temps de jeu:</span><span class="timer-value" id="gameTimerDisplay">${timer}</span></div>
+            <div class="game-progress"><div class="progress-stats">
+                <span class="stat">🪙 Total: ${gameState.total_completed || 0}/${TOTAL_COINS} terminées</span>
+                <span class="stat">⏳ ${gameState.tails_remaining || 0} pièces à traiter</span>
+            </div></div>
         </div>
     `
-
-    return gameStatus
+    return el
 }
 
 function createProductionLineElement(gameState) {
-    const productionLine = document.createElement('div')
-    productionLine.className = 'production-line'
-
-    gameState.players.forEach((player, index) => {
-        const playerStation = createPlayerStation(player, gameState, index)
-        productionLine.appendChild(playerStation)
-
-        // Add arrow between players
-        if (index < gameState.players.length - 1) {
+    const line = document.createElement('div')
+    line.className = 'production-line'
+    gameState.players.forEach((player, i) => {
+        line.appendChild(createPlayerStation(player, gameState, i))
+        if (i < gameState.players.length - 1) {
             const arrow = document.createElement('div')
             arrow.className = 'flow-arrow'
             arrow.innerHTML = '➡️'
-            productionLine.appendChild(arrow)
+            line.appendChild(arrow)
         }
     })
-
-    // Add completion area
-    const completionArea = document.createElement('div')
-    completionArea.className = 'completion-area'
-    completionArea.innerHTML = `
-        <div class="completion-station">
-            <h3>✅ Terminé</h3>
-            <div class="completed-coins">
-                ${Array(gameState.total_completed).fill(coinEmoji).join('')}
-            </div>
-            <div class="completion-count">${gameState.total_completed}/${TOTAL_COINS}</div>
+    const completion = document.createElement('div')
+    completion.className = 'completion-area'
+    completion.innerHTML = `
+        <div class="completion-station"><h3>✅ Terminé</h3>
+            <div class="completed-coins">${Array(gameState.total_completed || 0).fill(coinEmoji).join('')}</div>
+            <div class="completion-count">${gameState.total_completed || 0}/${TOTAL_COINS}</div>
         </div>
     `
-    productionLine.appendChild(completionArea)
-
-    return productionLine
+    line.appendChild(completion)
+    return line
 }
 
 function createRulesReminderElement(gameState) {
-    const rulesReminder = document.createElement('div')
-    rulesReminder.className = 'rules-reminder'
-    rulesReminder.innerHTML = `
-        <h4>📋 Rappel des règles (Game Rules):</h4>
+    const el = document.createElement('div')
+    el.className = 'rules-reminder'
+    el.innerHTML = `
+        <h4>📋 Rappel des règles:</h4>
         <ul>
-            <li>🔄 Retournez les pièces de pile (<div class="flip grayscale">🪙</div>) vers face (🪙)</li>
-            <li>📦 Envoyez par ${LEAN_TERMS.BATCH_SIZE} de ${gameState.batch_size} pièce${gameState.batch_size > 1 ? 's' : ''}</li>
+            <li>🔄 Retournez les pièces de pile vers face</li>
+            <li>📦 Envoyez par ${LEAN_TERMS.BATCH_SIZE} de ${gameState.batch_size}</li>
             <li>⚡ Travaillez en parallèle pour optimiser le ${LEAN_TERMS.FLOW} !</li>
-            <li>🎯 Objectif : minimiser le ${LEAN_TERMS.LEAD_TIME} ensemble</li>
-            <li>🪙 ${TOTAL_COINS} pièces au total à traiter</li>
-            <li>💡 Identifiez les ${LEAN_TERMS.BOTTLENECK} et réduisez le ${LEAN_TERMS.WASTE} !</li>
+            <li>🎯 Objectif : minimiser le ${LEAN_TERMS.LEAD_TIME}</li>
+            <li>🪙 ${TOTAL_COINS} pièces au total</li>
         </ul>
     `
-
-    return rulesReminder
+    return el
 }
 
 function createPlayerStation(player, gameState, playerIndex) {
     const station = document.createElement('div')
     station.className = 'player-station'
     station.id = `station-${player}`
-
-    const currentUsername = window.currentUsername
-    const isCurrentPlayer = player === currentUsername
+    const isCurrentPlayer = player === window.currentUsername
     const isHost = window.isHost
     const playerCoins = gameState.player_coins[player] || []
-
-    // Count coins by state
-    const tailsCount = playerCoins.filter((coin) => !coin).length
-    const headsCount = playerCoins.filter((coin) => coin).length
-    const totalCoins = playerCoins.length
-
-    // Determine if player can send batch
-    const canSend = headsCount >= gameState.batch_size || (headsCount > 0 && headsCount === totalCoins)
-
-    // Determine if player can interact
+    const tails = playerCoins.filter((c) => !c).length
+    const heads = playerCoins.filter((c) => c).length
     const canInteract = isCurrentPlayer && !isHost && window.userRole === 'player'
-
-    // Format player timer
-    const timerInfo = formatPlayerTimer(gameState.player_timers ? gameState.player_timers[player] : null)
+    const timerInfo = formatPlayerTimer(gameState.player_timers?.[player])
 
     station.innerHTML = `
         <div class="station-header">
             <h3>${isCurrentPlayer ? '⭐' : '👤'} ${player}</h3>
-            <div class="player-status">
-                ${isCurrentPlayer ? `Votre ${LEAN_TERMS.STATION}` : `${LEAN_TERMS.STATION} partenaire`}
-                ${!canInteract && isCurrentPlayer ? ' (Hôte - observation seulement)' : ''}
-            </div>
+            <div class="player-status">${isCurrentPlayer ? 'Votre Station' : 'Station partenaire'}</div>
             <div class="player-timer ${timerInfo.status}">
                 <span class="timer-icon">⏱️</span>
                 <span class="timer-time" data-player="${player}">${timerInfo.time}</span>
@@ -729,248 +391,129 @@ function createPlayerStation(player, gameState, playerIndex) {
             </div>
         </div>
         <div class="station-stats">
-            <span class="stat">🪙 ${totalCoins} pièces</span>
-            <span class="stat"><div class="flip grayscale ">🪙</div> ${tailsCount} à retourner</span>
-            <span class="stat">🪙 ${headsCount} prêtes</span>
+            <span class="stat">🪙 ${playerCoins.length} pièces</span>
+            <span class="stat"><div class="flip grayscale">🪙</div> ${tails} à retourner</span>
+            <span class="stat">🪙 ${heads} prêtes</span>
         </div>
     `
 
-    // Add coins display
     const coinsContainer = document.createElement('div')
     coinsContainer.className = 'coins-container'
-
-    if (totalCoins > 0) {
-        playerCoins.forEach((isHeads, index) => {
-            const coinWrapper = createCoinElement(player, index, isHeads, canInteract)
-            coinsContainer.appendChild(coinWrapper)
-        })
+    if (playerCoins.length > 0) {
+        playerCoins.forEach((isHeads, index) => coinsContainer.appendChild(createCoinElement(player, index, isHeads, canInteract)))
     } else {
-        const emptyMessage = document.createElement('div')
-        emptyMessage.className = 'empty-station'
-        emptyMessage.textContent = totalCoins === 0 ? 'En attente de pièces...' : 'Station vide'
-        coinsContainer.appendChild(emptyMessage)
+        const empty = document.createElement('div')
+        empty.className = 'empty-station'
+        empty.textContent = 'En attente de pièces...'
+        coinsContainer.appendChild(empty)
     }
-
     station.appendChild(coinsContainer)
 
-    // Add action buttons for current player
-    if (canInteract && totalCoins > 0) {
-        const actionsContainer = document.createElement('div')
-        actionsContainer.className = 'station-actions'
-
-        const sendButton = document.createElement('button')
-        sendButton.className = `btn ${canSend ? 'btn-primary' : 'btn-disabled'}`
-        sendButton.textContent =
-            playerIndex === gameState.players.length - 1
-                ? `Terminer ${headsCount} pièce${headsCount > 1 ? 's' : ''}`
-                : `Envoyer lot (${headsCount}/${gameState.batch_size})`
-        sendButton.disabled = !canSend
-
+    if (canInteract && playerCoins.length > 0) {
+        const canSend = heads >= gameState.batch_size || (heads > 0 && heads === playerCoins.length)
+        const actions = document.createElement('div')
+        actions.className = 'station-actions'
+        const btn = document.createElement('button')
+        btn.className = `btn ${canSend ? 'btn-primary' : 'btn-disabled'}`
+        btn.textContent = playerIndex === gameState.players.length - 1
+            ? `Terminer ${heads} pièce${heads > 1 ? 's' : ''}`
+            : `Envoyer lot (${heads}/${gameState.batch_size})`
+        btn.disabled = !canSend
         if (canSend) {
-            sendButton.addEventListener('click', async (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                try {
-                    await handleSendBatch()
-                } catch (error) {
-                    console.error('Error in send batch handler:', error)
-                }
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault(); e.stopPropagation()
+                try { await handleSendBatch() } catch (_) { }
             })
-        } else {
-            sendButton.title = `Retournez ${gameState.batch_size - headsCount} pièce${gameState.batch_size - headsCount > 1 ? 's' : ''} de plus`
         }
-
-        actionsContainer.appendChild(sendButton)
-        station.appendChild(actionsContainer)
-    } else if (isCurrentPlayer && window.userRole === 'spectator') {
-        const spectatorMessage = document.createElement('div')
-        spectatorMessage.className = 'spectator-message'
-        spectatorMessage.textContent = 'Vous êtes spectateur - observation seulement'
-        station.appendChild(spectatorMessage)
-    } else if (isCurrentPlayer && isHost) {
-        const hostMessage = document.createElement('div')
-        hostMessage.className = 'host-message'
-        hostMessage.textContent = 'Vous êtes hôte - observation seulement'
-        station.appendChild(hostMessage)
+        actions.appendChild(btn)
+        station.appendChild(actions)
     }
 
     return station
 }
 
 function createCoinElement(player, index, isHeads, canInteract) {
-    const coinWrapper = document.createElement('div')
-    coinWrapper.className = 'coin-wrapper'
-
+    const wrapper = document.createElement('div')
+    wrapper.className = 'coin-wrapper'
     const coin = document.createElement('div')
     coin.className = `flip coin ${isHeads ? 'heads' : 'tails'}`
     coin.textContent = coinEmoji
-    coin.title = isHeads ? 'Face - Prête à envoyer' : `Maintenez pendant ${FLIP_HOLD_DURATION / 1000}s pour retourner`
     coin.dataset.coinIndex = index
     coin.dataset.player = player
+    if (!isHeads) coin.classList.add('grayscale')
 
-    // Apply grayscale to tails coins
-    if (!isHeads) {
-        coin.classList.add('grayscale')
-    }
+    const ring = document.createElement('div')
+    ring.className = 'coin-progress-ring'
+    ring.innerHTML = '<svg class="progress-ring__svg"><circle class="progress-ring__circle-bg"></circle><circle class="progress-ring__circle"></circle></svg>'
 
-    // Add progress ring for hold indicator
-    const progressRing = document.createElement('div')
-    progressRing.className = 'coin-progress-ring'
-    progressRing.innerHTML = `
-        <svg class="progress-ring__svg">
-            <circle class="progress-ring__circle-bg"></circle>
-            <circle class="progress-ring__circle"></circle>
-        </svg>
-    `
+    wrapper.appendChild(coin)
+    wrapper.appendChild(ring)
 
-    coinWrapper.appendChild(coin)
-    coinWrapper.appendChild(progressRing)
-
-    // Only allow interaction for current player with tails coins
     if (canInteract && !isHeads) {
         coin.classList.add('interactive', 'holdable')
         coin.style.cursor = 'grab'
-        setupCoinHoldEvents(coin, index, progressRing)
-    } else if (isHeads) {
-        coin.classList.add('ready')
-        coin.title = 'Face - Prête à envoyer'
+        coin.title = 'Maintenez pour retourner'
+        setupCoinHoldEvents(coin, index, ring)
     }
-
-    return coinWrapper
+    return wrapper
 }
 
 function setupCoinHoldEvents(coinElement, coinIndex, progressRing) {
     const player = coinElement.dataset.player
     const coinKey = `${player}-${coinIndex}`
+    let holdTimer = null, progressInterval = null, startTime = null, isHolding = false, flipCompleted = false
 
-    let holdTimer = null
-    let progressInterval = null
-    let startTime = null
-    let isHolding = false
-    let flipCompleted = false
+    const updateProgress = (progress) => {
+        const circle = progressRing.querySelector('.progress-ring__circle')
+        if (!circle) return
+        const r = 18, c = 2 * Math.PI * r
+        circle.style.strokeDasharray = `${c} ${c}`
+        circle.style.strokeDashoffset = c - progress * c
+    }
 
     const startHold = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-
+        e.preventDefault(); e.stopPropagation()
         if (isHolding || flipCompleted) return
-
-        isHolding = true
-        flipCompleted = false
-        startTime = Date.now()
-
-        // Store active hold
-        activeHolds.set(coinKey, {
-            timer: holdTimer,
-            interval: progressInterval,
-            startTime: startTime,
-            element: coinElement,
-        })
-
-        // Visual feedback
-        coinElement.classList.add('holding')
-        coinElement.style.cursor = 'grabbing'
+        isHolding = true; startTime = Date.now()
+        activeHolds.set(coinKey, { startTime, element: coinElement })
+        coinElement.classList.add('holding'); coinElement.style.cursor = 'grabbing'
         progressRing.classList.add('active')
-
-        showHoldInstruction(coinElement)
         updateProgress(0)
 
         progressInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime
-            const progress = Math.min(elapsed / FLIP_HOLD_DURATION, 1)
+            const progress = Math.min((Date.now() - startTime) / FLIP_HOLD_DURATION, 1)
             updateProgress(progress)
-
-            if (progress >= 1 && !flipCompleted) {
-                flipCompleted = true
-                completeFlip()
-            }
+            if (progress >= 1 && !flipCompleted) { flipCompleted = true; completeFlip() }
         }, 16)
-
-        // Update stored interval
-        const holdData = activeHolds.get(coinKey)
-        if (holdData) {
-            holdData.interval = progressInterval
-        }
     }
 
     const endHold = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-
-        if (!isHolding) return
-
-        const elapsed = startTime ? Date.now() - startTime : 0
-        const progress = elapsed / FLIP_HOLD_DURATION
-
-        if (progress < 1 && !flipCompleted) {
-            isHolding = false
-
-            if (progressInterval) {
-                clearInterval(progressInterval)
-                progressInterval = null
-            }
-
-            // Remove from active holds
-            activeHolds.delete(coinKey)
-
-            // Reset visual feedback
-            coinElement.classList.remove('holding')
-            coinElement.style.cursor = 'grab'
-            progressRing.classList.remove('active')
-            updateProgress(0)
-            hideHoldInstruction(coinElement)
-
-            showIncompleteMessage(coinElement)
-        }
+        e.preventDefault(); e.stopPropagation()
+        if (!isHolding || flipCompleted) return
+        isHolding = false
+        if (progressInterval) { clearInterval(progressInterval); progressInterval = null }
+        activeHolds.delete(coinKey)
+        coinElement.classList.remove('holding'); coinElement.style.cursor = 'grab'
+        progressRing.classList.remove('active')
+        updateProgress(0)
     }
 
     const completeFlip = () => {
-        if (progressInterval) {
-            clearInterval(progressInterval)
-            progressInterval = null
-        }
-
-        // Hide instruction immediately before any DOM changes
-        hideHoldInstruction(coinElement)
-
-        // Remove from active holds
+        if (progressInterval) { clearInterval(progressInterval); progressInterval = null }
         activeHolds.delete(coinKey)
-
-        // Add to local flips in progress
         localFlipsInProgress.add(coinKey)
-
-        // Success feedback
         coinElement.classList.add('flip-success')
         progressRing.classList.add('complete')
-
         performCoinFlip(coinIndex, coinElement)
-
         setTimeout(() => {
             coinElement.classList.remove('holding', 'flip-success')
             progressRing.classList.remove('active', 'complete')
             updateProgress(0)
-            isHolding = false
-            flipCompleted = false
-
-            // Remove from local flips after animation
-            setTimeout(() => {
-                localFlipsInProgress.delete(coinKey)
-            }, 500)
+            isHolding = false; flipCompleted = false
+            setTimeout(() => localFlipsInProgress.delete(coinKey), 500)
         }, 500)
     }
 
-    const updateProgress = (progress) => {
-        const circle = progressRing.querySelector('.progress-ring__circle')
-        if (circle) {
-            const radius = 18
-            const circumference = 2 * Math.PI * radius
-            const offset = circumference - progress * circumference
-            circle.style.strokeDasharray = `${circumference} ${circumference}`
-            circle.style.strokeDashoffset = offset
-        }
-    }
-
-    // Event listeners
     coinElement.addEventListener('mousedown', startHold)
     coinElement.addEventListener('mouseup', endHold)
     coinElement.addEventListener('mouseleave', endHold)
@@ -980,291 +523,99 @@ function setupCoinHoldEvents(coinElement, coinIndex, progressRing) {
     coinElement.addEventListener('contextmenu', (e) => e.preventDefault())
 }
 
-function showIncompleteMessage(coinElement) {
-    const coinWrapper = coinElement.parentElement
-    if (!coinWrapper) return
-
-    let message = coinWrapper.querySelector('.incomplete-message')
-    if (!message) {
-        message = document.createElement('div')
-        message.className = 'incomplete-message'
-        message.textContent = 'Maintenez plus longtemps !'
-        coinWrapper.appendChild(message)
-    }
-
-    // Show message
-    setTimeout(() => {
-        message.classList.add('visible')
-    }, 10)
-
-    // Hide and remove after delay
-    setTimeout(() => {
-        message.classList.remove('visible')
-        setTimeout(() => {
-            if (message.parentNode) {
-                message.remove()
-            }
-        }, 200)
-    }, 1000)
-}
-
-function showHoldInstruction(coinElement) {
-    const coinWrapper = coinElement.parentElement
-    if (!coinWrapper) return
-
-    let instruction = coinWrapper.querySelector('.hold-instruction')
-    if (!instruction) {
-        instruction = document.createElement('div')
-        instruction.className = 'hold-instruction'
-        instruction.textContent = 'Maintenez...'
-        coinWrapper.appendChild(instruction)
-    }
-    // Small delay to ensure animation works
-    setTimeout(() => {
-        instruction.classList.add('visible')
-    }, 10)
-}
-
-function hideHoldInstruction(coinElement) {
-    // Find instruction in the parent wrapper
-    const coinWrapper = coinElement.parentElement
-    if (coinWrapper) {
-        const instruction = coinWrapper.querySelector('.hold-instruction')
-        if (instruction) {
-            instruction.classList.remove('visible')
-            // Also remove the element after animation
-            setTimeout(() => {
-                if (instruction.parentNode) {
-                    instruction.remove()
-                }
-            }, 200)
-        }
-    }
-}
-
 async function performCoinFlip(coinIndex, coinElement) {
     const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
     const username = window.currentUsername
+    if (!apiUrl || !gameCode || !username) return
 
-    if (!apiUrl || !gameCode || !username) {
-        console.error('Missing required data for coin flip')
-        return
-    }
-
-    // Hide hold instruction before replacing element
-    hideHoldInstruction(coinElement)
-
-    // Visual feedback - immediate update
     coinElement.classList.add('flipped')
     coinElement.classList.remove('grayscale', 'tails', 'interactive', 'holdable')
     coinElement.classList.add('heads')
     coinElement.style.cursor = 'default'
-    coinElement.title = 'Face - Prête à envoyer'
 
-    // Remove event listeners
     const newCoin = coinElement.cloneNode(true)
     newCoin.textContent = coinEmoji
     coinElement.parentNode.replaceChild(newCoin, coinElement)
 
     try {
         await flipCoin(apiUrl, gameCode, username, coinIndex)
-    } catch (error) {
-        console.error('Error flipping coin:', error)
-
-        // Revert visual change if API call failed
+    } catch (_) {
         newCoin.classList.remove('flipped', 'heads')
         newCoin.classList.add('grayscale', 'tails')
         newCoin.style.cursor = 'grab'
-        newCoin.title = `Maintenez pendant ${FLIP_HOLD_DURATION / 1000}s pour retourner`
-
-        // Re-setup hold events for retry
-        const progressRing = newCoin.parentElement.querySelector('.coin-progress-ring')
-        if (progressRing) {
-            setupCoinHoldEvents(newCoin, coinIndex, progressRing)
-        }
+        const ring = newCoin.parentElement?.querySelector('.coin-progress-ring')
+        if (ring) setupCoinHoldEvents(newCoin, coinIndex, ring)
     }
 }
 
 function addTimersSummary(gameState) {
-    const gameBoard = document.getElementById('gameBoard')
-    if (!gameBoard) return
-
-    // Check if summary already exists
-    let timersSummary = gameBoard.querySelector('.timers-summary')
-    if (!timersSummary) {
-        timersSummary = document.createElement('div')
-        timersSummary.className = 'timers-summary'
-        timersSummary.innerHTML = '<h3>📊 Temps par Joueur</h3>'
-
-        const timersGrid = document.createElement('div')
-        timersGrid.className = 'timers-grid'
-
-        gameState.players.forEach((player) => {
-            const timer = gameState.player_timers[player]
-            const timerInfo = formatPlayerTimer(timer)
-
-            const timerCard = document.createElement('div')
-            timerCard.className = `timer-card ${timerInfo.status}`
-            timerCard.innerHTML = `
-                <div class="timer-player">${player}</div>
-                <div class="timer-value" data-player="${player}">${timerInfo.time}</div>
-                <div class="timer-status">${timerInfo.statusText}</div>
-            `
-            timersGrid.appendChild(timerCard)
-        })
-
-        timersSummary.appendChild(timersGrid)
-        gameBoard.appendChild(timersSummary)
-    }
+    const board = document.getElementById('gameBoard')
+    if (!board || board.querySelector('.timers-summary')) return
+    const summary = document.createElement('div')
+    summary.className = 'timers-summary'
+    summary.innerHTML = '<h3>📊 Temps par Joueur</h3>'
+    const grid = document.createElement('div')
+    grid.className = 'timers-grid'
+    gameState.players.forEach((player) => {
+        const info = formatPlayerTimer(gameState.player_timers?.[player])
+        const card = document.createElement('div')
+        card.className = `timer-card ${info.status}`
+        card.innerHTML = `<div class="timer-player">${player}</div><div class="timer-value" data-player="${player}">${info.time}</div><div class="timer-status">${info.statusText}</div>`
+        grid.appendChild(card)
+    })
+    summary.appendChild(grid)
+    board.appendChild(summary)
 }
 
 async function handleSendBatch() {
-    // Prevent duplicate sends
-    if (isSendingBatch) {
-        console.log('Send batch already in progress, skipping')
-        return
-    }
-
+    if (isSendingBatch) return
     const gameCode = document.getElementById('game-code')?.textContent?.trim()
     const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url')
     const username = window.currentUsername
+    if (!apiUrl || !gameCode || !username) throw new Error('Missing data')
+    if (window.isHost) { showNotification('Les hôtes ne peuvent pas jouer', 'error'); throw new Error('Host') }
+    if (window.userRole !== 'player') { showNotification('Seuls les joueurs peuvent envoyer', 'error'); throw new Error('Not player') }
+    if (!window.gameState || window.gameState.phase !== 'active') { showNotification("Partie non active", 'error'); throw new Error('Not active') }
 
-    if (!apiUrl || !gameCode || !username) {
-        console.error('Missing required data for send batch:', {
-            apiUrl: !!apiUrl,
-            gameCode: !!gameCode,
-            username: !!username,
-        })
-        throw new Error('Missing required data')
-    }
-
-    if (window.isHost === true) {
-        showNotification('Les hôtes ne peuvent pas jouer', 'error')
-        throw new Error('Host cannot play')
-    }
-
-    if (window.userRole !== 'player') {
-        showNotification('Seuls les joueurs peuvent envoyer des lots', 'error')
-        throw new Error('Not a player')
-    }
-
-    if (!window.gameState || window.gameState.state !== 'active') {
-        showNotification("La partie n'est pas active", 'error')
-        throw new Error('Game not active')
-    }
-
-    // Set flag to prevent duplicate sends
     isSendingBatch = true
-    console.log('Starting batch send for user:', username)
-
     try {
-        const response = await fetch(`${apiUrl}/game/send/${gameCode}`, {
+        const res = await fetch(`${apiUrl}/game/send/${gameCode}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-            },
-            body: JSON.stringify({ username: username }),
-            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ username }),
         })
-
-        if (!response.ok) {
-            let errorMessage = "Erreur lors de l'envoi du lot"
-            try {
-                const errorData = await response.json()
-                errorMessage = errorData.detail || errorMessage
-            } catch (e) {
-                console.error('Could not parse error response:', e)
-            }
-            throw new Error(errorMessage)
-        }
-
-        const data = await response.json()
-        console.log('Batch sent successfully:', data)
-        // Success notification will be shown by websocket update
-        return data
+        if (!res.ok) throw new Error((await res.json()).detail || "Erreur d'envoi")
+        return await res.json()
     } catch (error) {
-        console.error('Error sending batch:', error)
-
-        // Show user-friendly error message
-        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-            showNotification('Erreur de connexion au serveur', 'error')
-        } else if (error.message) {
-            showNotification(`Erreur: ${error.message}`, 'error')
-        } else {
-            showNotification("Erreur lors de l'envoi du lot", 'error')
-        }
-
-        // Re-throw to let the button handler know there was an error
+        showNotification(`Erreur: ${error.message}`, 'error')
         throw error
     } finally {
-        // Always reset the flag
-        console.log('Resetting isSendingBatch flag')
         isSendingBatch = false
     }
 }
 
-export function updateGameUI(gameState) {
-    if (!gameState) return
-
-    // Update batch size display if changed
-    const batchSizeSelectors = document.querySelectorAll('.batch-size-option')
-    batchSizeSelectors.forEach((option) => {
-        const size = parseInt(option.dataset.size)
-        option.classList.toggle('active', size === gameState.batch_size)
-    })
-}
-
 export function addResetButton() {
-    const gameBoard = document.getElementById('gameBoard')
-    if (!gameBoard) return
-
-    // Check if button already exists
-    if (gameBoard.querySelector('#resetGameBtn')) return
-
-    const resetContainer = document.createElement('div')
-    resetContainer.className = 'host-controls'
-    resetContainer.innerHTML = `
-        <button class="btn btn-secondary" id="resetGameBtn">
-            🔄 Réinitialiser la partie
-        </button>
-    `
-
-    gameBoard.appendChild(resetContainer)
-
+    const board = document.getElementById('gameBoard')
+    if (!board || board.querySelector('#resetGameBtn')) return
+    const container = document.createElement('div')
+    container.className = 'host-controls'
+    container.innerHTML = '<button class="btn btn-secondary" id="resetGameBtn">🔄 Réinitialiser la partie</button>'
+    board.appendChild(container)
     document.getElementById('resetGameBtn')?.addEventListener('click', async () => {
-        if (confirm('Êtes-vous sûr de vouloir réinitialiser la partie ?')) {
-            await resetGame()
+        if (!confirm('Réinitialiser la partie ?')) return
+        const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
+        const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
+        if (!apiUrl || !gameCode) return
+        try {
+            const { buildHostHeaders } = await import('./api.js')
+            await fetch(`${apiUrl}/game/reset/${gameCode}`, { method: 'POST', headers: buildHostHeaders() })
+        } catch (error) {
+            showNotification(`Erreur: ${error.message}`, 'error')
         }
     })
 }
 
-async function resetGame() {
-    const gameCode = document.getElementById('game-code')?.textContent?.trim() || ''
-    const apiUrl = document.getElementById('joinRoleModal')?.getAttribute('data-api-url') || ''
-
-    if (!apiUrl || !gameCode) return
-
-    try {
-        const response = await fetch(`${apiUrl}/game/reset/${gameCode}`, {
-            method: 'POST',
-            credentials: 'include',
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.detail || 'Échec de la réinitialisation')
-        }
-
-        console.log('Game reset successful')
-    } catch (error) {
-        console.error('Error resetting game:', error)
-        showNotification(`Erreur lors de la réinitialisation: ${error.message}`, 'error')
-    }
-}
-
-// Clear state on game reset
 function clearGameBoardState() {
     previousGameState = null
     activeHolds.clear()
@@ -1272,5 +623,4 @@ function clearGameBoardState() {
     isSendingBatch = false
 }
 
-// Export utility functions
 export { clearGameBoardState }

@@ -1,12 +1,7 @@
 .game-controls {
     display: flex;
-    gap: 20px;
+    gap: 12px;
     justify-content: center;
-}
-
-@media screen and (width<=850px) {
-    .game-controls {
-        align-items: center;
-        flex-direction: column;
-    }
+    margin-top: 16px;
+    flex-wrap: wrap;
 }
