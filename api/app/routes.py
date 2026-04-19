@@ -152,7 +152,7 @@ def create_game(request: Request):
         value=host_secret,
         httponly=True,
         samesite="lax",
-        secure=False,  # Allow HTTP in dev environment
+        secure=os.getenv("ENVIRONMENT") == "production",
         max_age=COOKIE_MAX_AGE,
         path="/",
     )
@@ -162,7 +162,7 @@ def create_game(request: Request):
         value=host_csrf_token,
         httponly=False,
         samesite="lax",
-        secure=False,  # Allow HTTP in dev environment
+        secure=os.getenv("ENVIRONMENT") == "production",
         max_age=COOKIE_MAX_AGE,
         path="/",
     )
