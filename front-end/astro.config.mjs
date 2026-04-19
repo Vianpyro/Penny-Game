@@ -3,7 +3,7 @@ import { defineConfig } from 'astro/config'
 
 // https://astro.build/config
 export default defineConfig({
-    base: '/penny_game/',
+    base: '/',
     build: {
         format: 'file',
         assets: 'compressed',
