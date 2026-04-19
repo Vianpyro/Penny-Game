@@ -27,6 +27,7 @@ APP_CONFIG = {
 ALLOWED_ORIGINS = [
     "http://localhost:4321",  # Development frontend
     "http://127.0.0.1:4321",  # Development frontend alternative
+    os.getenv("FRONTEND_URL", "https://pennygame.thevhome.com"),
 ]
 
 # Environment configuration
