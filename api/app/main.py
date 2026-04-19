@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Application configuration
 APP_CONFIG = {
     "title": "Penny Game API",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "A Lean simulation game for measuring flow efficiency and lead time",
 }
 
@@ -80,12 +80,12 @@ def _configure_cors(app: FastAPI) -> None:
 def _add_health_endpoints(app: FastAPI) -> None:
     """Add health check endpoints."""
 
-    @app.get("/")
+    @app.api_route("/", methods=["GET", "HEAD"])
     async def health_check():
         """Basic health check endpoint."""
         return {"status": "ok", "message": "Penny Game API is running", "version": APP_CONFIG["version"]}
 
-    @app.get("/health")
+    @app.api_route("/health", methods=["GET", "HEAD"])
     async def detailed_health_check():
         """Detailed health check endpoint."""
         return {
