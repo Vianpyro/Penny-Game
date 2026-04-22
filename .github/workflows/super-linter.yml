@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -38,7 +38,7 @@ jobs:
           npx prettier --write .
 
       - name: Run Super Linter
-        uses: super-linter/super-linter/slim@v7
+        uses: super-linter/super-linter/slim@v8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'push' }}
@@ -79,7 +79,7 @@ jobs:
 
       - name: Commit and push fixes
         if: github.event_name == 'pull_request' && github.event.pull_request.head.ref != github.event.repository.default_branch
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           branch: ${{ github.event.pull_request.head.ref }}
           commit_message: "Super-Linter: Fix linting issues"
